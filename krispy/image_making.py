@@ -42,7 +42,7 @@ Alterations:
 '''
 
 #make images from the aia fits files
-	def aiamaps(directory, save_directory, submap, wavelength='', cmlims = [], rectangle=[], save_inc=True, 
+def aiamaps(directory, save_directory, submap, wavelength='', cmlims = [], rectangle=[], save_inc=True, 
 	iron='', cm_scale='Normalize', ave_diff_image=False):      
 	"""Takes a directory with fits files, constructs a map or submap of the full observation with/without a rectangle and
 	saves the image in the requested directory.
@@ -496,7 +496,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 ###### This function has a memory leak and I don't know where yet so don't run a huge list of files #######
 ###### through it at once! ################################################################################
 ###########################################################################################################
-	def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [], submap=[], rectangle=[], 
+def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [], submap=[], rectangle=[], 
 					 resample=[], save_inc=False, fexviii=False):
 	"""Takes a directory with fits files, constructs a map or submap of the full observation with/without a rectangle and
 	saves the image in the requested directory.
