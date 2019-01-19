@@ -67,7 +67,7 @@ Alterations:
 			Indicates what wavelength is being passed into the function.
 			Default: '' 
 
-		cmlims : One-dimensional list/array of type float or int, length 2
+	cmlims : One-dimensional list/array of type float or int, length 2
 			Limits of the colourmap, e.g. [vmin, vmax].
 			
 	rectangle : two-dimensional list/array, shape=n,4
