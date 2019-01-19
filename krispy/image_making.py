@@ -32,10 +32,18 @@ import datetime
 '''
 Alterations:
 	KC: 20/12/2018 - made it possible to add more than one rectangle in 'aiamaps()'.
+	KC: 19/01/2019 - the sunpy.map.Map() now takes in a list instead of map objects being created
+						for every file.
+	KC: 19/01/2019 - aiamaps() can nowtake a wavelength for a title, look at two iron channels,
+						change the scale of the colour bar, and can now subtract average of 
+						observation.						
+	KC: 19/01/2019 - contourmaps_from_dir() now takes an AIA file from within time range instead
+						having time bins all having to match bfore input.
 '''
 
 #make images from the aia fits files
-def aiamaps(directory, save_directory, submap, cmlims = [], rectangle=[], save_inc=True, iron18=False):
+	def aiamaps(directory, save_directory, submap, wavelength='', cmlims = [], rectangle=[], save_inc=True, 
+	iron='', cm_scale='Normalize', ave_diff_image=False):      
 	"""Takes a directory with fits files, constructs a map or submap of the full observation with/without a rectangle and
 	saves the image in the requested directory.
 	
@@ -53,9 +61,13 @@ def aiamaps(directory, save_directory, submap, cmlims = [], rectangle=[], save_i
 			
 	submap : One-dimensional list/array, length 4
 			Contains the bottom left (bl) and top right (tr) coordinates for a submap, e.g. [blx,bly,trx,try]. Must be 
-			in arcseconds, of type float or integer and NOT an arcsec object. 
+			in arcseconds, of type float or integer and NOT an arcsec object.
 
-	cmlims : One-dimensional list/array of type float or int, length 2
+	wavelength : Str
+			Indicates what wavelength is being passed into the function.
+			Default: '' 
+
+		cmlims : One-dimensional list/array of type float or int, length 2
 			Limits of the colourmap, e.g. [vmin, vmax].
 			
 	rectangle : two-dimensional list/array, shape=n,4
@@ -68,8 +80,16 @@ def aiamaps(directory, save_directory, submap, cmlims = [], rectangle=[], save_i
 			named incrementally, e.g. AIA123456_123456_1234.png or map_000 respectively.
 			Default: True
 	
-	iron18 : Bool
-			Indicates whether or not the save file is the iron 18 channel.
+	iron : Bool
+			Indicates whether or not the save file is the iron 16 or 18 channel. Set to '16' or '18'.
+			Default: ''
+
+	cm_scale : Str
+			Scale for the colour bar for the plot. Set to 'Normalize' or 'LogNorm'.
+			Default: 'Normalize'
+
+	ave_diff_image : Bool
+			For the images to be plotted to have the average value for that observation subtracted.
 			Default: False
 			
 	Returns
@@ -87,31 +107,59 @@ def aiamaps(directory, save_directory, submap, cmlims = [], rectangle=[], save_i
 	
 	d = 0
 	no_of_files = len(aia_files)
+
+	directory_with_files = [directory+f for f in aia_files]
+	aia_maps = sunpy.map.Map(directory_with_files, sequence=True)
+	if ave_diff_image == True:
+		mean = aia_maps.as_array().mean()
+		min_for_diff = np.min(aia_maps.as_array() - aia_maps.as_array().mean())
+		max_for_diff = np.max(aia_maps.as_array())
+		cmlims = [min_for_diff, max_for_diff]
 	
-	for f in aia_files:
-		aia_map = sunpy.map.Map(directory + f)
+	for f in range(no_of_files):
+		if no_of_files == 1:
+			aia_map = aia_maps
+		elif no_of_files > 1:
+			aia_map = aia_maps[f]
+
+		if ave_diff_image == True:
+			diff_data = aia_map.data - mean
+			aia_map = sunpy.map.Map(diff_data, aia_map.meta)
 		
 		bl_fi = SkyCoord(submap[0]*u.arcsec, submap[1]*u.arcsec, frame=aia_map.coordinate_frame)
 		tr_fi = SkyCoord(submap[2]*u.arcsec, submap[3]*u.arcsec, frame=aia_map.coordinate_frame)
 		
 		smap = aia_map.submap(bl_fi,tr_fi)    
 			
-		if iron18 == True:
+		if iron == '18':
 			smap.plot_settings['cmap'] = plt.cm.Blues
+		if iron == '16':
+			smap.plot_settings['cmap'] = plt.cm.Purples
 
 		fig = plt.figure(figsize=(9,8));
 		compmap = sunpy.map.Map(smap, composite=True)
 			
-		if cmlims != []:
-			if cmlims[0] <= 0: #vmin > 0 or error
-				cmlims[0] = 0.1
-				compmap.plot(vmin=cmlims[0], vmax=cmlims[1]);  
-			else:
-				compmap.plot(vmin=cmlims[0], vmax=cmlims[1]);
-		elif cmlims == []:
-			compmap.plot();
-				
-		plt.colorbar();
+		if cm_scale == 'Normalize':
+			if cmlims != []:
+				if cmlims[0] <= 0: #vmin > 0 or error
+					cmlims[0] = 0.1
+					compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.Normalize()); #LogNorm  Normalize
+				else:
+					compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.Normalize());
+			elif cmlims == []:
+				compmap.plot(norm=colors.Normalize());
+			plt.colorbar(label='Linear Scale');
+			
+		elif cm_scale == 'LogNorm':
+			if cmlims != []:
+				if cmlims[0] <= 0: #vmin > 0 or error
+					cmlims[0] = 0.1
+					compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.LogNorm()); #LogNorm  Normalize
+				else:
+					compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.LogNorm());
+			elif cmlims == []:
+				compmap.plot(norm=colors.LogNorm());
+			plt.colorbar(label='Log Scale');
 		
 		if rectangle != []: #if a rectangle is specified, make it
 			for rect in rectangle:
@@ -123,25 +171,48 @@ def aiamaps(directory, save_directory, submap, cmlims = [], rectangle=[], save_i
 				else:
 					smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec)
 		
-		if iron18 == True: #sets title for Iron 18
-			time = aia_map.meta['date_obs']
-			plt.title(f'AIA FeXVIII {time[:10]} {time[11:19]}')        
+		if ave_diff_image == False:
+			if iron == '18': #sets title for Iron 18
+				time = aia_map.meta['t_obs']
+				plt.title(f'AIA FeXVIII {time[:10]} {time[11:19]}')  
+			elif iron == '16': #sets title for Iron 16
+				time = aia_map.meta['t_obs']
+				plt.title(f'AIA FeXVI {time[:10]} {time[11:19]}')
+			else:
+				time = aia_map.meta['t_obs']
+				plt.title('AIA '+ wavelength + r'$\AA$ ' + f'{time[:10]} {time[11:19]}')
+		elif ave_diff_image == True:
+			if iron == '18': #sets title for Iron 18
+				time = aia_map.meta['t_obs']
+				plt.title(f'AIA FeXVIII {time[:10]} {time[11:19]} (with Mean of Obs. Subtracted)')  
+			elif iron == '16': #sets title for Iron 16
+				time = aia_map.meta['t_obs']
+				plt.title(f'AIA FeXVI {time[:10]} {time[11:19]} (with Mean of Obs. Subtracted)')
+			else:
+				#print(aia_map.meta)
+				time = aia_map.meta['t_obs']
+				plt.title('AIA '+ wavelength + r'$\AA$ ' + f'{time[:10]} {time[11:19]} (Mean of Obs. Subtracted)')       
 
 		if save_inc == False:
-			plt.savefig(save_dir + f'nustar_contours{d}_on_iron18_chu{chu}_fpm{fpm}.png', dpi=600, 
-							bbox_inches='tight')
+			plt.savefig(save_dir + f'AIA_image_{time[:10]}_{time[11:19]}.png', dpi=600, bbox_inches='tight')
 		elif save_inc == True:
 			plt.savefig(save_dir + 'maps{:03d}.png'.format(d), dpi=600, bbox_inches='tight')
 		d+=1
 				
 		plt.close(fig)
+		bl_fi = 0
+		tr_fi = 0 
+		del bl_fi
+		del tr_fi
 		print(f'\rSaved {d} submap(s) of {no_of_files}.', end='')
 	
 	aia_map = 0
+	aia_maps = 0
 	aia_files = 0
 	smap = 0
 	compmap = 0
 	del aia_map
+	del aia_maps
 	del aia_files
 	del smap
 	del compmap
@@ -151,7 +222,7 @@ def aiamaps(directory, save_directory, submap, cmlims = [], rectangle=[], save_i
 
 #make contour maps
 def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm='', energy_rng=[], submap=[], 
-						 cmlims = [], nustar_shift=[], time_bins=[], resample_aia=[], counter=0, contour_lvls=[],
+							 cmlims = [], nustar_shift=[], time_bins=[], resample_aia=[], counter=0, contour_lvls=[],
 						 contour_fmt='percent', contour_colour='black', aia='ns_overlap_only', iron18=True, 
 						 save_inc=False):
 	"""Takes a list of times, a nustar fits file and and list of iron 18 AIA fits files and produces an AIA map with 
@@ -186,7 +257,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 			in arcseconds, of type float or integer and NOT an arcsec object. 
 			Default: []
 
-	cmlims : One-dimensional list/array of type float or int, length 2
+		cmlims : One-dimensional list/array of type float or int, length 2
 			Limits of the colourmap, e.g. [vmin, vmax]. To avoid error, if vmin <= 0 then vmin is set to 0.1.
 			Default: []
 			
@@ -288,7 +359,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 			
 			aia_map = 0
 			for f in aia_files:
-				if f[12:14]+':'+ f[14:16]+':'+ f[16:18] == time_bins[t][10:18]:
+				if time_bins[t][10:18] <= f[12:14]+':'+ f[14:16]+':'+ f[16:18] < time_bins[t+1][10:18]:
 					aia_map = sunpy.map.Map(aia_dir + f);
 					if resample_aia != []:
 						dimensions = u.Quantity([resample_aia[0], resample_aia[1]], u.pixel)
@@ -334,13 +405,13 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 			elif contour_fmt == 'actual_values':
 				compmap.set_levels(1,contour_lvls,percent = False);
 
-			if cmlims != []:
-				if cmlims[0] <= 0: #vmin > 0 or error
-					cmlims[0] = 0.1
-					compmap.plot(vmin=cmlims[0], vmax=cmlims[1]);  
+				if cmlims != []:
+					if cmlims[0] <= 0: #vmin > 0 or error
+						cmlims[0] = 0.1
+						compmap.plot(vmin=cmlims[0], vmax=cmlims[1]);  
 				else:
-					compmap.plot(vmin=cmlims[0], vmax=cmlims[1]); 
-			elif cmlims == []:
+						compmap.plot(vmin=cmlims[0], vmax=cmlims[1]); 
+				elif cmlims == []:
 				compmap.plot();
 				
 			plt.colorbar();
@@ -386,13 +457,13 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 			fig = plt.figure(figsize=(9,8));
 			compmap = sunpy.map.Map(smap, composite=True)
 			
-			if cmlims != []:
-				if cmlims[0] <= 0: #vmin > 0 or error
-					cmlims[0] = 0.1
-					compmap.plot(vmin=cmlims[0], vmax=cmlims[1]);  
+				if cmlims != []:
+					if cmlims[0] <= 0: #vmin > 0 or error
+						cmlims[0] = 0.1
+						compmap.plot(vmin=cmlims[0], vmax=cmlims[1]);  
 				else:
-					compmap.plot(vmin=cmlims[0], vmax=cmlims[1]);
-			elif cmlims == []:
+						compmap.plot(vmin=cmlims[0], vmax=cmlims[1]);
+				elif cmlims == []:
 				compmap.plot();
 				
 			plt.colorbar();
@@ -425,7 +496,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 ###### This function has a memory leak and I don't know where yet so don't run a huge list of files #######
 ###### through it at once! ################################################################################
 ###########################################################################################################
-def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [], submap=[], rectangle=[], 
+	def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [], submap=[], rectangle=[], 
 					 resample=[], save_inc=False, fexviii=False):
 	"""Takes a directory with fits files, constructs a map or submap of the full observation with/without a rectangle and
 	saves the image in the requested directory.
@@ -446,7 +517,7 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [
 			Dots per inch for the save file resolution, e.g. 100, 150, 600, etc.
 			Default: 600
 
-	cmlims : One-dimensional list/array of type float or int, length 2
+		cmlims : One-dimensional list/array of type float or int, length 2
 			Limits of the colourmap, e.g. [vmin, vmax].
 			
 	submap : One-dimensional list/array, length 4
@@ -516,8 +587,8 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [
 				aia_submap.plot_settings['cmap'] = plt.cm.Blues
 			
 			fig = plt.figure()
-			if cmlims != []: #if there are colourmap limits, use them
-				aia_submap.plot(vmin=cmlims[0], vmax=cmlims[1]);
+				if cmlims != []: #if there are colourmap limits, use them
+					aia_submap.plot(vmin=cmlims[0], vmax=cmlims[1]);
 			else:
 				aia_submap.plot();
 			plt.colorbar()
@@ -550,8 +621,8 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [
 			print('\rSaved {} submap(s) of {}'.format(done, num_f), end='')
 		else: #just makes the full map
 			fig = plt.figure();
-			if cmlims != []: #if there are colourmap limits, use them
-				aia_map.plot(vmin=cmlims[0], vmax=cmlims[1]);
+				if cmlims != []: #if there are colourmap limits, use them
+					aia_map.plot(vmin=cmlims[0], vmax=cmlims[1]);
 			else:
 				aia_map.plot();
 			plt.colorbar();
