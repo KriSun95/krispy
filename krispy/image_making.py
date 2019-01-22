@@ -34,11 +34,12 @@ Alterations:
 	KC: 20/12/2018 - made it possible to add more than one rectangle in 'aiamaps()'.
 	KC: 19/01/2019 - the sunpy.map.Map() now takes in a list instead of map objects being created
 						for every file.
-	KC: 19/01/2019 - aiamaps() can nowtake a wavelength for a title, look at two iron channels,
+	KC: 19/01/2019 - aiamaps() can now take a wavelength for a title, look at two iron channels,
 						change the scale of the colour bar, and can now subtract average of 
 						observation.						
 	KC: 19/01/2019 - contourmaps_from_dir() now takes an AIA file from within time range instead
 						having time bins all having to match bfore input.
+	KC: 22/01/2019 - cm_scale is changed to 'Normalize' now when a difference image is requested.
 '''
 
 #make images from the aia fits files
@@ -115,6 +116,7 @@ def aiamaps(directory, save_directory, submap, wavelength='', cmlims = [], recta
 		min_for_diff = np.min(aia_maps.as_array() - aia_maps.as_array().mean())
 		max_for_diff = np.max(aia_maps.as_array())
 		cmlims = [min_for_diff, max_for_diff]
+		cm_scale = 'Normalize' #dont want a log plot for a difference image
 	
 	for f in range(no_of_files):
 		if no_of_files == 1:
@@ -495,6 +497,10 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 ###########################################################################################################
 ###### This function has a memory leak and I don't know where yet so don't run a huge list of files #######
 ###### through it at once! ################################################################################
+###########################################################################################################
+###### This may be fixed by running it through the command line. IPython environments keep ################
+###### references, especially to plots, even after they're not used meaning garbage collection ############
+###### wouldn't get rid of them. ##########################################################################
 ###########################################################################################################
 def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [], submap=[], rectangle=[], 
 					 resample=[], save_inc=False, fexviii=False):
