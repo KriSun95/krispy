@@ -1,19 +1,19 @@
 '''
 Functions to go in here (I think!?):
-	KC: 01/12/2018, ideas-
-	~make_lightcurve()		<
-	~dt_to_md()			<
-	~stepped_plot()			<
-	~cmap_midcolours()      	<   
-	~iron_18_title()
-	~plot_lightcurve()
+    KC: 01/12/2018, ideas-
+    ~make_lightcurve()      <
+    ~dt_to_md()             <
+    ~stepped_plot()         <
+    ~cmap_midcolours()      <   
+    ~iron_18_title()
+    ~plot_lightcurve()
 
-	KC: 18/12/2018, added-
-	~make_lightcurve()
-	~dt_to_md()
-	~stepped_lightcurve()
-    	KC: 19/12/2018, added-	
-    	~cmap_midcolours()
+    KC: 18/12/2018, added-
+    ~make_lightcurve()
+    ~dt_to_md()
+    ~stepped_lightcurve()
+        KC: 19/12/2018, added-  
+        ~cmap_midcolours()
 '''
 from . import file_working
 
@@ -28,7 +28,7 @@ import sunpy.cm
 
 '''
 Alterations:
-	KC: 05/02/2019 - cmap_midcolours() now has the 'Purples' colour pallet assigned to iron 16 (FeXVI).
+    KC: 05/02/2019 - cmap_midcolours() now has the 'Purples' colour pallet assigned to iron 16 (FeXVI).
 '''
 
 #make a light curve
