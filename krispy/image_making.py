@@ -3,7 +3,7 @@ Functions to go in here (I think!?):
 	KC: 01/12/2018, ideas-
 	~make_maps_from_dir()		<
 	~contour_maps_from_dir()	<
-	~iron_18_cmap()				<
+	~iron_18_cmap()			<
 
 	KC: 19/12/2018, added-
 	~aiamaps()
@@ -28,6 +28,7 @@ from scipy import ndimage
 import scipy.io
 import sunpy
 import datetime
+import gc
 
 '''
 Alterations:
@@ -40,6 +41,9 @@ Alterations:
 	KC: 19/01/2019 - contourmaps_from_dir() now takes an AIA file from within time range instead
 						having time bins all having to match bfore input.
 	KC: 22/01/2019 - cm_scale is changed to 'Normalize' now when a difference image is requested.
+        KC: 05/02/2019 - aiamaps() memory leak now solved!! By calling the 'del' operator on the variable 'aia_map'
+                         			before too much gets loaded into memory releases the data efficiently.
+	KC: 05/02/2019 - aiamaps() now makes use of the method 'collect()' from garbage collection (gc) to keep on top of memory.
 '''
 
 #make images from the aia fits files
@@ -97,13 +101,17 @@ def aiamaps(directory, save_directory, submap, wavelength='', cmlims = [], recta
 	-------
 	AIA maps saved to the requested directory (so doesn't really return anythin).
 	"""
+
+        #05/02/2019: ~added 'del aia_map' after submap is defined.
+        #	     ~garbage collection (gc.collect()) is manually called.
+
 	#sets up plots
 	matplotlib.rcParams['font.sans-serif'] = "Arial" 
 	matplotlib.rcParams['font.family'] = "sans-serif"
 	matplotlib.rcParams['font.size'] = 12
 	
 	aia_files = os.listdir(directory)
-	aia_files = only_fits(aia_files)
+	aia_files = file_working.only_fits(aia_files)
 	aia_files.sort()
 	
 	d = 0
@@ -112,6 +120,7 @@ def aiamaps(directory, save_directory, submap, wavelength='', cmlims = [], recta
 	directory_with_files = [directory+f for f in aia_files]
 	aia_maps = sunpy.map.Map(directory_with_files, sequence=True)
 	if ave_diff_image == True:
+                #if the number of files is too large then the .mean() method does not work
 		mean = aia_maps.as_array().mean()
 		min_for_diff = np.min(aia_maps.as_array() - aia_maps.as_array().mean())
 		max_for_diff = np.max(aia_maps.as_array())
@@ -120,7 +129,7 @@ def aiamaps(directory, save_directory, submap, wavelength='', cmlims = [], recta
 	
 	for f in range(no_of_files):
 		if no_of_files == 1:
-			aia_map = aia_maps
+			aia_map = aia_maps[0]
 		elif no_of_files > 1:
 			aia_map = aia_maps[f]
 
@@ -131,14 +140,22 @@ def aiamaps(directory, save_directory, submap, wavelength='', cmlims = [], recta
 		bl_fi = SkyCoord(submap[0]*u.arcsec, submap[1]*u.arcsec, frame=aia_map.coordinate_frame)
 		tr_fi = SkyCoord(submap[2]*u.arcsec, submap[3]*u.arcsec, frame=aia_map.coordinate_frame)
 		
-		smap = aia_map.submap(bl_fi,tr_fi)    
+		smap = aia_map.submap(bl_fi,tr_fi)  
+                del aia_map  
+
+                if cm_scale == 'LogNorm':
+                        #set to min positive value to avoid nans in the log plot for values <=0
+                        m_data = smap.data
+                        m_data[m_data<=0] = np.min(np.min(m_data[m_data>0])) 
+                        smap = sunpy.map.Map(m_data,smap.meta)
+                        del m_data
 			
 		if iron == '18':
 			smap.plot_settings['cmap'] = plt.cm.Blues
 		if iron == '16':
 			smap.plot_settings['cmap'] = plt.cm.Purples
 
-		fig = plt.figure(figsize=(9,8));
+		fig = plt.figure(figsize=(9,8))
 		compmap = sunpy.map.Map(smap, composite=True)
 			
 		if cm_scale == 'Normalize':
@@ -175,24 +192,23 @@ def aiamaps(directory, save_directory, submap, wavelength='', cmlims = [], recta
 		
 		if ave_diff_image == False:
 			if iron == '18': #sets title for Iron 18
-				time = aia_map.meta['t_obs']
+				time = smap.meta['t_obs']
 				plt.title(f'AIA FeXVIII {time[:10]} {time[11:19]}')  
 			elif iron == '16': #sets title for Iron 16
-				time = aia_map.meta['t_obs']
+				time = smap.meta['t_obs']
 				plt.title(f'AIA FeXVI {time[:10]} {time[11:19]}')
 			else:
-				time = aia_map.meta['t_obs']
+				time = smap.meta['t_obs']
 				plt.title('AIA '+ wavelength + r'$\AA$ ' + f'{time[:10]} {time[11:19]}')
 		elif ave_diff_image == True:
 			if iron == '18': #sets title for Iron 18
-				time = aia_map.meta['t_obs']
+				time = smap.meta['t_obs']
 				plt.title(f'AIA FeXVIII {time[:10]} {time[11:19]} (with Mean of Obs. Subtracted)')  
 			elif iron == '16': #sets title for Iron 16
-				time = aia_map.meta['t_obs']
+				time = smap.meta['t_obs']
 				plt.title(f'AIA FeXVI {time[:10]} {time[11:19]} (with Mean of Obs. Subtracted)')
 			else:
-				#print(aia_map.meta)
-				time = aia_map.meta['t_obs']
+				time = smap.meta['t_obs']
 				plt.title('AIA '+ wavelength + r'$\AA$ ' + f'{time[:10]} {time[11:19]} (Mean of Obs. Subtracted)')       
 
 		if save_inc == False:
@@ -200,12 +216,20 @@ def aiamaps(directory, save_directory, submap, wavelength='', cmlims = [], recta
 		elif save_inc == True:
 			plt.savefig(save_dir + 'maps{:03d}.png'.format(d), dpi=600, bbox_inches='tight')
 		d+=1
-				
-		plt.close(fig)
+			
+                plt.clf()
+                plt.cla()	
+		plt.close('all')
+
 		bl_fi = 0
 		tr_fi = 0 
 		del bl_fi
 		del tr_fi
+                del fig
+                del smap
+                del compmap
+
+                gc.collect()
 		print(f'\rSaved {d} submap(s) of {no_of_files}.', end='')
 	
 	aia_map = 0
@@ -218,6 +242,7 @@ def aiamaps(directory, save_directory, submap, wavelength='', cmlims = [], recta
 	del aia_files
 	del smap
 	del compmap
+        gc.collect()
 	print('\nLook everyone, it\'s finished!')
 
 
@@ -336,7 +361,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 	for f in os.listdir(aia_dir):
 		aia_files.append(f)
 	aia_files.sort()
-	aia_files = only_fits(aia_files)
+	aia_files = file_working.only_fits(aia_files)
 	
 	d = counter
 	max_contours = []
@@ -558,7 +583,7 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [
 		assert 0 == 1, 'Deciding not to use this function, try and use the function aiamaps() instead.'
 
 	files = list(os.listdir(fits_dir))
-	files = only_fits(files)
+	files = file_working.only_fits(files)
 	files.sort() #orders the files
 	
 	num_f = len(files) #total number of images

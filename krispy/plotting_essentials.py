@@ -2,9 +2,9 @@
 Functions to go in here (I think!?):
 	KC: 01/12/2018, ideas-
 	~make_lightcurve()		<
-	~dt_to_md()				<
+	~dt_to_md()			<
 	~stepped_plot()			<
-	~cmap_midcolours()      <   
+	~cmap_midcolours()      	<   
 	~iron_18_title()
 	~plot_lightcurve()
 
@@ -12,8 +12,8 @@ Functions to go in here (I think!?):
 	~make_lightcurve()
 	~dt_to_md()
 	~stepped_lightcurve()
-    KC: 19/12/2018, added-	
-    ~cmap_midcolours()
+    	KC: 19/12/2018, added-	
+    	~cmap_midcolours()
 '''
 from . import file_working
 
@@ -25,6 +25,11 @@ import os
 import matplotlib.dates as mdates
 import matplotlib
 import sunpy.cm
+
+'''
+Alterations:
+	KC: 05/02/2019 - cmap_midcolours() now has the 'Purples' colour pallet assigned to iron 16 (FeXVI).
+'''
 
 #make a light curve
 def make_lightcurve(directory, bottom_left, top_right):
@@ -158,6 +163,9 @@ def cmap_midcolours(**kwargs):
     -------
     A dictionary of rgba values (between 0 and 1) for the middle of given colourmaps.
     """
+
+    #05/02/2019: ~colourbar used for iron 16 is added as 'Purples'
+
     #default/standard colourmaps with appropriate names for their use 
     cmap_names = ['sdoaia94', 'sdoaia171', 'sdoaia211'] #default colourmaps
 
@@ -173,7 +181,7 @@ def cmap_midcolours(**kwargs):
         cmap_dict.update({n:colorval}) 
         
     #standard colourmaps given custom names to be used for plotting etc.
-    custom_cmaps = {'sdoaiaFeXVIII':'Blues'} #custom names for standard colourmaps
+    custom_cmaps = {'sdoaiaFeXVIII':'Blues', 'sdoaiaFeXVI':'Purples'} #custom names for standard colourmaps
     
     for c_cmap_name, std_cmap in custom_cmaps.items():
         cmap = matplotlib.cm.get_cmap(std_cmap)
