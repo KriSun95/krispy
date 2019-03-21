@@ -237,6 +237,7 @@ def find_aia_files(directory, wavelength='', time_limits=None, cadence=12, downl
             #time of the last file then there should be one there
             t_of_no_friends.append(time_last)
             
+
     if (download == None) and (len(t_of_no_friends) > 0 ):  
             download = input('Would you like the times of the missing files checked (yea or nay)? ')
     
@@ -248,6 +249,7 @@ def find_aia_files(directory, wavelength='', time_limits=None, cadence=12, downl
     print('Check ', len(t_of_no_friends), ' time intervals for missing files.')
 
     if (download == 'Yes') and (len(t_of_no_friends) > 0 ):
+
         client = VSOClient()
         start_times = [t.strftime("%Y-%m-%d %H:%M:%S") for t in t_of_no_friends]
         #search a minute ahead
@@ -276,5 +278,4 @@ def find_aia_files(directory, wavelength='', time_limits=None, cadence=12, downl
         return no_friends
     if double_check == 'Yes': #double check to see if we have all the files
         still_no_friends = find_aia_files(directory, wavelength, time_limits=time_limits, download='No', double_check='No')
-    
     return still_no_friends

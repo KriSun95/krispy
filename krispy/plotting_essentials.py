@@ -12,6 +12,7 @@ Functions to go in here (I think!?):
     ~make_lightcurve()
     ~dt_to_md()
     ~stepped_lightcurve()
+
     KC: 19/12/2018, added-    
     ~cmap_midcolours()
 '''
