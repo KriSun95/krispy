@@ -206,13 +206,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
                 first_time_through = False
             if rescale_cml == True: #rescale limits is the resolution is changed
                 cmlims = [cmlims[0]*(0.5*(1+res)), cmlims[1]*(0.5*(1+res))]
-                rescale_cml = False   
-   
-        bl_fi = SkyCoord(submap[0]*u.arcsec, submap[1]*u.arcsec, frame=aia_map.coordinate_frame)
-        tr_fi = SkyCoord(submap[2]*u.arcsec, submap[3]*u.arcsec, frame=aia_map.coordinate_frame)
-        
-        smap = aia_map.submap(bl_fi,tr_fi)  
-        del aia_map  
+                rescale_cml = False     
 
         if cm_scale == 'LogNorm':
             #set to min positive value to avoid nans in the log plot for values <=0
@@ -332,7 +326,6 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
     del directory_with_files
     gc.collect()
     print('\nLook everyone, it\'s finished!')
-
 
 
 #make contour maps
@@ -482,15 +475,15 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 			nm=sunpy.map.Map(dd, nustar_map.meta);
 
 			del nustar_map 
-
+			
+			background_in_trng_data = []
+			background_in_trng_header = []
 			aia_map = 0
 			for f in aia_files: #make a list of the aia files in the range
 				aia_time_string = f[3:7]+'/'+f[7:9]+'/'+f[9:11]+', '+f[12:14]+':'+ f[14:16]+':'+ f[16:18]
 				aia_time = datetime.datetime.strptime(aia_time_string, '%Y/%m/%d, %H:%M:%S')
 				t_bin_edge1 = datetime.datetime.strptime(time_bins[t], '%Y/%m/%d, %H:%M:%S')
 				t_bin_edge2 = datetime.datetime.strptime(time_bins[t+1], '%Y/%m/%d, %H:%M:%S')
-				background_in_trng_data = []
-				background_in_trng_header = []
 				if t_bin_edge1 <= aia_time < t_bin_edge2:
 					aia_map = sunpy.map.Map(aia_dir + f);
 					if resample_aia != []: #resample the data here to the new dimensions given now
@@ -502,22 +495,23 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 					if background_time == 'begin': #only need the first one if 'begin' is set so save time and stop here
 						break
 				
-				background_in_trng_data = np.array(background_in_trng_data)
-				num_of_maps = len(background_in_trng_data)
-				if background_time == 'begin':
-					aia_map.sunpy.map.Map(background_in_trng_data[0], background_in_trng_header[0])
-				elif background_time == 'middle':
-					mid_of_maps = num_of_maps // 2
-					aia_map.sunpy.map.Map(background_in_trng_data[mid_of_maps], background_in_trng_header[mid_of_maps])
-				elif background_time == 'end':
-					aia_map.sunpy.map.Map(background_in_trng_data[-1], background_in_trng_header[-1])
-				elif background_time == 'average':
-					aia_map.sunpy.map.Map(background_in_trng_data.sum()/num_of_maps, background_in_trng_header[0])
-				else:
-					print('Choose where the background map comes from: begin, middle, end, or average of time range')
+			background_in_trng_data = np.array(background_in_trng_data)
+			num_of_maps = len(background_in_trng_data)
+			if background_time == 'begin':
+				aia_map = sunpy.map.Map(background_in_trng_data[0], background_in_trng_header[0])
+			elif background_time == 'middle':
+				mid_of_maps = num_of_maps // 2
+				aia_map = sunpy.map.Map(background_in_trng_data[mid_of_maps], background_in_trng_header[mid_of_maps])
+			elif background_time == 'end':
+				aia_map = sunpy.map.Map(background_in_trng_data[-1], background_in_trng_header[-1])
+			elif background_time == 'average':
+				ave = background_in_trng_data.sum(axis=0) / num_of_maps
+				aia_map = sunpy.map.Map(ave, background_in_trng_header[0])
+			else:
+				print('Choose where the background map comes from: begin, middle, end, or average of time range')
 
-				del background_in_trng_data
-				del background_in_trng_header
+			del background_in_trng_data
+			del background_in_trng_header
    
 			if aia_map == 0:
 				print(f'\rNo AIA data in this time range: {time_bins[t]}, {time_bins[t+1]}.', end='')
@@ -612,15 +606,15 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 			del shifted_nustar_submap
 
 		elif (len(cleanevt) == 0 and aia == 'all') or aia == 'solo': #just AIA maps wih the same settings
-			
+			background_in_trng_data = []
+			background_in_trng_header = []
 			aia_map = 0
 			for f in aia_files:
 				aia_time_string = f[3:7]+'/'+f[7:9]+'/'+f[9:11]+', '+f[12:14]+':'+ f[14:16]+':'+ f[16:18]
 				aia_time = datetime.datetime.strptime(aia_time_string, '%Y/%m/%d, %H:%M:%S')
 				t_bin_edge1 = datetime.datetime.strptime(time_bins[t], '%Y/%m/%d, %H:%M:%S')
 				t_bin_edge2 = datetime.datetime.strptime(time_bins[t+1], '%Y/%m/%d, %H:%M:%S')
-				background_in_trng_data = []
-				background_in_trng_header = []
+				
 				if t_bin_edge1 <= aia_time < t_bin_edge2:
 					aia_map = sunpy.map.Map(aia_dir + f);
 					if resample_aia != []:
@@ -632,22 +626,22 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 					if background_time == 'begin':
 						break
 				
-				background_in_trng_data = np.array(background_in_trng_data)
-				num_of_maps = len(background_in_trng_data)
-				if background_time == 'begin':
-					aia_map.sunpy.map.Map(background_in_trng_data[0], background_in_trng_header[0])
-				elif background_time == 'middle':
-					mid_of_maps = num_of_maps // 2
-					aia_map.sunpy.map.Map(background_in_trng_data[mid_of_maps], background_in_trng_header[mid_of_maps])
-				elif background_time == 'end':
-					aia_map.sunpy.map.Map(background_in_trng_data[-1], background_in_trng_header[-1])
-				elif background_time == 'average':
-					aia_map.sunpy.map.Map(background_in_trng_data.sum()/num_of_maps, background_in_trng_header[0])
-				else:
-					print('Choose where the background map comes from: begin, middle, end, or average of time range')
+			background_in_trng_data = np.array(background_in_trng_data)
+			num_of_maps = len(background_in_trng_data)
+			if background_time == 'begin':
+				aia_map = sunpy.map.Map(background_in_trng_data[0], background_in_trng_header[0])
+			elif background_time == 'middle':
+				mid_of_maps = num_of_maps // 2
+				aia_map = sunpy.map.Map(background_in_trng_data[mid_of_maps], background_in_trng_header[mid_of_maps])
+			elif background_time == 'end':
+				aia_map = sunpy.map.Map(background_in_trng_data[-1], background_in_trng_header[-1])
+			elif background_time == 'average':
+				aia_map = sunpy.map.Map(background_in_trng_data.sum()/num_of_maps, background_in_trng_header[0])
+			else:
+				print('Choose where the background map comes from: begin, middle, end, or average of time range')
 
-				del background_in_trng_data
-				del background_in_trng_header
+			del background_in_trng_data
+			del background_in_trng_header
 
 			if aia_map == 0:
 				print(f'\rNo AIA data in this time range: {time_bins[t]}, {time_bins[t+1]}.', end='')
@@ -686,6 +680,8 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 			d+=1
 				
 			plt.close(fig)
+			del smap
+			del aia_map
 			print(f'\rSaved {d} submap(s).', end='')
 		
 		else:
