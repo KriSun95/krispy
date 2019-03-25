@@ -54,7 +54,7 @@ def make_lightcurve(directory, bottom_left, top_right):
     Returns
     -------
     Array of times (as datetime objects) and light curve values in input_unit per pixel (AIA).
-    -OR-
+    -AND/OR-
     Dictionary of times and input_unit per pixel seperated by filter combo and exposure time (XRT).
     """
 
