@@ -241,10 +241,10 @@ def find_aia_files(directory, wavelength='', time_limits=None, cadence=12, downl
     if (download == None) and (len(t_of_no_friends) > 0 ):  
             download = input('Would you like the times of the missing files checked (yea or nay)? ')
     
-        if download in ['No', 'no', 'N', 'n', 'Nope', 'nope', 'Nay', 'nay']:
-            download = 'No'
-        elif download in ['Yes', 'yes', 'Y', 'y', 'Yip', 'yip', 'Yea', 'yea']:
-            download = 'Yes'
+            if download in ['No', 'no', 'N', 'n', 'Nope', 'nope', 'Nay', 'nay']:
+                download = 'No'
+            elif download in ['Yes', 'yes', 'Y', 'y', 'Yip', 'yip', 'Yea', 'yea']:
+                download = 'Yes'
     
     print('Check ', len(t_of_no_friends), ' time intervals for missing files.')
 

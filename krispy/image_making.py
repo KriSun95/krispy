@@ -29,6 +29,7 @@ import scipy.io
 import sunpy
 import datetime
 import gc
+import re
 
 '''
 Alterations:
@@ -51,7 +52,7 @@ Alterations:
 
 #make images from the aia fits files
 def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], save_inc=True, iron='',
-           cm_scale='Normalize', diff_image=None, res=None, save_smap=None):      
+           cm_scale='Normalize', diff_image=None, res=None, save_smap=None, colourbar=True):      
     """Takes a directory with fits files, constructs a map or submap of the full observation with/without a rectangle and
     saves the image in the requested directory.
     
@@ -107,8 +108,13 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
             Default: None
             
     save_smap : Str
-            Can be set to a string for the directory if you want to save the subamps data being worked with to that directory.
+            Can be set to a string for the directory if you want to save the subamps data being worked with to that directory. These
+            submap files are not overwritten so delete them manually if you run it again with a different sub-region.
             Default: None
+
+    colourbar : Bool
+            Indicates whether or not to draw the colour bar for the map.
+            Default: True
 
     Returns
     -------
@@ -131,7 +137,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
         for _d in directory:
             _aia_files = os.listdir(_d)
             _aia_files.sort()
-            _aia_files = only_fits(_aia_files)
+            _aia_files = file_working.only_fits(_aia_files)
             _directory_with_files = [_d+f for f in _aia_files]
             directory_with_files += _directory_with_files
 
@@ -245,10 +251,11 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
                     compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.Normalize())
             elif cmlims == []:
                 compmap.plot(norm=colors.Normalize())
-            if res is not None: #res makes the units per pixel too
-                plt.colorbar(label='DN pix$^{-1}$ s$^{-1}$')
-            elif res is None:
-                plt.colorbar(label='DN s$^{-1}$')
+            if colourbar == True:
+                if res is not None: #res makes the units per pixel
+                    plt.colorbar(label='DN pix$^{-1}$ s$^{-1}$')
+                elif res is None:
+                    plt.colorbar(label='DN s$^{-1}$')
             
         elif cm_scale == 'LogNorm':
             if cmlims != []:
@@ -259,10 +266,11 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
                     compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.LogNorm())
             elif cmlims == []:
                 compmap.plot(norm=colors.LogNorm())
-            if res is not None:
-                plt.colorbar(label='DN pix$^{-1}$ s$^{-1}$')
-            elif res is None:
-                plt.colorbar(label='DN s$^{-1}$')
+            if colourbar == True:
+                if res is not None:
+                    plt.colorbar(label='DN pix$^{-1}$ s$^{-1}$')
+                elif res is None:
+                    plt.colorbar(label='DN s$^{-1}$')
 
         
         if rectangle != []: #if a rectangle(s) is specified, make it
@@ -315,7 +323,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
         del compmap
 
         gc.collect()
-        print(f'\rSaved {d} submap(s) of {no_of_files}.', end='')
+        print(f'\r[function: aiamaps()] Saved {d} submap(s) of {no_of_files}.', end='')
 
     aia_map = 0
     smap = 0
@@ -451,7 +459,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 	for f in os.listdir(aia_dir):
 		aia_files.append(f)
 	aia_files.sort()
-	aia_files = only_fits(aia_files)
+	aia_files = file_working.only_fits(aia_files)
 	
 	d = counter
 	max_contours = []
@@ -797,8 +805,8 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [
                 aia_submap.plot_settings['cmap'] = plt.cm.Blues
             
             fig = plt.figure()
-                if cmlims != []: #if there are colourmap limits, use them
-                    aia_submap.plot(vmin=cmlims[0], vmax=cmlims[1]);
+            if cmlims != []: #if there are colourmap limits, use them
+                aia_submap.plot(vmin=cmlims[0], vmax=cmlims[1]);
             else:
                 aia_submap.plot();
             plt.colorbar()
@@ -833,8 +841,8 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [
             print('\rSaved {} submap(s) of {}'.format(done, num_f), end='')
         else: #just makes the full map
             fig = plt.figure();
-                if cmlims != []: #if there are colourmap limits, use them
-                    aia_map.plot(vmin=cmlims[0], vmax=cmlims[1]);
+            if cmlims != []: #if there are colourmap limits, use them
+                aia_map.plot(vmin=cmlims[0], vmax=cmlims[1]);
             else:
                 aia_map.plot();
             plt.colorbar();

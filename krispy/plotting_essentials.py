@@ -69,12 +69,13 @@ def make_lightcurve(directory, bottom_left, top_right):
             _aia_files = only_fits(_aia_files)
             _directory_with_files = [_d+f for f in _aia_files]
             directory_with_files += _directory_with_files
-    
+    no_of_files = len(directory_with_files)
+
     lc_values = [] #average value for selected area: DN/s/pix
     lc_times = []
     lc_values_xrt = {} #average value for selected area: DN/s/pix
     lc_times_xrt = {}
-    for f in directory_with_files:
+    for d,f in enumerate(directory_with_files):
         aia_map = sunpy.map.Map(f)
         times = aia_map.meta['date_obs']
 
@@ -96,23 +97,23 @@ def make_lightcurve(directory, bottom_left, top_right):
         #check that the data is normalised, aia and xrt tell you in different ways
         if aia_submap_lc.meta['instrume'][:3] == 'AIA' and aia_submap_lc.meta['lvl_num'] == 1.5:
             if aia_submap_lc.meta['exptime'] == 1.0:
-                pass
+                t_norm_data = aia_submap_lc.data
             else:
                 t_norm_data = aia_submap_lc.data / aia_submap_lc.meta['exptime']
-                aia_submap_lc = sunpy.map.Map(t_norm_data, aia_submap_lc.meta)
+                #aia_submap_lc = sunpy.map.Map(t_norm_data, aia_submap_lc.meta)
         elif aia_submap_lc.meta['instrume'] == 'XRT' and 'XRT_PREP' in aia_submap_lc.meta['history']:
             if 'Normalized from' in aia_submap_lc.meta['history'] and 'sec --> 1.00 sec.' in aia_submap_lc.meta['history']:
-                pass
+                t_norm_data = aia_submap_lc.data
             else:
                 t_norm_data = aia_submap_lc.data / aia_submap_lc.meta['exptime']
-                aia_submap_lc = sunpy.map.Map(t_norm_data, aia_submap_lc.meta)
+                #aia_submap_lc = sunpy.map.Map(t_norm_data, aia_submap_lc.meta)
         else:
             print('The data either: isn\'t from the AIA or XRT, or it has not been prepped.')
             return
 
-        ave_value = np.sum(np.array(aia_submap_lc.data)) / ((np.shape(np.array(aia_submap_lc.data))[0] * \
-                                              np.shape(np.array(aia_submap_lc.data))[1]))
         del aia_submap_lc
+        ave_value = np.sum(np.array(t_norm_data)) / ((np.shape(np.array(t_norm_data))[0] * \
+                                              np.shape(np.array(t_norm_data))[1]))
 
         if map_type == 'XRT': #xrt need keys to seperate different filter combos and exptimes
             if key in lc_values_xrt:
@@ -124,6 +125,9 @@ def make_lightcurve(directory, bottom_left, top_right):
         elif map_type == 'AIA':
             lc_times.append(obs_time)
             lc_values.append(ave_value)
+
+        print(f'\r[function: make_lightcurve()] Looked at {d+1} files of {no_of_files}.', end='')
+
     if map_type == 'AIA':
         return lc_times, lc_values
     elif map_type == 'XRT': 
