@@ -20,8 +20,8 @@ from pylab import figure, cm
 from astropy.coordinates import SkyCoord
 import numpy as np
 import nustar_pysolar as nustar
-import filter_with_tmrng ######Kris
-import custom_map ######Kris
+from . import filter_with_tmrng ######Kris
+from . import custom_map ######Kris
 import sunpy.map
 from scipy import ndimage
 import re #for regular expressions
@@ -75,7 +75,7 @@ class NustarDo:
         
         #search for all seperate sub-strings composed of digits, first one in evt_filename is observation id
         obs_id_regex = re.compile(r'\d+')
-        obs_id = obs_id_regex.findall(evt_filename)[0]
+        obs_id = obs_id_regex.findall(name_of_file)[0]
         self.obs_id = obs_id
         
         #set attributes of the file and parameters used in other functions on the class
@@ -590,7 +590,7 @@ class NustarDo:
                 assert t_bin_conversion >= 1, 'Number of bins cannot be <1. Decrease \'t_bin\' value to get more bins.'
 
                 counts = np.histogram(cleanevt['TIME'], t_bin_conversion) #gives out bin values and bin edges
-                self.counts = counts[0]
+                self.lc_counts = counts[0]
                 times = counts[1][:-1]
                 t_bin_edges = counts[1]
                 
@@ -810,7 +810,7 @@ class NustarDo:
                 ~rectangle coordinates
         '''
         
-        if self.chu_state not 'not_split':
+        if self.chu_state != 'not_split':
             nustar_folder = save_dir + self.obs_id + self.fpm + '_' + self.chu_state + '_nustar_folder'
         else:
             nustar_folder = save_dir + self.obs_id + self.fpm + '_nustar_folder'
