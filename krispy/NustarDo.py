@@ -809,8 +809,12 @@ class NustarDo:
             ~lc_counts/lc_count_rates, lc_times, lightcurve plot(s)
                 ~rectangle coordinates
         '''
-        nustar_folder = save_dir + self.obs_id + '_nustar_folder'
         
+        if self.chu_state not 'not_split':
+            nustar_folder = save_dir + self.obs_id + self.fpm + '_' + self.chu_state + '_nustar_folder'
+        else:
+            nustar_folder = save_dir + self.obs_id + self.fpm + '_nustar_folder'
+
         # Create target Directory if don't exist
         if not os.path.exists(nustar_folder + '/'):
             nustar_folder = nustar_folder + '/'
