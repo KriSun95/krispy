@@ -902,3 +902,12 @@ class NustarDo:
                 pickle.dump(kwargs, own_save_file, protocol=pickle.HIGHEST_PROTOCOL)
                 
         print(' Now Populated.')
+
+def shift(evt_data, pix_xshift=None, pix_yshift=None):
+    if pix_xshift != None:
+        for X in evt_data:
+            X['X'] = X['X'] + pix_xshift 
+    if pix_yshift != None:
+        for Y in evt_data:
+            Y['Y'] = Y['Y'] + pix_yshift 
+    return evt_data
