@@ -31,6 +31,7 @@ from datetime import timedelta
 from astropy.io.fits.verify import VerifyWarning
 import matplotlib.dates as mdates
 import pickle
+import subprocess
 
 '''
 Alterations:
