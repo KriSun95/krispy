@@ -125,7 +125,59 @@ class NustarDo:
             raise ValueError('\nThere there are no counts within these paramenters. '
                              '\nThis may be because no counts were recorded or that the paramenters are outwith the '
                              'scope of NuSTAR and/or the observation.')
-    
+    @staticmethod
+    def shift(evt_data, pix_xshift=None, pix_yshift=None):
+        if pix_xshift != None:
+            for X in evt_data:
+                X['X'] = X['X'] + pix_xshift 
+        if pix_yshift != None:
+            for Y in evt_data:
+                Y['Y'] = Y['Y'] + pix_yshift 
+        return evt_data
+
+
+    @staticmethod
+    def arcsec_to_pixel(*args, **kwargs):
+        #NuSTAR values: ['crpix1'+0.5,'crpix2','cdelt1']
+        meta = {'centre_pix_val': [1499.5+0.5, 1500], 'arc_per_pix':[2.45810736], 'length':False} 
+        #change list with kwargs
+        for key, kwarg in kwargs.items():   
+            meta[key] = kwarg
+
+        #convert numbers so that they are easier to work with
+        indices_for_centre = {'x':meta['centre_pix_val'][0]-1, 'y':meta['centre_pix_val'][1]-1}
+        assert 1 <= len(meta['arc_per_pix']) <= 2, '\'arc_per_pix\' needs to have one or two arguments only.'
+        if len(meta['arc_per_pix']) == 2:
+            delta_x = meta['arc_per_pix'][0]
+            delta_y = meta['arc_per_pix'][1]
+        elif len(meta['arc_per_pix']) == 1:
+            delta_x = meta['arc_per_pix'][0]
+            delta_y = meta['arc_per_pix'][0]
+
+        pixel_lengths = []
+        if meta['length'] == True:
+            for arg in args:
+                x_length = (arg[0] / delta_x)
+                y_length = (arg[1] / delta_y)
+                pixel_lengths.append([int(round(x_length,0)), int(round(y_length,0))])
+            return pixel_lengths
+
+        #input coordinates as [x,y] in arcseconds
+        pixel_coords = []
+        for arg in args:
+            x_index = indices_for_centre['x'] + (arg[0] / delta_x)
+            y_index = indices_for_centre['y'] + (arg[1] / delta_y)
+            pixel_coords.append([int(round(x_index,0)), int(round(y_index,0))])
+        return pixel_coords
+
+
+    def nustar_shift_map(self, x_shift_arc, y_shift_arc):   
+        #find shift in pix
+        shift_pix = self.arcsec_to_pixel([x_shift_arc, y_shift_arc], length=True)
+        #shift data now
+        shift_cleanevt = self.shift(self.cleanevt, pix_xshift=shift_pix[0][0], pix_yshift=shift_pix[0][1]) 
+
+        self.cleanevt = shift_cleanevt
     
     gaussian_filter = {'apply':True, 'sigma':4, 'mode':'nearest'}
     
@@ -408,33 +460,6 @@ class NustarDo:
             plt_date = mdates.date2num(d)
             new_array[c] = plt_date
         return new_array
-    
-    
-    @staticmethod
-    def arcsec_to_pixel(*args, **kwargs):
-        #NuSTAR values: ['crpix1'+0.5,'crpix2','cdelt1']
-        meta = {'centre_pix_val': [1499.5+0.5, 1500], 'arc_per_pix':[2.45810736]} 
-        #change list with kwargs
-        for key, kwarg in kwargs.items():   
-            meta[key] = kwarg
-
-        #convert numbers so that they are easier to work with
-        indices_for_centre = {'x':meta['centre_pix_val'][0]-1, 'y':meta['centre_pix_val'][1]-1}
-        assert 1 <= len(meta['arc_per_pix']) <= 2, '\'arc_per_pix\' needs to have one or two arguments only.'
-        if len(meta['arc_per_pix']) == 2:
-            delta_x = meta['arc_per_pix'][0]
-            delta_y = meta['arc_per_pix'][1]
-        elif len(meta['arc_per_pix']) == 1:
-            delta_x = meta['arc_per_pix'][0]
-            delta_y = meta['arc_per_pix'][0]
-
-        #input coordinates as [x,y] in arcseconds
-        pixel_coords = []
-        for arg in args:
-            x_index = indices_for_centre['x'] + (arg[0] / delta_x)
-            y_index = indices_for_centre['y'] + (arg[1] / delta_y)
-            pixel_coords.append([int(round(x_index,0)), int(round(y_index,0))])
-        return pixel_coords
 
 
     @staticmethod
@@ -639,7 +664,7 @@ class NustarDo:
                         sub_cleanevt = self.time_filter(spacial_evtdata, tmrng=[ts, te])
                         counts.append(len(sub_cleanevt['TIME']))
            
-                    self.counts = np.array(counts)
+                    self.lc_counts = np.array(counts)
 
                 elif np.shape(sub_reg)[1] == 4:  
                     all_counts = {}
@@ -659,6 +684,7 @@ class NustarDo:
           
                         box = ' (Box '+str(b)+')'
                         all_counts[box] = np.array(counts)
+
                         if make_final_graph == True:
                             
                             if count_rate == True:
@@ -715,6 +741,8 @@ class NustarDo:
                         self.lc_count_rates = None
                     else:
                         self.lc_count_rates = all_count_rates
+                     
+                    self.lc_times = dt_times
                         
                     make_final_graph = False
                         
@@ -779,6 +807,7 @@ class NustarDo:
                 ax.xaxis.set_major_locator(plt.LinearLocator(9))
                 plt.xticks(rotation=30)
                 plt.show()
+                self.lc_times = dt_times
                 self.lc_count_rates = None
 
      
