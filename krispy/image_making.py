@@ -231,6 +231,8 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
             smap.plot_settings['cmap'] = plt.cm.Purples
         if diff_image is not None:
             smap.plot_settings['cmap'] = plt.cm.coolwarm
+        if (_aia_files[0][0:3] == 'HMI') or (_aia_files[0][0:3] == 'hmi'):
+            smap.plot_settings['cmap'] = matplotlib.cm.get_cmap('hmimag')
 
         #save submap that you're working with to save time later
         if save_smap is not None:
@@ -955,3 +957,268 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [
             done += 1
             print('\rSaved {} map(s) of {}'.format(done, num_f), end='')
     print('\nAll files saved!')
+
+
+#make composite images from the aia fits files
+def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cmlims = [], lvls=[-50, 50], rectangle=[], save_inc=True, iron='',
+                    cm_scale='Normalize', res=None, colourbar=True):      
+    """Takes a directory with fits files, constructs a map or submap of the full observation with/without a rectangle and
+    saves the image in the requested directory.
+    
+    Parameters
+    ----------
+    directory : Data directory
+            The directory which contains the list of fits files from the AIA. Must end with a '/'. Can now accept a list of directories
+            of multiple data directories, e.g. [dir1,dir2,...]. Make sure they're in order.
+    
+    save_directory : Save directory
+            The directory in which the new fits files are saved. Must end with a '/'. Can now accept a list of directories
+            of where to save all of the images, e.g. [sav1,sav2,...].
+    
+    save_directory : Save directory
+            The directory in which the new fits files are saved. Must end with a '/'.
+        
+    savefile_fmt : Str
+            File extension for the saved file's format, e.g. '.png', '.jpg', '.pdf', etc.
+            Default: '.png'
+            
+    submap : One-dimensional list/array, length 4
+            Contains the bottom left (bl) and top right (tr) coordinates for a submap, e.g. [blx,bly,trx,try]. Must be 
+            in arcseconds, of type float or integer and NOT an arcsec object.
+
+    cmlims : One-dimensional list/array of type float or int, length 2
+            Limits of the colourmap, e.g. [vmin, vmax]. 
+    
+    lvls : 1D array
+            Contour levels as true values (not percentages) fort the second overlying map. If lvls is set to None then the two maps are
+            just combined.
+            Default: [-50, 50]
+            
+    rectangle : two-dimensional list/array, shape=n,4
+            Contains lists of the bottom left (bl) and top right (tr) coordinates to draw a rectangle on the constructed 
+            map, e.g. [[blx1,bly1,trx1,try1], [blx2,bly2,trx2,try2], ...]. Must be in arcseconds, of type float or 
+            integer and NOT an arcsec object.
+            
+    save_inc : Bool
+            Indicates whether or not the save file should be named with respect to the file it was produced from or be
+            named incrementally, e.g. AIA123456_123456_1234.png or map_000 respectively.
+            Default: True
+    
+    iron : Str
+            Indicates whether or not the save file is the iron 16 or 18 channel. Set to '16' or '18'.
+            Default: ''
+
+    cm_scale : Str
+            Scale for the colour bar for the plot. Set to 'Normalize' or 'LogNorm'.
+            Default: 'Normalize'
+
+    res : float
+            A float <1 which has the resolution of the image reduced, e.g. 0.5 produces an image at 50% resolution to the original.
+            Default: None
+
+    colourbar : Bool
+            Indicates whether or not to draw the colour bar for the map.
+            Default: True
+
+    Returns
+    -------
+    AIA maps saved to the requested directory (so doesn't really return anythin).
+    """
+
+    np.seterr(divide='ignore', invalid='ignore') #ignore warnings resulting from missing header info
+    warnings.simplefilter('ignore', Warning)
+
+    matplotlib.rcParams['font.sans-serif'] = "Arial" #sets up plots
+    matplotlib.rcParams['font.family'] = "sans-serif"
+    matplotlib.rcParams['font.size'] = 12
+
+    title_addition = ''
+    rescale_cml = False
+    first_time_through = True
+
+    if type(directory) == str:
+        directory = [directory] # no point in writing out the loop below twice
+        
+    if type(directory) == list: # directory lists must be in time order for now, hopefully this will change (and look better with *args?)
+        directory_with_files = []
+        for _d in directory:
+            _aia_files = os.listdir(_d)
+            _aia_files.sort()
+            _aia_files = file_working.only_fits(_aia_files)
+            _directory_with_files = [_d+f for f in _aia_files]
+            directory_with_files += _directory_with_files
+
+    if type(second_directory) == str:
+        second_directory = [second_directory] # no point in writing out the loop below twice
+        
+    if type(second_directory) == list: # directory lists must be in time order for now, hopefully this will change (and look better with *args?)
+        second_directory_with_files = []
+        for _d in second_directory:
+            _aia_files = os.listdir(_d)
+            _aia_files.sort()
+            _aia_files = file_working.only_fits(_aia_files)
+            _directory_with_files = [_d+f for f in _aia_files]
+            second_files = _aia_files
+            second_directory_with_files += _directory_with_files
+
+    no_of_files = len(directory_with_files)
+
+    d = 0
+
+    for f in range(no_of_files):
+
+        aia_map = sunpy.map.Map(directory_with_files[f])
+
+        #find closest overlay file
+        first_image_time = datetime.datetime.strptime(aia_map.meta['t_obs'], '%Y-%m-%dT%H:%M:%S.%fZ')
+        distance = [abs(first_image_time - datetime.datetime.strptime(over[3:18], '%Y%m%d_%H%M%S')) for over in second_files]
+        closest = np.argmin(distance)
+        second_aia_map = sunpy.map.Map(second_directory_with_files[closest])
+        
+        if submap != None:
+            bl_fi = SkyCoord(submap[0]*u.arcsec, submap[1]*u.arcsec, frame=aia_map.coordinate_frame)
+            tr_fi = SkyCoord(submap[2]*u.arcsec, submap[3]*u.arcsec, frame=aia_map.coordinate_frame)
+        
+            smap = aia_map.submap(bl_fi,tr_fi) 
+            second_smap = second_aia_map.submap(bl_fi,tr_fi)
+            del aia_map
+            del second_aia_map
+        else:
+            smap = aia_map
+            second_smap = second_aia_map
+
+        if res is not None:
+            orig_size = np.shape(smap.data)
+            smap = smap.resample(u.Quantity([orig_size[0]*res,orig_size[1]*res], u.pixel)) #new dimensions are the fraction you want of the original
+            if first_time_through == True: #only add the new title info on the first gop through
+                title_res = ' ({:.0f}'.format(res*100)+'% res)'
+                title_addition = title_addition + title_res
+                first_time_through = False
+            if rescale_cml == True: #rescale limits is the resolution is changed
+                cmlims = [cmlims[0]*(0.5*(1+res)), cmlims[1]*(0.5*(1+res))]
+                rescale_cml = False     
+
+        if cm_scale == 'LogNorm':
+            #set to min positive value to avoid nans in the log plot for values <=0
+            m_data = smap.data
+            m_data[m_data<=0] = np.min(np.min(m_data[m_data>0])) 
+            smap = sunpy.map.Map(m_data,smap.meta)
+            del m_data
+            
+        if iron == '18':
+            smap.plot_settings['cmap'] = plt.cm.Blues
+        if iron == '16':
+            smap.plot_settings['cmap'] = plt.cm.Purples
+        if (_aia_files[0][0:3] == 'HMI') or (_aia_files[0][0:3] == 'hmi'):
+            second_smap.plot_settings['cmap'] = matplotlib.cm.get_cmap('hmimag')
+
+        fig, ax = plt.subplots(figsize=(9,8)) 
+        
+        compmap = sunpy.map.Map(smap, second_smap, composite=True) #comp image as to keep formatting the same as NuSTAR
+        
+        if lvls is not None:
+            compmap.set_alpha(0, 1)
+            compmap.set_alpha(1, 0.4)
+            compmap.set_levels(index=1, levels=lvls)
+        else:
+            compmap.set_alpha(0, 0.5)
+            compmap.set_alpha(1, 0.5)
+        
+        if cm_scale == 'Normalize': #tell the plot the choices for the limits and colour map
+            if cmlims != []:
+                if False:#cmlims[0] <= 0 and diff_image == False: #vmin > 0 or error
+                    cmlims[0] = 0.1
+                    compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.Normalize())
+                else:
+                    compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.Normalize())
+            elif cmlims == []:
+                compmap.plot(norm=colors.Normalize())
+            if colourbar == True:
+                if res is not None: #res makes the units per pixel
+                    plt.colorbar(label='DN pix$^{-1}$ s$^{-1}$')
+                elif res is None:
+                    plt.colorbar(label='DN s$^{-1}$')
+            
+        elif cm_scale == 'LogNorm':
+            if cmlims != []:
+                if cmlims[0] <= 0: #vmin > 0 or error
+                    cmlims[0] = 0.1
+                    compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.LogNorm()) 
+                else:
+                    compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.LogNorm())
+            elif cmlims == []:
+                compmap.plot(norm=colors.LogNorm())
+            if colourbar == True:
+                if res is not None:
+                    plt.colorbar(label='DN pix$^{-1}$ s$^{-1}$')
+                elif res is None:
+                    plt.colorbar(label='DN s$^{-1}$')
+
+        
+        if rectangle != []: #if a rectangle(s) is specified, make it
+            for rect in rectangle:
+                
+                bl_rect = SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=smap.coordinate_frame)
+                length = rect[2] - rect[0]
+                height = rect[3] - rect[1]
+                if (iron != ''): #if iron or a diff map is needed then make the rectangles black
+                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = 'black')
+                else:
+                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec)
+        
+        #make titles
+        time = smap.meta['t_obs'] 
+        wavelength = str(smap.meta['wavelnth'])
+        second_w = str(second_smap.meta['wavelnth'])
+        if iron == '18': #sets title for Iron 18
+            plt.title(f'AIA FeXVIII and {second_w} $\AA$ {time[:10]} {time[11:19]}'+title_addition)  
+        elif iron == '16': #sets title for Iron 16
+            plt.title(f'AIA FeXVI and {second_w} $\AA$ {time[:10]} {time[11:19]}'+title_addition)
+        else:
+            plt.title('AIA '+wavelength + r'$\AA$ and {second_w} $\AA$ ' + f'{time[:10]} {time[11:19]}'+title_addition)
+
+        if type(save_directory) == str: #save writing what is below twice
+            save_directory = [save_directory]
+        if type(save_directory) == list:
+            for _save_d in save_directory:
+                if save_inc == False:
+                    plt.savefig(_save_d + f'aia_image{wavelength}.png', dpi=600, bbox_inches='tight')
+                elif save_inc == True:
+                    plt.savefig(_save_d + 'maps{:04d}.png'.format(d), dpi=600, bbox_inches='tight')
+        d+=1
+                
+        plt.clf() 
+        plt.cla()
+        plt.close('all')
+
+        
+        bl_fi = 0 #reassign variables that take up a lot of space the delete them just to be sure
+        tr_fi = 0 
+        aia_map = 0
+        smap = 0
+        second_aia_map = 0
+        second_smap = 0
+        compmap = 0
+        del bl_fi
+        del tr_fi
+        del fig
+        del ax
+        del aia_map
+        del smap
+        del second_aia_map
+        del second_smap
+        del compmap
+
+        gc.collect()
+        print(f'\r[function: aiamaps()] Saved {d} submap(s) of {no_of_files}.', end='')
+
+    aia_map = 0
+    smap = 0
+    compmap = 0
+    del aia_map
+    del smap
+    del compmap
+    del directory_with_files
+    gc.collect()
+    print('\nLook everyone, it\'s finished!')
+
