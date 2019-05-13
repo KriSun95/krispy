@@ -1210,7 +1210,7 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
         del compmap
 
         gc.collect()
-        print(f'\r[function: aiamaps()] Saved {d} submap(s) of {no_of_files}.', end='')
+        print(f'\r[function: overlay_aiamaps()] Saved {d} submap(s) of {no_of_files}.', end='')
 
     aia_map = 0
     smap = 0
