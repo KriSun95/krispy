@@ -166,7 +166,7 @@ def only_fits(fits_list, ext = '.fits'):
 
 
 #The missing file finder function
-def find_aia_files(directory, wavelength='', time_limits=None, cadence=12, download=None, double_check='Yes'):
+def find_sdo_files(directory, wavelength='', time_limits=None, cadence=12, download=None, double_check='Yes'):
     """Checks a directory for missing files from downloading AIA images and can check/download the 
     files from the missing time.
 
@@ -178,7 +178,8 @@ def find_aia_files(directory, wavelength='', time_limits=None, cadence=12, downl
             A string of the path to the files to be checked.
     
     wavelength : Str
-            The wavelength of the files to check. Only important if download = 'yes' or 'auto'.
+            The wavelength of the files to check. Only important if download = 'yes' or 'auto'. For HMI 
+            files then can have 'los_magnetic_field', 'intensity', etc.
             Default: ''
 
     time_limits : list
@@ -255,8 +256,10 @@ def find_aia_files(directory, wavelength='', time_limits=None, cadence=12, downl
         #search a minute ahead
         end_times = [(t + timedelta(seconds=5*cadence)).strftime("%Y-%m-%d %H:%M:%S") for t in t_of_no_friends]
         for ts, te in zip(start_times, end_times):
-            query_response = client.query_legacy(tstart=ts, tend=te, instrument='AIA', wave=wavelength)
-
+            if files[0][0:3] == 'aia':
+                query_response = client.query_legacy(tstart=ts, tend=te, instrument='AIA', wave=wavelength)
+            elif files[0][0:3] == 'hmi':
+                query_response = client.query_legacy(tstart=st, tend=et, instrument='HMI', physobs=wavelength)
             n = len(query_response) - 1 #will be used to index the list 'query_response' when downloading
 
             #Download the first two from ROB to /tmp folder and wait for download to complete
@@ -277,5 +280,5 @@ def find_aia_files(directory, wavelength='', time_limits=None, cadence=12, downl
             print('Please wait a few minutes and try this function again, it depends on the servers sometimes.')
         return no_friends
     if double_check == 'Yes': #double check to see if we have all the files
-        still_no_friends = find_aia_files(directory, wavelength, time_limits=time_limits, download='No', double_check='No')
+        still_no_friends = find_sdo_files(directory, wavelength, time_limits=time_limits, download='No', double_check='No')
     return still_no_friends
