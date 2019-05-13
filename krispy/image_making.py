@@ -30,6 +30,7 @@ import sunpy
 import datetime
 import gc
 import re
+import warnings
 
 '''
 Alterations:
@@ -120,6 +121,9 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
     -------
     AIA maps saved to the requested directory (so doesn't really return anythin).
     """
+
+    np.seterr(divide='ignore', invalid='ignore') #ignore warnings resulting from missing header info
+    warnings.simplefilter('ignore', Warning)
 
     matplotlib.rcParams['font.sans-serif'] = "Arial" #sets up plots
     matplotlib.rcParams['font.family'] = "sans-serif"
