@@ -962,7 +962,7 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [
 
 #make composite images from the aia fits files
 def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cmlims = [],cmlims2=[], rectangle=[], save_inc=True, iron='',
-                    cm_scale='Normalize', res=None, in_order=True, alphas=[0.5,0.5], lvls=None):      
+                    cm_scale='Normalize', res=None, in_order=True, alphas=[0.5,0.5], lvls=None, dpi=600):      
     """Takes a directory with fits files, constructs a map or submap of the full observation with/without a rectangle and
     saves the image in the requested directory.
     
@@ -1005,7 +1005,7 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
             Default: ''
 
     cm_scale : Str
-            Scale for the colour bar for the plot. Set to 'Normalize' or 'LogNorm'.
+            Scale for the colour bar for the first maps given. Set to 'Normalize' or 'LogNorm'.
             Default: 'Normalize'
 
     res : float
@@ -1025,6 +1025,10 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
             Contour levels as true values (not percentages) fort the second overlying map. If lvls is set to None then the two maps are
             just combined.
             Default: None
+
+    dpi : Int
+            Express the dots per inch that the images produced should have.
+            Default: 600
 
     Returns
     -------
@@ -1131,7 +1135,12 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
         #plt.show()
 
         if lvls is None:
-            smap.plot_settings['norm'] = colors.Normalize(vmin=cmlims[0],vmax=cmlims[1])
+            if cm_scale == 'LogNorm':
+                if cmlims[0] <= 0:
+                    cmlims[0] = 0.1
+                smap.plot_settings['norm'] = colors.LogNorm(vmin=cmlims[0],vmax=cmlims[1])
+            else:
+                smap.plot_settings['norm'] = colors.Normalize(vmin=cmlims[0],vmax=cmlims[1])
             second_smap.plot_settings['norm'] = colors.Normalize(vmin=cmlims2[0],vmax=cmlims2[1])
 
         fig, ax = plt.subplots(figsize=(9,8)) 
@@ -1195,9 +1204,9 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
         if type(save_directory) == list:
             for _save_d in save_directory:
                 if save_inc == False:
-                    plt.savefig(_save_d + f'compaia_image{wavelength}.png', dpi=600, bbox_inches='tight')
+                    plt.savefig(_save_d + f'compaia_image{wavelength}.png', dpi=dpi, bbox_inches='tight')
                 elif save_inc == True:
-                    plt.savefig(_save_d + 'maps{:04d}.png'.format(d), dpi=600, bbox_inches='tight')
+                    plt.savefig(_save_d + 'maps{:04d}.png'.format(d), dpi=dpi, bbox_inches='tight')
         d+=1
                 
         plt.clf() 
