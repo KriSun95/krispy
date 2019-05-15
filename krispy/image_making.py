@@ -31,6 +31,7 @@ import datetime
 import gc
 import re
 import warnings
+import astropy.units as u
 
 '''
 Alterations:
@@ -960,8 +961,8 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [
 
 
 #make composite images from the aia fits files
-def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cmlims = [], lvls=[-50, 50], rectangle=[], save_inc=True, iron='',
-                    cm_scale='Normalize', res=None, colourbar=True):      
+def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cmlims = [],cmlims2=[], rectangle=[], save_inc=True, iron='',
+                    cm_scale='Normalize', res=None, in_order=True, alphas=[0.5,0.5], lvls=None):      
     """Takes a directory with fits files, constructs a map or submap of the full observation with/without a rectangle and
     saves the image in the requested directory.
     
@@ -970,17 +971,14 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
     directory : Data directory
             The directory which contains the list of fits files from the AIA. Must end with a '/'. Can now accept a list of directories
             of multiple data directories, e.g. [dir1,dir2,...]. Make sure they're in order.
+
+    second_directory : Data directory
+            The directory which contains the list of fits files for the second maps from the AIA. Must end with a '/'. Can now accept a list of directories
+            of multiple data directories, e.g. [dir1,dir2,...]. Make sure they're in order.
     
     save_directory : Save directory
             The directory in which the new fits files are saved. Must end with a '/'. Can now accept a list of directories
             of where to save all of the images, e.g. [sav1,sav2,...].
-    
-    save_directory : Save directory
-            The directory in which the new fits files are saved. Must end with a '/'.
-        
-    savefile_fmt : Str
-            File extension for the saved file's format, e.g. '.png', '.jpg', '.pdf', etc.
-            Default: '.png'
             
     submap : One-dimensional list/array, length 4
             Contains the bottom left (bl) and top right (tr) coordinates for a submap, e.g. [blx,bly,trx,try]. Must be 
@@ -988,11 +986,9 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
 
     cmlims : One-dimensional list/array of type float or int, length 2
             Limits of the colourmap, e.g. [vmin, vmax]. 
-    
-    lvls : 1D array
-            Contour levels as true values (not percentages) fort the second overlying map. If lvls is set to None then the two maps are
-            just combined.
-            Default: [-50, 50]
+
+    cmlims2 : One-dimensional list/array of type float or int, length 2
+            Limits of the colourmap for the second map, e.g. [vmin, vmax]. 
             
     rectangle : two-dimensional list/array, shape=n,4
             Contains lists of the bottom left (bl) and top right (tr) coordinates to draw a rectangle on the constructed 
@@ -1016,9 +1012,19 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
             A float <1 which has the resolution of the image reduced, e.g. 0.5 produces an image at 50% resolution to the original.
             Default: None
 
-    colourbar : Bool
-            Indicates whether or not to draw the colour bar for the map.
-            Default: True
+    in_order : Bool
+            If True then the second map will be overlain on the first, if False the this order switches. This is important as the first maps 
+            dictate the frames created, i.e. the first map is paired with its closest (in time) second map, so you might want all the frames of
+            the first lot of maps but have that go on top of the second maps when plotted.
+            Default: True 
+
+    alphas : One-dimensional list/array of type float or int, length 2
+            Alpha channel for map1 and map2, in order of plot order, respectively, e.g. [a1, a2]. 
+    
+    lvls : 1D array
+            Contour levels as true values (not percentages) fort the second overlying map. If lvls is set to None then the two maps are
+            just combined.
+            Default: None
 
     Returns
     -------
@@ -1035,6 +1041,9 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
     title_addition = ''
     rescale_cml = False
     first_time_through = True
+
+    if cmlims2 == []:
+        cmlims2 = cmlims
 
     if type(directory) == str:
         directory = [directory] # no point in writing out the loop below twice
@@ -1104,41 +1113,50 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
             m_data[m_data<=0] = np.min(np.min(m_data[m_data>0])) 
             smap = sunpy.map.Map(m_data,smap.meta)
             del m_data
+
+        #fig = plt.figure()
+        #plt.imshow(second_smap.data, vmin=-50,vmax=50)
+        #plt.show()
             
         if iron == '18':
             smap.plot_settings['cmap'] = plt.cm.Blues
         if iron == '16':
             smap.plot_settings['cmap'] = plt.cm.Purples
         if (_aia_files[0][0:3] == 'HMI') or (_aia_files[0][0:3] == 'hmi'):
-            second_smap.plot_settings['cmap'] = matplotlib.cm.get_cmap('hmimag')
+            second_smap = second_smap.rotate(angle = 180 * u.deg)
+            second_smap.plot_settings['cmap'] = matplotlib.cm.get_cmap('PiYG_r') # use a simpler cmap than 'hmimag'
+
+        #fig = plt.figure()
+        #plt.imshow(second_smap.data, vmin=-50,vmax=50)
+        #plt.show()
+
+        if lvls is None:
+            smap.plot_settings['norm'] = colors.Normalize(vmin=cmlims[0],vmax=cmlims[1])
+            second_smap.plot_settings['norm'] = colors.Normalize(vmin=cmlims2[0],vmax=cmlims2[1])
 
         fig, ax = plt.subplots(figsize=(9,8)) 
         
-        compmap = sunpy.map.Map(smap, second_smap, composite=True) #comp image as to keep formatting the same as NuSTAR
+        if in_order == True:
+            compmap = sunpy.map.Map(smap, second_smap, composite=True)
+        elif in_order == False:
+            compmap = sunpy.map.Map(second_smap, smap, composite=True)
         
         if lvls is not None:
-            compmap.set_alpha(0, 1)
-            compmap.set_alpha(1, 0.4)
+            compmap.set_alpha(0, 2*alphas[0])
+            compmap.set_alpha(1, alphas[1])
             compmap.set_levels(index=1, levels=lvls)
         else:
-            compmap.set_alpha(0, 0.5)
-            compmap.set_alpha(1, 0.5)
-        
+            compmap.set_alpha(0, alphas[0])
+            compmap.set_alpha(1, alphas[1])
+        compmap.plot()
+
+        '''        
         if cm_scale == 'Normalize': #tell the plot the choices for the limits and colour map
             if cmlims != []:
-                if False:#cmlims[0] <= 0 and diff_image == False: #vmin > 0 or error
-                    cmlims[0] = 0.1
-                    compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.Normalize())
-                else:
-                    compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.Normalize())
+                compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.Normalize())
             elif cmlims == []:
                 compmap.plot(norm=colors.Normalize())
-            if colourbar == True:
-                if res is not None: #res makes the units per pixel
-                    plt.colorbar(label='DN pix$^{-1}$ s$^{-1}$')
-                elif res is None:
-                    plt.colorbar(label='DN s$^{-1}$')
-            
+        
         elif cm_scale == 'LogNorm':
             if cmlims != []:
                 if cmlims[0] <= 0: #vmin > 0 or error
@@ -1148,12 +1166,7 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
                     compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.LogNorm())
             elif cmlims == []:
                 compmap.plot(norm=colors.LogNorm())
-            if colourbar == True:
-                if res is not None:
-                    plt.colorbar(label='DN pix$^{-1}$ s$^{-1}$')
-                elif res is None:
-                    plt.colorbar(label='DN s$^{-1}$')
-
+        '''
         
         if rectangle != []: #if a rectangle(s) is specified, make it
             for rect in rectangle:
@@ -1182,7 +1195,7 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
         if type(save_directory) == list:
             for _save_d in save_directory:
                 if save_inc == False:
-                    plt.savefig(_save_d + f'aia_image{wavelength}.png', dpi=600, bbox_inches='tight')
+                    plt.savefig(_save_d + f'compaia_image{wavelength}.png', dpi=600, bbox_inches='tight')
                 elif save_inc == True:
                     plt.savefig(_save_d + 'maps{:04d}.png'.format(d), dpi=600, bbox_inches='tight')
         d+=1
