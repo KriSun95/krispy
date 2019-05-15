@@ -1142,7 +1142,7 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
             compmap = sunpy.map.Map(second_smap, smap, composite=True)
         
         if lvls is not None:
-            compmap.set_alpha(0, 2*alphas[0])
+            compmap.set_alpha(0, alphas[0])
             compmap.set_alpha(1, alphas[1])
             compmap.set_levels(index=1, levels=lvls)
         else:
