@@ -1127,7 +1127,7 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
         if iron == '16':
             smap.plot_settings['cmap'] = plt.cm.Purples
         if (_aia_files[0][0:3] == 'HMI') or (_aia_files[0][0:3] == 'hmi'):
-            second_smap = second_smap.rotate(angle = 180 * u.deg)
+            #second_smap = second_smap.rotate(angle = 180 * u.deg)
             second_smap.plot_settings['cmap'] = matplotlib.cm.get_cmap('PiYG_r') # use a simpler cmap than 'hmimag'
 
         #fig = plt.figure()
@@ -1242,5 +1242,6 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
     del compmap
     del directory_with_files
     gc.collect()
+
     print('\nLook everyone, it\'s finished!')
 
