@@ -344,10 +344,10 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
 
 
 #make contour maps
-def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm='', energy_rng=[], submap=[], 
-                             cmlims = [], nustar_shift=[], time_bins=[], resample_aia=[], counter=0, contour_lvls=[],
+def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=None, chu='', fpm='', energy_rng=[], submap=[], 
+                             cmlims = [], nustar_shift=None, time_bins=[], resample_aia=[], counter=0, contour_lvls=[],
                          contour_fmt='percent', contour_colour='black', aia='ns_overlap_only', iron18=True, 
-                         save_inc=False, gauss_sigma=4, background_time='begin', A_and_B=False, B_shift=None):
+                         save_inc=False, gauss_sigma=4, background_time='begin', A_and_B=False, frame_to_correlate=0, AB_pixshift=None):
     """Takes a list of times, a nustar fits file and and list of iron 18 AIA fits files and produces an AIA map with 
     contours from the nustar observation between adjacent time in the time list.
     
@@ -384,9 +384,9 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
             Limits of the colourmap, e.g. [vmin, vmax]. To avoid error, if vmin <= 0 then vmin is set to 0.1.
             Default: []
             
-    nustar_shift : One-dimensional list/array of type int, length 2
+    nustar_shift : One-dimensional list/array of type int, length 2, or str
             Gives an [x,y] shift to move the NuSTAR contours to align with the AIA image as the coordinates of the NuSTAR
-            map may not be spot on.
+            map may not be spot on. This can also accept 'cc' fort eh shift to be done by cross-correlation.
             Default: []
     
     time_bins : One-dimensional list/array of type Str, length N
@@ -444,25 +444,31 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
             Specify whether, if given FPMA at first, if you want to combine it with FPMB.
             Default: False 
 
-    B_shift : list/tuple, length 2
-            If 'A_and_B=True' the you can apply a shift to B manually rather than doing the 2D correlation.
+    frame_to_corr : int
+            Index of the start time for the frame to be cross-correlated with, default is the first frame. For every individual 
+            frame to be cross-correlated then frame_to_corr='individual'.
+            Default: 0
+
+    AB_pixshift : 2d-array
+            A list of the A pixel shift and the B pixel shift, e.g. [[Ax, Ay], [Bx, By]]. Any row can be None. If you only are 
+            working with, and only want to shift one, make it the first row, i.e. working with FPMB only then [[Bx, By], None].
             Default: None
             
     Returns
     -------
     A dictionary with the values of the largest values of the NuSTAR map to help with contour value setting 
-    (labelled as 'max_contour_levels'), the final value for the incremental counter (labelled as 
-    'last_incremental_value'), and the B shift applied (manual or otherwise) labelled as 'B_shift'. AIA maps, 
-    with NuSTAR contours, are also saved to the requested directory.
+    (labelled as 'max_contour_levels'), the final value for the incremental counter (labelled as 'last_incremental_value'), 
+    'nustar_shift' gives the manual shift in arcseconds the user gives, 'cc_A_and_B_pixel_shifts' provides the 
+    cross-correlation pixel shift values. AIA maps, with NuSTAR contours, are also saved to the requested directory.
     """
     #20/11/2018: ~if statement for the definition of cleanevt.
     #            ~two iron 18 if statements for the colour map.
     #            ~two iron 18 if statements for the colour map.
     #26/11/2018: ~added try and except to the cleanevt bit.
     #08/04/2019: ~can now combine A and B.
-
+    
     import filter_with_tmrng # this file has to be in the directory
-
+    
     matplotlib.rcParams['font.sans-serif'] = "Arial" #sets up plots
     matplotlib.rcParams['font.family'] = "sans-serif"
     matplotlib.rcParams['font.size'] = 14
@@ -472,22 +478,45 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
     hdr = hdulist[1].header
     hdulist.close()
 
+    #hk_file
+    nu1 = krispy.nustardo.NustarDo(nustar_dir + nustar_file)
+    nu1.livetime(hk_filename=hk_file, show_fig=False)
+    lvt_t1 = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in nu1.hk_times]
+    lvt_lvt1 = nu1.hk_livetimes
+    
     if A_and_B == True:
         hdulist = fits.open(nustar_dir + nustar_file.replace('A', 'B')) #chu, sunpos file
         evtdata_other = hdulist[1].data
         hdr_other = hdulist[1].header
         hdulist.close()
+        nu2 = krispy.nustardo.NustarDo(nustar_dir + nustar_file.replace('A', 'B'))
+        nu2.livetime(hk_filename=hk_file.replace('A', 'B'), show_fig=False)
+        lvt_t2 = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in nu2.hk_times]
+        lvt_lvt2 = nu2.hk_livetimes
     
-    aia_files =[]
-    for f in os.listdir(aia_dir):
-        aia_files.append(f)
+    aia_files = os.listdir(aia_dir)
     aia_files.sort()
     aia_files = only_fits(aia_files)
+
+    manual_pixel_shift = False
+    if AB_pixshift != None:
+        manual_pixel_shift = True
+        if len(np.shape(AB_pixshift[0])) == 1:
+            AB_pixshift = [[AB_pixshift[0]], AB_pixshift[1]]
+        if len(np.shape(AB_pixshift[1])) == 1:
+            AB_pixshift = [AB_pixshift[0], [AB_pixshift[1]]]
     
     d = counter
     max_contours = []
 
+    all_A_shift = []
+    all_B_shift = []
+    
     for t in range(len(time_bins)-1):
+        if frame_to_correlate == 'individual':
+            frame_to_corr = t
+        else:
+            frame_to_corr = frame_to_correlate
         try:
             cleanevt = filter_with_tmrng.event_filter(evtdata,fpm=fpm,energy_low=energy_rng[0], energy_high=energy_rng[1], 
                                                       tmrng=[time_bins[t], time_bins[t+1]])
@@ -500,69 +529,83 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
                             cleanevt_other = []
             
         if len(cleanevt) != 0 and aia == ('ns_overlap_only' or 'all'): #AIA data and NuSTAR data
+            
             t_1 = datetime.datetime.strptime(time_bins[t], '%Y/%m/%d, %H:%M:%S')
             t_2 = datetime.datetime.strptime(time_bins[t+1], '%Y/%m/%d, %H:%M:%S')
-            t_start = datetime.datetime.strptime(time_bins[0], '%Y/%m/%d, %H:%M:%S')
-            t_end = datetime.datetime.strptime(time_bins[-1], '%Y/%m/%d, %H:%M:%S')
-            nustar_map = nustar.map.make_sunpy(cleanevt, hdr, norm_map=True)
-            nustar_map_normdata = nustar_map.data / ((t_2 - t_1) / (t_end - t_start))
+            #livetime correction A
+            ltimes_in_rangeA = []
+            for lv in range(len(lvt_t1)):
+                if ((lvt_t1[lv]>=t_1) & (lvt_t1[lv]<t_2)):
+                    ltimes_in_rangeA.append(lvt_lvt1[lv])
+            ave_livetime_A = np.average(ltimes_in_rangeA)
+
+            if A_and_B == True:
+                #livetime correction B
+                ltimes_in_rangeB = []
+                for lv in range(len(lvt_t2)):
+                    if ((lvt_t2[lv]>=t_1) & (lvt_t2[lv]<t_2)):
+                        ltimes_in_rangeB.append(lvt_lvt2[lv])
+                ave_livetime_B = np.average(ltimes_in_rangeB)
+
+            nustar_map = nustar.map.make_sunpy(cleanevt, hdr, norm_map=False)
+            ##nustar_map_normdata = nustar_map.data
+            nustar_map_normdata = nustar_map.data / ((t_2 - t_1).total_seconds() * ave_livetime_A)
 
             '''
             Need to find shift before all of this, CANNOT do it each time
             '''
             
-            if (A_and_B == True) and (len(cleanevt_other) != 0):
-                        if t == 0: #only want the shift at the start
-                            if  B_shift == None:
-                                nustar_map_first = sunpy.map.Map(nustar_map_normdata, nustar_map.meta)
+            if (len(cleanevt_other) != 0) and (manual_pixel_shift == False):
+                if (A_and_B == True) or (nustar_shift == 'cc'):
+                        if (t == 0) or (frame_to_correlate == 'individual'): #only want the shift at the start
+                                cleanevt_c = filter_with_tmrng.event_filter(evtdata,fpm=fpm,energy_low=energy_rng[0], energy_high=energy_rng[1], 
+                                                      tmrng=[time_bins[frame_to_corr], time_bins[frame_to_corr+1]])
+                                if (A_and_B == True):
+                                    cleanevt_other_c = filter_with_tmrng.event_filter(evtdata_other,fpm=fpm,energy_low=energy_rng[0], energy_high=energy_rng[1], 
+                                                      tmrng=[time_bins[frame_to_corr], time_bins[frame_to_corr+1]])
+                                t_1_c = datetime.datetime.strptime(time_bins[frame_to_corr], '%Y/%m/%d, %H:%M:%S')
+                                t_2_c = datetime.datetime.strptime(time_bins[frame_to_corr+1], '%Y/%m/%d, %H:%M:%S')
+                                #livetime correction
+                                ltimes_in_rangeA_c = []
+                                for lv in range(len(lvt_t1)):
+                                    if ((lvt_t1[lv]>=t_1_c) & (lvt_t1[lv]<t_2_c)):
+                                        ltimes_in_rangeA_c.append(lvt_lvt1[lv])
+                                ave_livetime_A_c = np.average(ltimes_in_rangeA_c)
 
-                                nustar_map_other = nustar.map.make_sunpy(cleanevt_other, hdr_other, norm_map=True)
-                                nustar_map_normdata_other = nustar_map_other.data / ((t_2 - t_1) / (t_end - t_start))
-                                nustar_map_other = sunpy.map.Map(nustar_map_normdata_other, nustar_map_other.meta)
+                                nustar_map_c = nustar.map.make_sunpy(cleanevt_c, hdr, norm_map=False)
+                                nustar_map_normdata_c = nustar_map_c.data / ((t_2_c - t_1_c).total_seconds() * ave_livetime_A_c)
+                       
+                                nustar_map_first_c = sunpy.map.Map(nustar_map_normdata_c, nustar_map_c.meta)
+                                if (A_and_B == True):
+                                    #livetime correction B
+                                    ltimes_in_rangeB_c = []
+                                    for lv in range(len(lvt_t2)):
+                                        if ((lvt_t2[lv]>=t_1_c) & (lvt_t2[lv]<t_2_c)):
+                                            ltimes_in_rangeB_c.append(lvt_lvt2[lv])
+                                    ave_livetime_B_c = np.average(ltimes_in_rangeB_c)
+
+                                    nustar_map_other_c = nustar.map.make_sunpy(cleanevt_other_c, hdr_other, norm_map=False)
+                                    nustar_map_normdata_other_c = nustar_map_other_c.data / ((t_2_c - t_1_c).total_seconds() * ave_livetime_B_c)
+                                    nustar_map_other_c = sunpy.map.Map(nustar_map_normdata_other_c, nustar_map_other_c.meta)
 
                                 #make submap for quickness to get the shift
-                                bl = SkyCoord((submap[0]-200)*u.arcsec, (submap[1]-200)*u.arcsec, frame=nustar_map_first.coordinate_frame)
-                                tr = SkyCoord((submap[2]+200)*u.arcsec, (submap[3]+200)*u.arcsec, frame=nustar_map_first.coordinate_frame)
-                                submap_first = nustar_map_first.submap(bl,tr)
+                                bl = SkyCoord((submap[0]-100)*u.arcsec, (submap[1]-100)*u.arcsec, frame=nustar_map_other_c.coordinate_frame)
+                                tr = SkyCoord((submap[2]+100)*u.arcsec, (submap[3]+100)*u.arcsec, frame=nustar_map_other_c.coordinate_frame)
+                                submap_first = nustar_map_first_c.submap(bl,tr)
                                 dataA = submap_first.data
-                                submap_other = nustar_map_other.submap(bl,tr)
-                                dataB = submap_other.data
+                                if (A_and_B == True):
+                                    submap_other = nustar_map_other_c.submap(bl,tr)
+                                    dataB = submap_other.data
+                                    del submap_other
+                                    del nustar_map_normdata_other_c
+                                    del nustar_map_other_c
 
-                                corr = signal.correlate2d(dataA, dataB, boundary='symm', mode='same')
-
-                                y, x = np.unravel_index(np.argmax(corr), corr.shape)  # find the match
-                                x_pix_shift = -(np.shape(dataB)[1]/2 - x) #negative because the positive number means shift to the left/down
-                                y_pix_shift = -(np.shape(dataB)[0]/2 - y)
-                                B_shift = [x_pix_shift, y_pix_shift]
-                                
-                                del corr
-                                del nustar_map_first
+                                del nustar_map_first_c
+                                del nustar_map_normdata_c
                                 del submap_first
-                                del submap_other
-                                del nustar_map_normdata_other
-                                del nustar_map_other
-                            elif B_shift != None:
-                                x_pix_shift = B_shift[0]
-                                y_pix_shift = B_shift[1]
-
-                        shift_evt_other = krispy.nustardo.shift(cleanevt_other, pix_xshift=x_pix_shift, pix_yshift=x_pix_shift)
-                        nustar_map_other = nustar.map.make_sunpy(shift_evt_other, hdr_other, norm_map=True)
-                        nustar_map_normdata_other = nustar_map_other.data / ((t_2 - t_1) / (t_end - t_start))
-                       
-                        nustar_map_normdata = nustar_map_normdata + nustar_map_normdata_other
-                        del nustar_map_other
-                        fpm = 'A&B'
-            
-
-            dd=ndimage.gaussian_filter(nustar_map_normdata, gauss_sigma, mode='nearest');
-            
-            # Tidy things up before plotting
-            dmin=1e-3
-            dmax=1e1
-            dd[dd < dmin]=0
-            nm=sunpy.map.Map(dd, nustar_map.meta);
-
-            del nustar_map_normdata
+            if (A_and_B == True):
+                fpm = 'A&B'
+            #del nustar_map_normdata
             
             background_in_trng_data = []
             background_in_trng_header = []
@@ -582,7 +625,11 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
                     del aia_map
                     if background_time == 'begin': #only need the first one if 'begin' is set so save time and stop here
                         break
-                
+
+            if len(background_in_trng_data) == 0:
+                print(f'\rNo AIA data in this time range: {time_bins[t]}, {time_bins[t+1]}.', end='')
+                continue
+
             background_in_trng_data = np.array(background_in_trng_data)
             num_of_maps = len(background_in_trng_data)
             if background_time == 'begin':
@@ -600,13 +647,148 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
 
             del background_in_trng_data
             del background_in_trng_header
-   
-            if aia_map == 0:
-                print(f'\rNo AIA data in this time range: {time_bins[t]}, {time_bins[t+1]}.', end='')
-                continue
+
+            ## can now cross correlate all the maps
+            if ('A_shift' not in locals()) and ('B_shift' not in locals()):
+                A_shift = None
+                B_shift = None
+            if (manual_pixel_shift == False) and ((nustar_shift == 'cc') or (A_and_B == True)):
+                if (t == 0) or (frame_to_correlate == 'individual'):
+
+                    background_in_trng_data_c = []
+                    background_in_trng_header_c = []
+                    aia_map_c = 0
+                    for f in aia_files: #make a list of the aia files in the range
+                        aia_time_string = f[3:7]+'/'+f[7:9]+'/'+f[9:11]+', '+f[12:14]+':'+ f[14:16]+':'+ f[16:18]
+                        aia_time = datetime.datetime.strptime(aia_time_string, '%Y/%m/%d, %H:%M:%S')
+                        t_bin_edge1 = datetime.datetime.strptime(time_bins[frame_to_corr], '%Y/%m/%d, %H:%M:%S')
+                        t_bin_edge2 = datetime.datetime.strptime(time_bins[frame_to_corr+1], '%Y/%m/%d, %H:%M:%S')
+                        if t_bin_edge1 <= aia_time < t_bin_edge2:
+                            aia_map_c = sunpy.map.Map(aia_dir + f);
+                            background_in_trng_data_c.append(aia_map_c.data)
+                            background_in_trng_header_c.append(aia_map_c.meta)
+                            del aia_map_c
+                            if background_time == 'begin': #only need the first one if 'begin' is set so save time and stop here
+                                break
+
+                    if len(background_in_trng_data_c) == 0:
+                        print(f'\rNo AIA data in time range to cross-corrrelate: {time_bins[frame_to_corr]}, {time_bins[frame_to_corr+1]}.', end='')
+                        break
+
+                    background_in_trng_data_c = np.array(background_in_trng_data_c)
+                    num_of_maps_c = len(background_in_trng_data_c)
+                    if background_time == 'begin':
+                        aia_map_c = sunpy.map.Map(background_in_trng_data_c[0], background_in_trng_header_c[0])
+                    elif background_time == 'middle':
+                        mid_of_maps_c = num_of_maps_c // 2
+                        aia_map_c = sunpy.map.Map(background_in_trng_data_c[mid_of_maps], background_in_trng_header_c[mid_of_maps])
+                    elif background_time == 'end':
+                        aia_map_c = sunpy.map.Map(background_in_trng_data_c[-1], background_in_trng_header_c[-1])
+                    elif background_time == 'average':
+                        ave_c = background_in_trng_data_c.sum(axis=0) / num_of_maps_c
+                        aia_map_c = sunpy.map.Map(ave_c, background_in_trng_header_c[0])
+                    else:
+                        print('Choose where the background map comes from: begin, middle, end, or average of time range')
+
+                    del background_in_trng_data_c
+                    del background_in_trng_header_c
+
+                    submap_aia_c = aia_map_c.submap(bl,tr)
+                    data_for_corr = submap_aia_c.data
+                    del submap_aia_c
+
+                    #must rescale aia to suit the nustar images
+                    data_for_corr_A = resize(data_for_corr, np.shape(dataA))
+
+                    dataA = ndimage.gaussian_filter(dataA, gauss_sigma, mode='nearest')
+
+                    corr_with_A = signal.correlate2d(data_for_corr_A, dataA, boundary='symm', mode='same')
+                    y_A, x_A = np.unravel_index(np.argmax(corr_with_A), corr_with_A.shape)  # find the match
+                    x_pix_shift_A = -(np.shape(data_for_corr_A)[1]/2 - x_A) #negative because the positive number means shift to the left/down
+                    y_pix_shift_A = -(np.shape(data_for_corr_A)[0]/2 - y_A)
+                    A_shift = np.array([x_pix_shift_A, y_pix_shift_A]) 
+                    all_A_shift.append(A_shift)
+ 
+                    if A_and_B == True:
+                        data_for_corr_B = resize(data_for_corr, np.shape(dataB))
+                        dataB = ndimage.gaussian_filter(dataB, gauss_sigma, mode='nearest')
+
+                        corr_with_B = signal.correlate2d(data_for_corr_B, dataB, boundary='symm', mode='same')
+                        y_B, x_B = np.unravel_index(np.argmax(corr_with_B), corr_with_B.shape)  # find the match
+                        x_pix_shift_B = -(np.shape(data_for_corr_B)[1]/2 - x_B) #negative because the positive number means shift to the left/down
+                        y_pix_shift_B = -(np.shape(data_for_corr_B)[0]/2 - y_B)
+                        B_shift = np.array([x_pix_shift_B, y_pix_shift_B])
+                        all_B_shift.append(B_shift)
+                        del corr_with_B
+                        del dataB
+
+                    del data_for_corr
+                    del dataA
+                    del corr_with_A
+                #print('A shift is ', A_shift)
+                #print('shape A is ', [np.shape(dataA)[0], np.shape(dataA)[1]])
+                #print('aia shape is ', [np.shape(data_for_corr_A)[0], np.shape(data_for_corr_A)[1]])
+                #print('corr shape is ', [np.shape(corr_with_A)[0], np.shape(corr_with_A)[1]])
+                #print('Corr max is ', [y_A, x_A])
+                #fig, (ax1, ax2, ax3) = plt.subplots(1,3)
+                #ax1.imshow(data_for_corr_A)
+                #ax2.imshow(dataA)
+                #ax3.imshow(corr_with_A)
+                #plt.show()
+
+                shift_evt_A = krispy.nustardo.shift(cleanevt, pix_xshift=A_shift[0], pix_yshift=A_shift[1])
+                nustar_map_A = nustar.map.make_sunpy(shift_evt_A, hdr, norm_map=False)
+                nustar_map_normdata_A = nustar_map_A.data / ((t_2 - t_1).total_seconds() * ave_livetime_A)
+
+                
+                if A_and_B == True:
+                    shift_evt_B = krispy.nustardo.shift(cleanevt_other, pix_xshift=B_shift[0], pix_yshift=B_shift[1])
+                    nustar_map_B = nustar.map.make_sunpy(shift_evt_B, hdr_other, norm_map=False)
+                    nustar_map_normdata_B = nustar_map_B.data / ((t_2 - t_1).total_seconds() * ave_livetime_B)
+                    
+                    nustar_map_normdata = nustar_map_normdata_A + nustar_map_normdata_B
+                else:
+                    nustar_map_normdata = nustar_map_normdata_A
+                nustar_shift = None
+
+            if AB_pixshift != None:
+                if len(AB_pixshift[0]) >= 1:
+                    if frame_to_correlate == 'individual':
+                        A_shift = AB_pixshift[0][t]
+                    else:
+                        A_shift = AB_pixshift[0][0]
+
+                    shift_evt_A = krispy.nustardo.shift(cleanevt, pix_xshift=A_shift[0], pix_yshift=A_shift[1])
+                    
+                    nustar_map_A = nustar.map.make_sunpy(shift_evt_A, hdr, norm_map=False)
+                    nustar_map_normdata_A = nustar_map_A.data / ((t_2 - t_1).total_seconds() * ave_livetime_A)
+                if len(AB_pixshift[1]) >= 1:
+                    if frame_to_correlate == 'individual':
+                        B_shift = AB_pixshift[1][t]
+                    else:
+                        B_shift = AB_pixshift[1][0]
+                    
+                    shift_evt_B = krispy.nustardo.shift(cleanevt_other, pix_xshift=B_shift[0], pix_yshift=B_shift[1])
+                    nustar_map_B = nustar.map.make_sunpy(shift_evt_B, hdr_other, norm_map=False)
+                    nustar_map_normdata_B = nustar_map_B.data / ((t_2 - t_1).total_seconds() * ave_livetime_B)
+                if A_and_B == True:
+                    nustar_map_normdata = nustar_map_normdata_A + nustar_map_normdata_B
+                else:
+                    nustar_map_normdata = nustar_map_normdata_A
+                nustar_shift = None 
+
+            dd=ndimage.gaussian_filter(nustar_map_normdata, gauss_sigma, mode='nearest');
+            
+            # Tidy things up before plotting
+            dmin=1e-3
+            dmax=1e1
+            dd[dd < dmin]=0
+            nm=sunpy.map.Map(dd, nustar_map.meta);
+
+            del nustar_map_normdata
                 
             # Let's shift it ############################################################################################
-            if nustar_shift != []:
+            if nustar_shift != None:
                 shifted_nustar_map = nm.shift(nustar_shift[0]*u.arcsec, nustar_shift[1]*u.arcsec)
             else:
                 shifted_nustar_map = nm
@@ -658,7 +840,10 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
             
             char_to_arcsec = 3.0 #-ish
             border = 2
-            clabel_title = f'NuSTAR {energy_rng[0]}-{energy_rng[1]} keV FPM'+fpm+' '+chu
+            if energy_rng[1] >= 79:
+                clabel_title = f'NuSTAR >{energy_rng[0]} keV FPM'+fpm+' '+chu
+            else:
+                clabel_title = f'NuSTAR {energy_rng[0]}-{energy_rng[1]} keV FPM'+fpm+' '+chu
             #for sig figures
             max_length = np.max([len(str(c))-len(str(float(int(c))))+1 for c in contour_lvls])
             if max_length < 0:
@@ -776,9 +961,13 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, chu='', fpm
         
         else:
             print(f'\rNo NuSTAR data in this time range: {time_bins[t]} to {time_bins[t+1]}.', end='')
+
+    if fpm == 'B' and B_shift == None and nustar_shift == 'cc' and A_shift != None:
+        B_shift = A_shift
+        A_shift = None
     
     print('\nLook everyone, it\'s finished!')
-    return {'max_contour_levels': max_contours, 'last_incremental_value': d-1, 'B_shift': B_shift} 
+    return {'max_contour_levels': max_contours, 'last_incremental_value': d-1, 'nustar_shift': nustar_shift, 'cc_A_and_B_pixel_shifts': [all_A_shift, all_B_shift]} 
     #helps find the values for the contour lines and the last number padded for the incremental saves
 
 

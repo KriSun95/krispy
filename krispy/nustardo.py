@@ -933,6 +933,7 @@ class NustarDo:
                 
         print(' Now Populated.')
 
+
 def shift(evt_data, pix_xshift=None, pix_yshift=None):
     if pix_xshift != None:
         for X in evt_data:
@@ -941,3 +942,87 @@ def shift(evt_data, pix_xshift=None, pix_yshift=None):
         for Y in evt_data:
             Y['Y'] = Y['Y'] + pix_yshift 
     return evt_data
+
+
+def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_area, errors=None, log_data=False):
+    """Takes data for a channel's temperature response, plasma temperature and emission measure and area of source and 
+    returns the expected count rate per pixel.
+    *** Make sure units  work ***
+    
+    Parameters
+    ----------
+    temp_response_dataxy : dict
+            The x and y data for the temperature response of the chennel of interest, e.g. {'x':[...], 'y':[...]}.
+    
+    plasma_temp : float
+            Temperature of the response you want.
+            
+    plasma_em : float
+            Emission measure of the plasma.
+    
+    source_area : float
+            Area of the source.
+            
+    errors : dict
+            A dictionary of dictionaries containing the errors on T and EM, e.g. {'T':{'+':a, '-':b}, 
+            'EM':{'+':c, '-':d}}.
+            Defualt: None
+            
+    log_data : bool
+            Do you want the data log (base 10) for the interpolation?
+            Default: False
+            
+    Returns
+    -------
+    A float that is the synthetic count rate per pixel for the data given, temperature response and errors.
+    """
+    if log_data == True:
+        temp_response = find_my_y(np.log10(plasma_temp), np.log10(temp_response_dataxy['x']), np.log10(temp_response_dataxy['y']), logged_data=True)
+    else:
+        #find temperature response at the given plasma temperature in DN cm^5 pix^-1 s^-1
+        temp_response = find_my_y(plasma_temp, temp_response_dataxy['x'], temp_response_dataxy['y'])
+        
+    syn_flux = [tr * plasma_em * (1 / source_area) for tr in temp_response]
+    
+    # For errors
+    if errors is not None:
+        min_T, max_T = plasma_temp - errors['T']['-'], plasma_temp + errors['T']['+']
+        min_EM, max_EM = plasma_em - errors['EM']['-'], plasma_em + errors['EM']['+']
+        
+        e_response = []
+        for Ts in [min_T, max_T]:
+            if log_data == True:
+                r = find_my_y(np.log10(Ts), np.log10(temp_response_dataxy['x']), np.log10(temp_response_dataxy['y']), logged_data=True)
+            else:
+                #find temperature response at the given plasma temperature in DN cm^5 pix^-1 s^-1
+                r = find_my_y(Ts, temp_response_dataxy['x'], temp_response_dataxy['y'])
+            e_response.append(r[0])
+        #e_response.sort()
+        
+        temp_max_response = temp_response_dataxy['x'][np.argmax(temp_response_dataxy['y'])]
+        
+        if (e_response[0] < temp_response) and (e_response[1] < temp_response):
+            if min_T < temp_max_response < plasma_temp:
+                e_response[0] = np.max(temp_response_dataxy['y'])
+            elif plasma_temp < temp_max_response < max_T:
+                e_response[1] = np.max(temp_response_dataxy['y'])
+        
+        min_R, max_R = e_response[0], e_response[1] #R from min_T and R from max_T
+        
+        #flux from min_T(max_EM) and flux from max_T(min_EM)
+        min_flux, max_flux = min_R * max_EM * (1 / source_area), max_R * min_EM * (1 / source_area)
+        flux_range = [min_flux, max_flux]
+        
+        e_response = np.array(e_response)[np.isfinite(e_response)]
+        flux_range = np.array(flux_range)[np.isfinite(flux_range)]
+        f_err = [np.max(flux_range) - syn_flux[0], syn_flux[0] - np.min(flux_range)]
+        for n,f in enumerate(f_err):
+            if f < 0:
+                f_err[n] = np.max(f_err)
+        
+        errors = {'T':{'+': errors['T']['+'], '-':errors['T']['-']}, 
+                  'EM':{'+': errors['EM']['+'],' -':errors['EM']['-']}, 
+                  'R':{'+': abs(np.max(e_response) - temp_response[0]), '-':abs(temp_response[0] - np.min(e_response))}, 
+                  'Syn_F':{'+': f_err[0], '-':f_err[1]}}
+
+    return {'syn_flux':[syn_flux[0],'DN pix^-1 s^-1'], 't_res':[temp_response, 'DN cm^5 pix^-1 s^-1'], 'errors':errors}
