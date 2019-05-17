@@ -6,6 +6,7 @@ from . import file_working
 from . import image_making
 from . import plotting_essentials
 from . import jupy
+from . import interaction_plot
 
 from . import nustardo
 
