@@ -1,6 +1,6 @@
 from matplotlib import pyplot as plt
 
-def draw_lines(data=None):
+def draw_lines(data):
 
     class LineBuilder:
         def __init__(self):
@@ -20,7 +20,7 @@ def draw_lines(data=None):
         def get_xy(self):
             return self.xs, self.ys
 
-    if data == None:
+    if len(data) == 0:
         data = [[1,2,3], [4,5,6], [7,8,9]]
 
     fig = plt.figure(1)
