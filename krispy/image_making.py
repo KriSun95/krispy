@@ -347,7 +347,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
 def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=None, chu='', fpm='', energy_rng=[], submap=[], 
                              cmlims = [], nustar_shift=None, time_bins=[], resample_aia=[], counter=0, contour_lvls=[],
                          contour_fmt='percent', contour_colour='black', aia='ns_overlap_only', iron18=True, 
-                         save_inc=False, gauss_sigma=4, background_time='begin', A_and_B=False, frame_to_correlate=0, AB_pixshift=None):
+                         save_inc=False, gauss_sigma=4, background_time='begin', save_bg=False, A_and_B=False, frame_to_correlate=0, AB_pixshift=None):
     """Takes a list of times, a nustar fits file and and list of iron 18 AIA fits files and produces an AIA map with 
     contours from the nustar observation between adjacent time in the time list.
     
@@ -440,6 +440,10 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             'begin', 'middle', 'end', 'average'.
             Default: 'begin'
 
+    save_bg : Bool
+            Do you want to save the background array?
+            Default: False
+
     A_and_B : Bool
             Specify whether, if given FPMA at first, if you want to combine it with FPMB.
             Default: False 
@@ -466,6 +470,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
     #            ~two iron 18 if statements for the colour map.
     #26/11/2018: ~added try and except to the cleanevt bit.
     #08/04/2019: ~can now combine A and B.
+    #23/05/2019: ~fixed some issues from when I enabled combining two FPMs
     
     import filter_with_tmrng # this file has to be in the directory
     
@@ -511,6 +516,8 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
 
     all_A_shift = []
     all_B_shift = []
+
+    saved_backgrounds = []
     
     for t in range(len(time_bins)-1):
         if frame_to_correlate == 'individual':
@@ -523,6 +530,8 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             if A_and_B == True:
                             cleanevt_other = filter_with_tmrng.event_filter(evtdata_other,fpm=fpm,energy_low=energy_rng[0], energy_high=energy_rng[1], 
                                                       tmrng=[time_bins[t], time_bins[t+1]])
+            else:
+                cleanevt_other = []
         except IndexError:
             cleanevt = [] #if time range is outwith nustar obs (i.e. IndexError) then this still lets aia to be looked at
             if A_and_B == True:
@@ -555,7 +564,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             Need to find shift before all of this, CANNOT do it each time
             '''
             
-            if (len(cleanevt_other) != 0) and (manual_pixel_shift == False):
+            if (manual_pixel_shift == False): #(len(cleanevt_other) != 0) and 
                 if (A_and_B == True) or (nustar_shift == 'cc'):
                         if (t == 0) or (frame_to_correlate == 'individual'): #only want the shift at the start
                                 cleanevt_c = filter_with_tmrng.event_filter(evtdata,fpm=fpm,energy_low=energy_rng[0], energy_high=energy_rng[1], 
@@ -589,8 +598,8 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
                                     nustar_map_other_c = sunpy.map.Map(nustar_map_normdata_other_c, nustar_map_other_c.meta)
 
                                 #make submap for quickness to get the shift
-                                bl = SkyCoord((submap[0]-100)*u.arcsec, (submap[1]-100)*u.arcsec, frame=nustar_map_other_c.coordinate_frame)
-                                tr = SkyCoord((submap[2]+100)*u.arcsec, (submap[3]+100)*u.arcsec, frame=nustar_map_other_c.coordinate_frame)
+                                bl = SkyCoord((submap[0]-100)*u.arcsec, (submap[1]-100)*u.arcsec, frame=nustar_map_c.coordinate_frame)
+                                tr = SkyCoord((submap[2]+100)*u.arcsec, (submap[3]+100)*u.arcsec, frame=nustar_map_c.coordinate_frame)
                                 submap_first = nustar_map_first_c.submap(bl,tr)
                                 dataA = submap_first.data
                                 if (A_and_B == True):
@@ -633,18 +642,22 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             background_in_trng_data = np.array(background_in_trng_data)
             num_of_maps = len(background_in_trng_data)
             if background_time == 'begin':
-                aia_map = sunpy.map.Map(background_in_trng_data[0], background_in_trng_header[0])
+                bg = background_in_trng_data[0]
+                aia_map = sunpy.map.Map(bg, background_in_trng_header[0])
             elif background_time == 'middle':
                 mid_of_maps = num_of_maps // 2
-                aia_map = sunpy.map.Map(background_in_trng_data[mid_of_maps], background_in_trng_header[mid_of_maps])
+                bg = background_in_trng_data[mid_of_maps]
+                aia_map = sunpy.map.Map(bg, background_in_trng_header[mid_of_maps])
             elif background_time == 'end':
-                aia_map = sunpy.map.Map(background_in_trng_data[-1], background_in_trng_header[-1])
+                bg = background_in_trng_data[-1]
+                aia_map = sunpy.map.Map(bg, background_in_trng_header[-1])
             elif background_time == 'average':
-                ave = background_in_trng_data.sum(axis=0) / num_of_maps
-                aia_map = sunpy.map.Map(ave, background_in_trng_header[0])
+                bg = background_in_trng_data.sum(axis=0) / num_of_maps
+                aia_map = sunpy.map.Map(bg, background_in_trng_header[0])
             else:
                 print('Choose where the background map comes from: begin, middle, end, or average of time range')
 
+            del bg
             del background_in_trng_data
             del background_in_trng_header
 
@@ -652,6 +665,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             if ('A_shift' not in locals()) and ('B_shift' not in locals()):
                 A_shift = None
                 B_shift = None
+
             if (manual_pixel_shift == False) and ((nustar_shift == 'cc') or (A_and_B == True)):
                 if (t == 0) or (frame_to_correlate == 'individual'):
 
@@ -749,7 +763,8 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
                     nustar_map_normdata = nustar_map_normdata_A + nustar_map_normdata_B
                 else:
                     nustar_map_normdata = nustar_map_normdata_A
-                nustar_shift = None
+                if nustar_shift != 'cc':
+                    nustar_shift = None
 
             if AB_pixshift != None:
                 if len(AB_pixshift[0]) >= 1:
@@ -775,7 +790,8 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
                     nustar_map_normdata = nustar_map_normdata_A + nustar_map_normdata_B
                 else:
                     nustar_map_normdata = nustar_map_normdata_A
-                nustar_shift = None 
+                if nustar_shift != 'cc':
+                    nustar_shift = None 
 
             dd=ndimage.gaussian_filter(nustar_map_normdata, gauss_sigma, mode='nearest');
             
@@ -788,7 +804,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             del nustar_map_normdata
                 
             # Let's shift it ############################################################################################
-            if nustar_shift != None:
+            if (nustar_shift != None) and (nustar_shift != 'cc'):
                 shifted_nustar_map = nm.shift(nustar_shift[0]*u.arcsec, nustar_shift[1]*u.arcsec)
             else:
                 shifted_nustar_map = nm
@@ -811,6 +827,9 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             tr_fi = SkyCoord(submap[2]*u.arcsec, submap[3]*u.arcsec, frame=aia_map.coordinate_frame)
             #0.01 arcsec padding
             smap = aia_map.submap(bl_fi,tr_fi)    
+
+            if save_bg == True: # do you want to keep the background used to be returned
+                saved_backgrounds.append(smap.data)
             
             del aia_map
 
@@ -926,6 +945,9 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             tr_fi = SkyCoord(submap[2]*u.arcsec, submap[3]*u.arcsec, frame=aia_map.coordinate_frame)
             #0.1 arcsec padding
             smap = aia_map.submap(bl_fi,tr_fi)    
+
+            if save_bg == True: # do you want to keep the background used to be returned
+                saved_backgrounds.append(smap.data)  
             
             if iron18 == True:
                 smap.plot_settings['cmap'] = plt.cm.Blues
@@ -962,12 +984,12 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
         else:
             print(f'\rNo NuSTAR data in this time range: {time_bins[t]} to {time_bins[t+1]}.', end='')
 
-    if fpm == 'B' and B_shift == None and nustar_shift == 'cc' and A_shift != None:
+    if fpm == 'B' and type(B_shift) == type(None) and nustar_shift == 'cc' and type(A_shift) != type(None):
         B_shift = A_shift
         A_shift = None
     
     print('\nLook everyone, it\'s finished!')
-    return {'max_contour_levels': max_contours, 'last_incremental_value': d-1, 'nustar_shift': nustar_shift, 'cc_A_and_B_pixel_shifts': [all_A_shift, all_B_shift]} 
+    return {'max_contour_levels': max_contours, 'last_incremental_value': d-1, 'nustar_shift': nustar_shift, 'cc_A_and_B_pixel_shifts': [all_A_shift, all_B_shift], 'bgs_saved':saved_backgrounds} 
     #helps find the values for the contour lines and the last number padded for the incremental saves
 
 
