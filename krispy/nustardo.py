@@ -314,19 +314,22 @@ class NustarDo:
         matplotlib.rcParams['font.sans-serif'] = "Arial"
         #matplotlib.rcParams['font.family'] = "sans-serif"
         #matplotlib.rcParams['font.size'] = 12
-        plt.rcParams["figure.figsize"] = (6,6)
+        plt.rcParams["figure.figsize"] = (10,8)
         plt.rcParams['mathtext.fontset'] = 'stix'
         plt.rcParams['font.size'] = 18
         plt.rcParams['font.family'] = 'STIXGeneral'
+        plt.rcParams['axes.facecolor']='white'
+        plt.rcParams['savefig.facecolor']='white'
         # Start the plot - many things here just to make matplotlib look decent
         
         self.rectangles = boxes
 
-        fig = plt.figure(figsize=(9, 8), frameon=False)
+        #fig = plt.figure(figsize=(9, 8), frameon=False)
         ax = plt.subplot(projection=self.rsn_map, frame_on=False) #rsn_map nustar_submap
+        ax.set_facecolor((1.0, 1.0, 1.0))
 
         self.rsn_map.plot()
-        self.rsn_map.draw_limb(color='black',linewidth=1,linestyle='dashed',zorder=0)   
+        self.rsn_map.draw_limb(color='black',linewidth=1,linestyle='dashed',zorder=0)
 
         # Manually plot a heliographic overlay - hopefully future no_ticks option in draw_grid
         overlay = ax.get_coords_overlay('heliographic_stonyhurst')
@@ -585,6 +588,7 @@ class NustarDo:
             self.sub_reg_lc = sub_reg
             
         rel_t = datetime.datetime(2010,1 ,1 ,0 ,0 ,0)
+        tz_correction = datetime.datetime.now() - datetime.datetime.utcnow() - timedelta(seconds=3599)
         if tstart == None:
             tstart = np.min(cleanevt['TIME'])
             rel_tstart = tstart #already relative to 1/1/2010 and in seconds
@@ -656,12 +660,12 @@ class NustarDo:
                 if np.shape(sub_reg) == (4,):
                     counts = []
                     pixels = self.arcsec_to_pixel([sub_reg[0],sub_reg[1]], [sub_reg[2],sub_reg[3]])
-                    spacial_evtdata = self.spatial_filter(self.cleanevt, pixels)
+                    spatial_evtdata = self.spatial_filter(self.cleanevt, pixels)
                     for t in range(len(t_bin_edges)-1):
-                        ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(rel_t.strftime("%s"))+t_bin_edges[t]))).strftime('%Y/%m/%d, %H:%M:%S')
-                        te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(rel_t.strftime("%s"))+t_bin_edges[t+1]))).strftime('%Y/%m/%d, %H:%M:%S')
+                        ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(rel_t.strftime("%s"))+t_bin_edges[t])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
+                        te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(rel_t.strftime("%s"))+t_bin_edges[t+1])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
       
-                        sub_cleanevt = self.time_filter(spacial_evtdata, tmrng=[ts, te])
+                        sub_cleanevt = self.time_filter(spatial_evtdata, tmrng=[ts, te])
                         counts.append(len(sub_cleanevt['TIME']))
            
                     self.lc_counts = np.array(counts)
@@ -673,13 +677,13 @@ class NustarDo:
                         counts = []
                         
                         pixels = self.arcsec_to_pixel([sub_r[0],sub_r[1]], [sub_r[2],sub_r[3]])
-                        spacial_evtdata = self.spatial_filter(self.cleanevt, pixels)
+                        spatial_evtdata = self.spatial_filter(self.cleanevt, pixels)
                         
                         for t in range(len(t_bin_edges)-1):
-                            ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(rel_t.strftime("%s"))+t_bin_edges[t]))).strftime('%Y/%m/%d, %H:%M:%S')
-                            te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(rel_t.strftime("%s"))+t_bin_edges[t+1]))).strftime('%Y/%m/%d, %H:%M:%S')
+                            ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(rel_t.strftime("%s"))+t_bin_edges[t])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
+                            te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(rel_t.strftime("%s"))+t_bin_edges[t+1])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
                   
-                            sub_cleanevt = self.time_filter(spacial_evtdata, tmrng=[ts, te])
+                            sub_cleanevt = self.time_filter(spatial_evtdata, tmrng=[ts, te])
                             counts.append(len(sub_cleanevt['TIME']))
           
                         box = ' (Box '+str(b)+')'
