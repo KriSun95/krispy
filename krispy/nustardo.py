@@ -32,6 +32,7 @@ from astropy.io.fits.verify import VerifyWarning
 import matplotlib.dates as mdates
 import pickle
 import subprocess
+import pytz
 
 '''
 Alterations:
@@ -588,7 +589,9 @@ class NustarDo:
             self.sub_reg_lc = sub_reg
             
         rel_t = datetime.datetime(2010,1 ,1 ,0 ,0 ,0)
-        tz_correction = datetime.datetime.now() - datetime.datetime.utcnow() - timedelta(seconds=3599)
+        #tz_correction = datetime.datetime.now() - datetime.datetime.utcnow() - timedelta(seconds=3599) # GMT=UTC+1 in the summer, GMT=UTC in winter
+        tz_correction = float(datetime.datetime.now().strftime('%s')) - float(datetime.datetime.now(pytz.timezone('Europe/London')).strftime('%s')) # GMT=UTC+1 in the summer, GMT=UTC in winter
+        tz_correction = timedelta(seconds=tz_correction)
         if tstart == None:
             tstart = np.min(cleanevt['TIME'])
             rel_tstart = tstart #already relative to 1/1/2010 and in seconds
