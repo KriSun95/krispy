@@ -199,7 +199,8 @@ def find_sdo_files(directory, wavelength='', time_limits=None, cadence=12, downl
 
     double_check : Str
             After checking for more files to download check again - without downloading - to see if 
-            there are any still missing, e.g. 'Yes' or 'No'.
+            there are any still missing, e.g. 'Yes' or 'No'. Can also have 'recursive' which keeps checking 
+            all files are found in case there is a large time gap in the middle *** BEWARE INFINITIES ***.
             Default: 'Yes'
             
     Returns
@@ -210,10 +211,23 @@ def find_sdo_files(directory, wavelength='', time_limits=None, cadence=12, downl
     files = [ f for f in files_list if f.endswith('.fits')]
     files.sort()
     
-    assert files != [], f'No .fits files in {directory}.' #make sure there are files in the first place
+    if files == []:
+        empty_but_download = input('The folder provided does not appear to have any \'.fits\' files within it. \nDo you want to download within the time range given in the form \"%Y-%m-%d %H:%M:%S\" (this will only work for SDO/AIA files at the moment)? ')
+        if empty_but_download == 'Yes':
+            client = VSOClient()
+            query_response = client.query_legacy(tstart=time_limits[0], tend=time_limits[1], instrument='AIA', wave=wavelength)
+            n = len(query_response) - 1 #will be used to index the list 'query_response' when downloading
+            #Download the first two from ROB to /tmp folder and wait for download to complete
+            results = client.get(query_response[0:n], path=directory, site='rob')
+            fs = results.wait()
+            still_no_friends = find_sdo_files(directory, wavelength, time_limits=time_limits, download='Yes', double_check='No')
+            return
+        else:
+            assert files != [], f'No .fits files in {directory}.' #make sure there are files in the first place
 
     no_friends = [] #files that do not have a friend within the cadence time after it
     t_of_no_friends = [] #time of files that have no friends
+    t_end_of_no_firends = []
 
     for f in range(len(files)-2): #don't want to look at the last one as it will never have anything after it anyway
         time_0 = datetime.datetime.strptime(files[f][4:19], '%Y%m%d_%H%M%S')
@@ -221,23 +235,11 @@ def find_sdo_files(directory, wavelength='', time_limits=None, cadence=12, downl
         if time_0 <= time_1 <= time_0 + timedelta(seconds=cadence): #if there is a file <=12s ahead move on
             continue
         else: #if there is not a file <=12s ahead add it to the no friends list
+            print(time_0)
+            print(time_1)
             no_friends.append(files[f])
-            t_of_no_friends.append(time_0)
-            
-    if time_limits != None:
-        time_first = datetime.datetime.strptime(files[0][4:19], '%Y%m%d_%H%M%S')
-        time_last = datetime.datetime.strptime(files[-1][4:19], '%Y%m%d_%H%M%S')
-        
-        time_limits_first = datetime.datetime.strptime(time_limits[0], "%Y-%m-%d %H:%M:%S")
-        time_limits_last = datetime.datetime.strptime(time_limits[1], "%Y-%m-%d %H:%M:%S")
-
-        if time_first - time_limits_first >= timedelta(seconds=cadence): #if the diff between the start time and the 
-            #time of the first file then there should be one there
-            t_of_no_friends.append(time_limits_first)
-        if time_limits_last - time_last  >= timedelta(seconds=cadence): #if the diff between the final time and the 
-            #time of the last file then there should be one there
-            t_of_no_friends.append(time_last)
-            
+            t_of_no_friends.append(time_0) 
+            t_end_of_no_firends.append(time_1) 
 
     if (download == None) and (len(t_of_no_friends) > 0 ):  
             download = input('Would you like the times of the missing files checked (yea or nay)? ')
@@ -246,39 +248,70 @@ def find_sdo_files(directory, wavelength='', time_limits=None, cadence=12, downl
                 download = 'No'
             elif download in ['Yes', 'yes', 'Y', 'y', 'Yip', 'yip', 'Yea', 'yea']:
                 download = 'Yes'
-    
-    print('Check ', len(t_of_no_friends), ' time intervals for missing files.')
+
+    if len(t_of_no_friends) > 0:
+        print('There are ', len(t_of_no_friends), ' time intervals of missing files.')
 
     if (download == 'Yes') and (len(t_of_no_friends) > 0 ):
 
         client = VSOClient()
         start_times = [t.strftime("%Y-%m-%d %H:%M:%S") for t in t_of_no_friends]
         #search a minute ahead
-        end_times = [(t + timedelta(seconds=5*cadence)).strftime("%Y-%m-%d %H:%M:%S") for t in t_of_no_friends]
+        end_times = [t.strftime("%Y-%m-%d %H:%M:%S") for t in t_end_of_no_firends]
         for ts, te in zip(start_times, end_times):
             if files[0][0:3] == 'aia':
                 query_response = client.query_legacy(tstart=ts, tend=te, instrument='AIA', wave=wavelength)
             elif files[0][0:3] == 'hmi':
-                query_response = client.query_legacy(tstart=st, tend=et, instrument='HMI', physobs=wavelength)
+                query_response = client.query_legacy(tstart=st, tend=te, instrument='HMI', physobs=wavelength)
             n = len(query_response) - 1 #will be used to index the list 'query_response' when downloading
 
             #Download the first two from ROB to /tmp folder and wait for download to complete
             results = client.get(query_response[0:n], path=directory, site='rob')
-            files = results.wait()
+            fs = results.wait()
+
+        if time_limits != None:
+            time_first = datetime.datetime.strptime(files[0][4:19], '%Y%m%d_%H%M%S')
+            time_last = datetime.datetime.strptime(files[-1][4:19], '%Y%m%d_%H%M%S')
+        
+            time_limits_first = datetime.datetime.strptime(time_limits[0], "%Y-%m-%d %H:%M:%S")
+            time_limits_last = datetime.datetime.strptime(time_limits[1], "%Y-%m-%d %H:%M:%S")
+
+            if time_first - time_limits_first >= timedelta(seconds=cadence): #if the diff between the start time given and the first file's starting time 
+                print('Checking start time-gap.')
+                if files[0][0:3] == 'aia':
+                    query_response = client.query_legacy(tstart=time_limits[0], tend=time_first.strftime("%Y-%m-%d %H:%M:%S"), instrument='AIA', wave=wavelength)
+                elif files[0][0:3] == 'hmi':
+                    query_response = client.query_legacy(tstart=time_limits[0], tend=time_first.strftime("%Y-%m-%d %H:%M:%S"), instrument='HMI', physobs=wavelength)
+                n = len(query_response) - 1 #will be used to index the list 'query_response' when downloading
+                #Download the first two from ROB to /tmp folder and wait for download to complete
+                results = client.get(query_response[0:n], path=directory, site='rob')
+                fs = results.wait()
+            if time_limits_last - time_last  >= timedelta(seconds=cadence): #if the diff between the end time given and the end file's starting time 
+                print('Checking end time-gap.')
+                if files[0][0:3] == 'aia':
+                    query_response = client.query_legacy(tstart=time_last.strftime("%Y-%m-%d %H:%M:%S"), tend=time_limits[1], instrument='AIA', wave=wavelength)
+                elif files[0][0:3] == 'hmi':
+                    query_response = client.query_legacy(tstart=time_last.strftime("%Y-%m-%d %H:%M:%S"), tend=time_limits[1], instrument='HMI', physobs=wavelength)
+                n = len(query_response) - 1 #will be used to index the list 'query_response' when downloading
+                #Download the first two from ROB to /tmp folder and wait for download to complete
+                results = client.get(query_response[0:n], path=directory, site='rob')
+                fs = results.wait()
             
     duplicates = glob.glob(directory + '*.*.fits') #removes files that downloaded twice
     for each_file_path in duplicates:
         os.remove(each_file_path)
+
+    if no_friends == []: #if there arent any files to check for then don't double check or anything, just stop
+        print('All files here!')
+        return
     
     if double_check == 'No':
-        if no_friends == []:
-            print('All files here!')
-            return
-        else:
-            print(f'Here are files without friends {cadence} seconds ahead of them from directory \n{directory}:')
-            print(no_friends)
-            print('Please wait a few minutes and try this function again, it depends on the servers sometimes.')
+        print(f'Here are files without friends {cadence} seconds ahead of them from directory \n{directory}:')
+        print(no_friends)
+        print('Please wait a few minutes and try this function again, it depends on the servers sometimes.')
         return no_friends
-    if double_check == 'Yes': #double check to see if we have all the files
-        still_no_friends = find_sdo_files(directory, wavelength, time_limits=time_limits, download='No', double_check='No')
+    elif double_check == 'Yes': #double check to see if we have all the files
+        still_no_friends = find_sdo_files(directory, wavelength, time_limits=time_limits, download='Yes', double_check='No')
+    elif double_check == 'recursive':
+        still_no_friends = find_sdo_files(directory, wavelength, time_limits=time_limits, download='Yes', double_check='recursive')
     return still_no_friends
