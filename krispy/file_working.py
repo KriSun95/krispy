@@ -235,8 +235,6 @@ def find_sdo_files(directory, wavelength='', time_limits=None, cadence=12, downl
         if time_0 <= time_1 <= time_0 + timedelta(seconds=cadence): #if there is a file <=12s ahead move on
             continue
         else: #if there is not a file <=12s ahead add it to the no friends list
-            print(time_0)
-            print(time_1)
             no_friends.append(files[f])
             t_of_no_friends.append(time_0) 
             t_end_of_no_firends.append(time_1) 
@@ -252,22 +250,24 @@ def find_sdo_files(directory, wavelength='', time_limits=None, cadence=12, downl
     if len(t_of_no_friends) > 0:
         print('There are ', len(t_of_no_friends), ' time intervals of missing files.')
 
-    if (download == 'Yes') and (len(t_of_no_friends) > 0 ):
+    if (download == 'Yes'):
 
         client = VSOClient()
-        start_times = [t.strftime("%Y-%m-%d %H:%M:%S") for t in t_of_no_friends]
-        #search a minute ahead
-        end_times = [t.strftime("%Y-%m-%d %H:%M:%S") for t in t_end_of_no_firends]
-        for ts, te in zip(start_times, end_times):
-            if files[0][0:3] == 'aia':
-                query_response = client.query_legacy(tstart=ts, tend=te, instrument='AIA', wave=wavelength)
-            elif files[0][0:3] == 'hmi':
-                query_response = client.query_legacy(tstart=st, tend=te, instrument='HMI', physobs=wavelength)
-            n = len(query_response) - 1 #will be used to index the list 'query_response' when downloading
 
-            #Download the first two from ROB to /tmp folder and wait for download to complete
-            results = client.get(query_response[0:n], path=directory, site='rob')
-            fs = results.wait()
+        if len(t_of_no_friends) > 0:
+            start_times = [t.strftime("%Y-%m-%d %H:%M:%S") for t in t_of_no_friends]
+            #search a minute ahead
+            end_times = [t.strftime("%Y-%m-%d %H:%M:%S") for t in t_end_of_no_firends]
+            for ts, te in zip(start_times, end_times):
+                if files[0][0:3] == 'aia':
+                    query_response = client.query_legacy(tstart=ts, tend=te, instrument='AIA', wave=wavelength)
+                elif files[0][0:3] == 'hmi':
+                    query_response = client.query_legacy(tstart=st, tend=te, instrument='HMI', physobs=wavelength)
+                n = len(query_response) - 1 #will be used to index the list 'query_response' when downloading
+
+                #Download the first two from ROB to /tmp folder and wait for download to complete
+                results = client.get(query_response[0:n], path=directory, site='rob')
+                fs = results.wait()
 
         if time_limits != None:
             time_first = datetime.datetime.strptime(files[0][4:19], '%Y%m%d_%H%M%S')
