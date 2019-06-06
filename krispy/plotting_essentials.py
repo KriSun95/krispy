@@ -218,7 +218,7 @@ def cmap_midcolours(**kwargs):
     #05/02/2019: ~colourbar used for iron 16 is added as 'Purples'
 
     #default/standard colourmaps with appropriate names for their use 
-    cmap_names = ['sdoaia94', 'sdoaia171', 'sdoaia211', 'sdoaia335', 'hinodexrt'] #default colourmaps
+    cmap_names = ['sdoaia94', 'sdoaia131', 'sdoaia171', 'sdoaia211', 'sdoaia335', 'hinodexrt'] #default colourmaps
 
     cmap_dict ={}
 
