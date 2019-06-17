@@ -306,9 +306,9 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
         if type(save_directory) == list:
             for _save_d in save_directory:
                 if save_inc == False:
-                    plt.savefig(_save_d + f'aia_image{wavelength}.png', dpi=600, bbox_inches='tight')
+                    plt.savefig(_save_d + f'aia_image{wavelength}.png', dpi=300, bbox_inches='tight')
                 elif save_inc == True:
-                    plt.savefig(_save_d + 'maps{:04d}.png'.format(d), dpi=600, bbox_inches='tight')
+                    plt.savefig(_save_d + 'maps{:04d}.png'.format(d), dpi=300, bbox_inches='tight')
         d+=1
                 
         plt.clf() 
@@ -887,10 +887,10 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             plt.title(f'FeXVIII at {time_bins[t]} to {time_bins[t+1][12:]}');
 
             if save_inc == False:
-                plt.savefig(save_dir + f'nustar_contours{d}_on_iron18_chu{chu}_fpm{fpm}.png', dpi=600, 
+                plt.savefig(save_dir + f'nustar_contours{d}_on_iron18_chu{chu}_fpm{fpm}.png', dpi=300, 
                             bbox_inches='tight')
             elif save_inc == True:
-                plt.savefig(save_dir + 'contours{:04d}.png'.format(d), dpi=600, bbox_inches='tight')
+                plt.savefig(save_dir + 'contours{:04d}.png'.format(d), dpi=300, bbox_inches='tight')
             d+=1
                 
             plt.close(fig)
@@ -970,10 +970,10 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             print(f'{time_bins[t][:-7]} to {time_bins[t+1][10:18]}')         
 
             if save_inc == False:
-                plt.savefig(save_dir + f'nustar_contours{d}_on_iron18_chu{chu}_fpm{fpm}.png', dpi=600, 
+                plt.savefig(save_dir + f'nustar_contours{d}_on_iron18_chu{chu}_fpm{fpm}.png', dpi=300, 
                             bbox_inches='tight')
             elif save_inc == True:
-                plt.savefig(save_dir + 'maps{:04d}.png'.format(d), dpi=600, bbox_inches='tight')
+                plt.savefig(save_dir + 'maps{:04d}.png'.format(d), dpi=300, bbox_inches='tight')
             d+=1
                 
             plt.close(fig)
@@ -1007,7 +1007,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
 ###########################################################################################################
 ###### Delete the aia_map as soon as you can, this solves the problem. ####################################
 ###########################################################################################################
-def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [], submap=[], rectangle=[], 
+def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=300, cmlims = [], submap=[], rectangle=[], 
                      resample=[], save_inc=False, fexviii=False):
     """Takes a directory with fits files, constructs a map or submap of the full observation with/without a rectangle and
     saves the image in the requested directory.
@@ -1025,8 +1025,8 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [
             Default: '.png'
             
     dpi : Int
-            Dots per inch for the save file resolution, e.g. 100, 150, 600, etc.
-            Default: 600
+            Dots per inch for the save file resolution, e.g. 100, 150, 300, etc.
+            Default: 300
 
         cmlims : One-dimensional list/array of type float or int, length 2
             Limits of the colourmap, e.g. [vmin, vmax].
@@ -1173,7 +1173,7 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=600, cmlims = [
 
 #make composite images from the aia fits files
 def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cmlims = [],cmlims2=[], rectangle=[], save_inc=True, iron='',
-                    cm_scale='Normalize', res=None, in_order=True, alphas=[0.5,0.5], lvls=None, dpi=600):      
+                    cm_scale='Normalize', res=None, in_order=True, alphas=[0.5,0.5], lvls=None, dpi=300):      
     """Takes a directory with fits files, constructs a map or submap of the full observation with/without a rectangle and
     saves the image in the requested directory.
     
@@ -1239,7 +1239,7 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
 
     dpi : Int
             Express the dots per inch that the images produced should have.
-            Default: 600
+            Default: 300
 
     Returns
     -------

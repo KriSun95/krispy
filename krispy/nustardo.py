@@ -47,7 +47,11 @@ class NustarDo:
     warnings.simplefilter('ignore', RuntimeWarning) 
     warnings.simplefilter('ignore', UserWarning)
     
-    def __init__(self, evt_filename, energy_range=[2.5,79], time_range = None): #set-up parameters
+    def __init__(self, evt_filename='', energy_range=[2.5,79], time_range = None): #set-up parameters
+        #if a filename is not given then the static functions can still be used
+        if evt_filename == '':
+            return 
+
         #directory of the file
         directory_regex = re.compile(r'\w+/')
         directory = directory_regex.findall(evt_filename)
@@ -313,12 +317,12 @@ class NustarDo:
         
     def nustar_plot(self, boxes=None, show_fig=True, save_fig=None):
         matplotlib.rcParams['font.sans-serif'] = "Arial"
-        #matplotlib.rcParams['font.family'] = "sans-serif"
+        matplotlib.rcParams['font.family'] = "sans-serif"
         #matplotlib.rcParams['font.size'] = 12
         plt.rcParams["figure.figsize"] = (10,8)
-        plt.rcParams['mathtext.fontset'] = 'stix'
+        #plt.rcParams['mathtext.fontset'] = 'stix'
         plt.rcParams['font.size'] = 18
-        plt.rcParams['font.family'] = 'STIXGeneral'
+        #plt.rcParams['font.family'] = 'STIXGeneral'
         plt.rcParams['axes.facecolor']='white'
         plt.rcParams['savefig.facecolor']='white'
         # Start the plot - many things here just to make matplotlib look decent
@@ -495,6 +499,30 @@ class NustarDo:
         goodinds=inds[0]       
 
         return evtdata[goodinds]
+
+
+    @staticmethod
+    def nustar_file_finder(start_directory='', obs_id='', descriptor='', fpm='', ext=''):
+
+        full_filename = None
+        file_directory = None
+        file_name = None
+        #expression for everything that ends in a slash
+        search_directory_regex = re.compile(r'\w+/')
+
+        #find all the folders in the evt directory (they end with a slash)
+        search_directory = search_directory_regex.findall(start_directory)
+
+        #don't includce the last folder to go back a directory
+        search_directory = '/'+''.join(search_directory[:-1]) #go back a directory to search for the house keeping file
+        for _dirpath, _dirnames, _filenames in os.walk(search_directory):
+            for _file in _filenames:
+                if _file == 'nu' + obs_id + fpm + descriptor + ext:
+                    full_filename = os.path.join(_dirpath, _file)
+                    file_directory = _dirpath
+                    file_name = _file
+
+        return full_filename, file_directory, file_name
         
         
     def livetime(self, hk_filename=None, show_fig=True):
@@ -508,22 +536,12 @@ class NustarDo:
         plt.rcParams['font.family'] = 'STIXGeneral'
         
         if hk_filename == None:
-            #expression for everything that ends in a slash
-            search_directory_regex = re.compile(r'\w+/')
-            #find all the folders in the evt directory (they end with a slash)
-            search_directory = search_directory_regex.findall(self.evt_directory)
-            #don't includce the last folder to go back a directory
-            search_directory = '/'+''.join(search_directory[:-1]) #go back a directory to search for the house keeping file
-            for _dirpath, _dirnames, _filenames in os.walk(search_directory):
-                for _file in _filenames:
-                    if _file == 'nu'+self.obs_id+self.fpm+'_fpm.hk':
-                        hk_filename = os.path.join(_dirpath, _file)
-                        self.hk_directory = _dirpath
-                        self.hk_filename = _file
+            hk_filename, self.hk_directory, self.hk_filename = self.nustar_file_finder(start_directory=self.evt_directory, obs_id=self.obs_id, descriptor='_fpm', fpm=self.fpm, ext='.hk')
+
             if hk_filename == None: #if there is still no hk_filename then there won't be one used
                 print('Unable to find appropriate .hk file.')
                 self.hk_times = 0
-                self.hk_livetimes = 0
+                self.hk_livetimes = [] # so the this length is 0
                 return #stops the function here but doesn't stop the code, this is the same as 'return None'
         
         name_of_hk_file_regex = re.compile(r'\w+\.\w+')
@@ -817,6 +835,79 @@ class NustarDo:
                 self.lc_times = dt_times
                 self.lc_count_rates = None
 
+
+    def full_obs_chus(self, start_directory=None, obs_id=None, descriptor='_chu123', ext='.fits' ,show_fig=True):
+        if start_directory == None:
+            start_directory=self.evt_directory
+        if obs_id == None:
+            obs_id=self.obs_id
+
+        chu_filename, self.chu_directory, self.chu_filename = self.nustar_file_finder(start_directory=start_directory, obs_id=obs_id, descriptor=descriptor, ext=ext)
+
+        #not self.chu_filename as fits.open needs to know the full path to the file
+        hdulist = fits.open(chu_filename) 
+        data1 = hdulist[1].data
+        data2 = hdulist[2].data
+        data3 = hdulist[3].data
+        hdulist.close()
+
+        # easier to work with numpy arrays later
+        data_c1 = np.array(data1)
+        data_c2 = np.array(data2)
+        data_c3 = np.array(data3)
+
+        maxres = 20
+        
+        for chu_num, dat in enumerate([data_c1, data_c2, data_c3]):
+            chu_bool = ((dat['VALID']==1) & 
+                        (dat['RESIDUAL']<maxres) &
+                        (dat['STARSFAIL']<dat['OBJECTS']) &
+                        (dat['CHUQ'][:,3]!=1))
+            chu_01 = chu_bool*1 # change true/false into 1/0
+    
+            chu_mask = chu_01* (chu_num+1)**2 # give each chu a unique number that when it is added to another it gives a unique chu combo, like file permissions
+    
+            if chu_num == 0:
+                chu_all = chu_mask # after chu 1 file have an array with 1s and 0s
+            else:
+                chu_all += chu_mask # after the others (chu2 and chu3) have an array with 1,4,9,5,10,13,14
+        
+        # last data array in the for loop can give the time, no. of seconds from 1-Jan-2010
+        chu_time = dat['TIME']
+
+        # reassigned values are at 100, etc. as to not accidently double sort the values again
+        # e.g. if mask value was changed to 10, then if it was accidently run again it would get sorted into chu state 13 etc.
+        chu_all[chu_all == 1] = 100 #chu1 # mask value in array is changed to chu state, e.g. mask value=5, chu state is 12, and value 102
+        chu_all[chu_all == 4] = 101 #chu2 
+        chu_all[chu_all == 5] = 102 #chu12
+        chu_all[chu_all == 9] = 103 #chu3
+        chu_all[chu_all == 10] = 104 #chu13
+        chu_all[chu_all == 13] = 105 #chu23
+        chu_all[chu_all == 14] = 106 #chu123
+
+        self.chu_all = chu_all
+
+        self.chu_reference = {'chu1':100, 'chu2':101, 'chu12':102, 'chu3':103, 'chu13':104, 'chu23':105, 'chu123':106}
+
+        tick_labels = ['','1', '2', '12', '3', '13', '23', '123'] 
+
+        self.chu_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + datetime.timedelta(seconds=t)) for t in chu_time]
+
+        if show_fig == True:
+            dt_times = self.chu_times
+            fig = plt.figure(figsize=(10,6))
+            ax = plt.axes()
+            plt.plot(dt_times, chu_all,'x')
+            plt.title('CHU States of NuSTAR on ' + dt_times[0].strftime('%Y/%m/%d')) #get the date in the title
+            plt.xlabel('Start Time - ' + dt_times[0].strftime('%H:%M:%S'))
+            plt.ylabel('NuSTAR CHUs')
+            plt.xlim([dt_times[0], dt_times[-1]])
+            fmt = mdates.DateFormatter('%H:%M')
+            ax.xaxis.set_major_formatter(fmt)
+            ax.axes.set_yticklabels(tick_labels)
+            plt.xticks(rotation=30)
+            plt.show()
+
      
     def save(self, save_dir='./', overwrite=False, **kwargs):
         #replace folder of saved data if run twice or just make a new one?
@@ -845,6 +936,9 @@ class NustarDo:
             ***** nustar_light_curve_data *****
             ~lc_counts/lc_count_rates, lc_times, lightcurve plot(s)
                 ~rectangle coordinates
+
+        New stuff to save:
+            ***** chu function*****
         '''
         
         if self.chu_state != 'not_split':
