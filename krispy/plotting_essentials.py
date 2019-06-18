@@ -26,6 +26,8 @@ import os
 import matplotlib.dates as mdates
 import matplotlib
 import sunpy.cm
+from astropy.coordinates import SkyCoord
+import astropy.units as u
 
 '''
 Alterations:
@@ -66,7 +68,7 @@ def make_lightcurve(directory, bottom_left, top_right):
         for _d in directory:
             _aia_files = os.listdir(_d)
             _aia_files.sort()
-            _aia_files = only_fits(_aia_files)
+            _aia_files = file_working.only_fits(_aia_files)
             _directory_with_files = [_d+f for f in _aia_files]
             directory_with_files += _directory_with_files
     no_of_files = len(directory_with_files)
