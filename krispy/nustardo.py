@@ -183,6 +183,7 @@ class NustarDo:
         shift_cleanevt = self.shift(self.cleanevt, pix_xshift=shift_pix[0][0], pix_yshift=shift_pix[0][1]) 
 
         self.cleanevt = shift_cleanevt
+
     
     gaussian_filter = {'apply':True, 'sigma':4, 'mode':'nearest'}
     
@@ -589,9 +590,11 @@ class NustarDo:
             ax.xaxis.set_major_locator(plt.LinearLocator(9))
             plt.xticks(rotation=30)
             plt.show()        
+
         
-        
-    def light_curve(self, cleanevt=None, hdr=None, t_bin=[10,'approx'], sub_reg=None, tstart=None, tend=None, 
+    t_bin = {'seconds_per_bin':10, 'method':'approx'}
+
+    def light_curve(self, cleanevt=None, hdr=None, sub_reg=None, tstart=None, tend=None, 
                     count_rate=True, house_keeping_file=None, make_final_graph=True):     
         plt.rcParams["figure.figsize"] = (10,6)
         plt.rcParams['mathtext.fontset'] = 'stix'
@@ -634,9 +637,9 @@ class NustarDo:
                     print('Will not show plot.')
                     return
 
-        if t_bin[1] == 'approx':
+        if self.t_bin['method'] == 'approx':
             if (type(cleanevt) == astropy.io.fits.fitsrec.FITS_rec) and (sub_reg == None): #data form of NuSTAR
-                t_bin_conversion = int((rel_tend - rel_tstart) // t_bin[0]) #get approximately t_bin seconds per bin as start and end of 
+                t_bin_conversion = int((rel_tend - rel_tstart) // self.t_bin['seconds_per_bin']) #get approximately t_bin seconds per bin as start and end of 
                 #data are fixed when the histogram is created
                 assert t_bin_conversion >= 1, 'Number of bins cannot be <1. Decrease \'t_bin\' value to get more bins.'
 
@@ -652,12 +655,12 @@ class NustarDo:
                 #this is to plot the light curve of a sub-region.
                 print('Inconvenient to approximate the time bins for the light curve of a sub_region.'
                       '\nChanging to \'exact\'.')
-                t_bin[1] = 'exact'
+                self.t_bin['method'] = 'exact'
             else:
                 raise TypeError('\'astropy.io.fits.fitsrec.FITS_rec\' is the only supported data type at the moment.')
 
-        if t_bin[1] == 'exact': #if since if the 'approx' flag is up and also submap!=None then time profile should be made here
-            t_bin_number = int((rel_tend - rel_tstart) // t_bin[0]) #get whole number of bins that are t_bin seconds long and
+        if self.t_bin['method'] == 'exact': #if since if the 'approx' flag is up and also submap!=None then time profile should be made here
+            t_bin_number = int((rel_tend - rel_tstart) // self.t_bin['seconds_per_bin']) #get whole number of bins that are t_bin seconds long and
             #doesn't include any time at the end that only has data for some of the last range
 
             assert t_bin_number >= 1, 'Number of bins cannot be <1. Decrease \'t_bin\' value to get more bins.'
@@ -666,7 +669,7 @@ class NustarDo:
             t_bin_edges = np.zeros(t_bin_number+1) #+1 for the last edge
             for t in range(len(t_bin_edges)):
                 t_bin_edges[t] = edge
-                edge += t_bin[0]
+                edge += self.t_bin['seconds_per_bin']
             times = t_bin_edges[:-1]
             
             start_hhmmss = str((datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=np.min(times))).strftime('%H:%M:%S'))
@@ -777,7 +780,7 @@ class NustarDo:
                 raise TypeError('\'astropy.io.fits.fitsrec.FITS_rec\' is the only supported data type at the moment.')
             
         else:
-            if (t_bin[1] != 'exact') and (t_bin[1] != 'approx'):
+            if (self.t_bin['method'] != 'exact') and (self.t_bin['method'] != 'approx'):
                 raise ValueError('Only options for the time bins is \'approx\' or \'exact\'.')
                 
         if make_final_graph == True: #only in case multiple regions are plotted then they are handled in its own 'for' loop
