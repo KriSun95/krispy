@@ -33,6 +33,7 @@ import matplotlib.dates as mdates
 import pickle
 import subprocess
 import pytz
+from skyimage import restoration
 
 '''
 Alterations:
@@ -91,6 +92,7 @@ class NustarDo:
         self.energy_range = energy_range
         self.chu_state = chu_state
         self.rectangles = None #set so that you don't have to plot a map to get a light curve
+        self.deconvolve = False #set before nustar_map to run deconvolution on map
         
         #extract the data within the provided parameters
         hdulist = fits.open(evt_filename) #not self.evt_filename as fits.open needs to know the full path to the file
@@ -184,6 +186,38 @@ class NustarDo:
 
         self.cleanevt = shift_cleanevt
 
+
+    def nustar_deconv(self, map_array=None, psf_array=None, it=20):
+
+        ## for defaults
+        if map_array == None:
+            map_array = self.nustar_map.data
+
+        if psf_array = None:
+            try_1 = '/opt/caldb/data/nustar/fpm/bcf/psf/nuA2dpsf20100101v001.fits'
+            try_2 = '/usr/local/caldb/data/nustar/fpm/bcf/psf/nuA2dpsf20100101v001.fits'
+            if os.path.exists(try_1):
+                psfhdu = fits.open(try_1)
+                psf_array = psfhdu[1].data
+                psfhdu.close()
+                psf_used = try_1,
+            elif os.path.exists(try_2):
+                psfhdu = fits.open(try_2)
+                psf_array = psfhdu[1].data
+                psfhdu.close()
+                psf_used = try_2
+            else:
+                print('Could not find PSF file. Please provide the PSF filename or array.') 
+                print('Returning original map.')
+                self.deconvolve = False
+                deconv_settings_info = {'map':None, 'psf_file':None, 'psf_array':None, 'iterations':None}
+                return map_array
+
+        deconvolved_RL = restoration.richardson_lucy(map_array, psf_array, iterations=it)
+        
+        deconv_settings_info = {'map':map_array, 'psf_file':psf_used, 'psf_array':psf_array, 'iterations':it}
+        return deconvolved_RL
+
     
     gaussian_filter = {'apply':True, 'sigma':4, 'mode':'nearest'}
     
@@ -201,6 +235,10 @@ class NustarDo:
             tr = SkyCoord(1200*u.arcsec, 1200*u.arcsec, frame=self.nustar_map.coordinate_frame)
             self.nustar_map = self.nustar_map.submap(bl,tr)
 
+        if self.deconvolve == True:
+            dconv = self.nustar_deconv()
+            self.nustar_map = sunpy.map.Map(dconv, self.nustar_map.meta)
+            
         if self.gaussian_filter['apply'] == True:
             gaussian_width = self.gaussian_filter['sigma']
             m = self.gaussian_filter['mode']
@@ -941,7 +979,7 @@ class NustarDo:
                 ~rectangle coordinates
 
         New stuff to save:
-            ***** chu function*****
+            ***** chu function ***** deconvolve settings *****
         '''
         
         if self.chu_state != 'not_split':
