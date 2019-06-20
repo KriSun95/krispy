@@ -33,7 +33,7 @@ import matplotlib.dates as mdates
 import pickle
 import subprocess
 import pytz
-from skyimage import restoration
+from skimage import restoration
 
 '''
 Alterations:
@@ -92,7 +92,6 @@ class NustarDo:
         self.energy_range = energy_range
         self.chu_state = chu_state
         self.rectangles = None #set so that you don't have to plot a map to get a light curve
-        self.deconvolve = False #set before nustar_map to run deconvolution on map
         
         #extract the data within the provided parameters
         hdulist = fits.open(evt_filename) #not self.evt_filename as fits.open needs to know the full path to the file
@@ -187,13 +186,13 @@ class NustarDo:
         self.cleanevt = shift_cleanevt
 
 
-    def nustar_deconv(self, map_array=None, psf_array=None, it=20):
+    def nustar_deconv(self, map_array=None, psf_array=None, it=10):
 
         ## for defaults
         if map_array == None:
             map_array = self.nustar_map.data
 
-        if psf_array = None:
+        if psf_array == None:
             try_1 = '/opt/caldb/data/nustar/fpm/bcf/psf/nuA2dpsf20100101v001.fits'
             try_2 = '/usr/local/caldb/data/nustar/fpm/bcf/psf/nuA2dpsf20100101v001.fits'
             if os.path.exists(try_1):
@@ -218,10 +217,12 @@ class NustarDo:
         deconv_settings_info = {'map':map_array, 'psf_file':psf_used, 'psf_array':psf_array, 'iterations':it}
         return deconvolved_RL
 
+
+    # might be best to only allow one of these at a time, either deconvolve OR gaussian filter
+    deconvolve = {'apply':False, 'iterations':10} # set before nustar_setmap to run deconvolution on map
+    gaussian_filter = {'apply':False, 'sigma':2, 'mode':'nearest'}
     
-    gaussian_filter = {'apply':True, 'sigma':4, 'mode':'nearest'}
-    
-    def nustar_map(self, time_norm=True, lose_off_limb=True, limits=[], 
+    def nustar_setmap(self, time_norm=True, lose_off_limb=True, limits=[],
                    submap=[], rebin_factor=1, norm='linear'):
         
         # Map the filtered evt, into one corrected for livetime (so units count/s) 
@@ -229,14 +230,25 @@ class NustarDo:
         
         self.time_norm = time_norm
         
-        if lose_off_limb == True:
+        if (lose_off_limb == True) and (len(submap) == 0):
             #fix really large plot, instead of going from -3600 to 3600 in x and y
             bl = SkyCoord(-1200*u.arcsec, -1200*u.arcsec, frame=self.nustar_map.coordinate_frame)
             tr = SkyCoord(1200*u.arcsec, 1200*u.arcsec, frame=self.nustar_map.coordinate_frame)
             self.nustar_map = self.nustar_map.submap(bl,tr)
+        elif len(submap) == 4: #Submap to plot?
+            bottom_left = {'x':submap[0], 'y':submap[1]}
+            top_right = {'x':submap[2], 'y':submap[3]}
+            
+            bl = SkyCoord(bottom_left['x']*u.arcsec, bottom_left['y']*u.arcsec, frame=self.nustar_map.coordinate_frame)
+            tr = SkyCoord(top_right['x']*u.arcsec, top_right['y']*u.arcsec, frame=self.nustar_map.coordinate_frame)
+            self.nustar_map = self.nustar_map.submap(bl,tr)
+        else:
+            raise TypeError('\nCheck the submap coordinates that were given please. It should be a list with four '
+                            'float/int entries in arcseconds in the form [bottom left x, bottom left y, top right x, '
+                            'top right y].')
 
-        if self.deconvolve == True:
-            dconv = self.nustar_deconv()
+        if self.deconvolve['apply'] == True:
+            dconv = self.nustar_deconv(it=self.deconvolve['iterations'])
             self.nustar_map = sunpy.map.Map(dconv, self.nustar_map.meta)
             
         if self.gaussian_filter['apply'] == True:
@@ -245,9 +257,9 @@ class NustarDo:
             #Apply a guassian blur to the data to bring out the faint feature
             dd = ndimage.gaussian_filter(self.nustar_map.data, gaussian_width, mode=m)
             if limits == []:
-                dmin = np.min(dd[np.nonzero(dd)])*1e6 #factor here as the lowest value will come from the gaussian 
+                dmin = np.min(dd[np.nonzero(self.nustar_map.data)])#*1e6 factor was here as the lowest value will come (came from dd) from the gaussian
                 #filter and not the actual lowest count rate hence the factor 
-                dmax = np.max(dd[np.isfinite(dd)])
+                dmax = np.max(dd[np.isfinite(self.nustar_map.data)])
             elif len(limits) == 2:
                 if norm == 'lognorm':
                     if limits[0] <= 0:
@@ -259,14 +271,13 @@ class NustarDo:
                 elif norm == 'linear':
                     dmin=limits[0]
                     dmax=limits[1]
-                #dmin, dmax = *limits #i.e. dmin=limits[0], dmax=limits[1]
             else:
                 raise TypeError('\nCheck the limits that were given please.')
         else:
             dd = self.nustar_map.data
             if limits == []:
-                dmin = np.min(dd[np.nonzero(dd)])
-                dmax = np.max(dd[np.isfinite(dd)])
+                dmin = np.min(dd[np.nonzero(self.nustar_map.data)])
+                dmax = np.max(dd[np.isfinite(self.nustar_map.data)])
             elif len(limits) == 2:
                 if norm == 'lognorm':
                     if limits[0] <= 0:
@@ -278,7 +289,6 @@ class NustarDo:
                 elif norm == 'linear':
                     dmin=limits[0]
                     dmax=limits[1]
-                #dmin, dmax = *limits #i.e. dmin=limits[0], dmax=limits[1]
             else:
                 raise TypeError('\nCheck the limits that were given please. It should be a list with two float/int '
                                 'entries')
@@ -286,52 +296,20 @@ class NustarDo:
         # Tidy up before plotting
         dd[dd < dmin]=0
         nm = sunpy.map.Map(dd, self.nustar_map.meta)
-
-        #Submap to plot?
-        if len(submap) == 4:
-            bottom_left = {'x':submap[0], 'y':submap[1]} 
-            top_right = {'x':submap[2], 'y':submap[3]} 
-
-            bl = SkyCoord(bottom_left['x']*u.arcsec, bottom_left['y']*u.arcsec, frame=nm.coordinate_frame)
-            tr = SkyCoord(top_right['x']*u.arcsec, top_right['y']*u.arcsec, frame=nm.coordinate_frame)
-            nustar_submap = nm.submap(bl,tr)
-        elif len(submap) == 0:
-            pass
-        else:
-            raise TypeError('\nCheck the submap coordinates that were given please. It should be a list with four '
-                            'float/int entries in arcseconds in the form [bottom left x, bottom left y, top right x, '
-                            'top right y].')
-
+        
         if rebin_factor != 1:
-            if len(submap) == 4:
-                #can rebin the pixels if we want to further bring out faint features
-                #set to 1 means no actual rebinning
-                nx,ny = np.shape(self.nustar_submap.data)
-                if rebin_factor > 1/nx and rebin_factor > 1/ny:
-                    dimensions = u.Quantity([nx*rebin_factor, ny*rebin_factor], u.pixel)
-                    rsn_map = nustar_submap.resample(dimensions)
-                else:
-                    raise TypeError(f'\nRebin factor must be greater than one over the x,y dimensions (1/{nx} and '
-                                    f'1/{ny}) as to rebin to more than one pixel.')
-
-            elif len(submap) == 0:
-                #can rebin the pixels if we want to further bring out faint features
-                #set to 1 means no actual rebinning
-                nx,ny = np.shape(nm.data)
-                if rebin_factor > 1/nx and rebin_factor > 1/ny:
-                    dimensions = u.Quantity([nx*rebin_factor, ny*rebin_factor], u.pixel)
-                    rsn_map = nm.resample(dimensions)
-                else:
-                    raise TypeError(f'\nRebin factor must be greater than one over the x,y dimensions (1/{nx} and '
-                                    f'1/{ny}) as to rebin to more than one pixel.')
+            #can rebin the pixels if we want to further bring out faint features
+            #set to 1 means no actual rebinning
+            nx,ny = np.shape(nm.data)
+            if rebin_factor => 1/nx and rebin_factor => 1/ny:
+                dimensions = u.Quantity([nx*rebin_factor, ny*rebin_factor], u.pixel)
+                rsn_map = nm.resample(dimensions)
+            else:
+                raise TypeError(f'\nRebin factor must be greater than one over the x,y dimensions (1/{nx} and '
+                                f'1/{ny}) as to rebin to get one, or more, pixel(s) fro the entire image, i.e. can\'t rebin to half a pixel.')
         elif rebin_factor == 1:
-            if len(submap) == 4:
-                rsn_map = nustar_submap
-                del nustar_submap
-
-            elif len(submap) == 0:
-                rsn_map = nm
-                del nm
+            rsn_map = nm
+            del nm
         
         if norm == 'linear':
             #change all zeros to NaNs so they appear white in the plot otherwise zeros appear as the lowest colour 
@@ -437,7 +415,7 @@ class NustarDo:
     
     def nustar_peek(self):
         #just to view the map with all default settings
-        self.nustar_map() 
+        self.nustar_setmap()
         self.nustar_plot()
             
     
