@@ -208,7 +208,7 @@ class NustarDo:
             else:
                 print('Could not find PSF file. Please provide the PSF filename or array.') 
                 print('Returning original map.')
-                self.deconvolve = False
+                self.deconvolve['apply'] = False
                 deconv_settings_info = {'map':None, 'psf_file':None, 'psf_array':None, 'iterations':None}
                 return map_array
 
