@@ -92,6 +92,8 @@ class NustarDo:
         self.energy_range = energy_range
         self.chu_state = chu_state
         self.rectangles = None #set so that you don't have to plot a map to get a light curve
+
+        self.rel_t = datetime.datetime(2010,1 ,1 ,0 ,0 ,0) # nustar times are measured in seconds from this date
         
         #extract the data within the provided parameters
         hdulist = fits.open(evt_filename) #not self.evt_filename as fits.open needs to know the full path to the file
@@ -193,10 +195,10 @@ class NustarDo:
             map_array = self.nustar_map.data
 
         if psf_array == None:
-            if self.fpm = 'A':
+            if self.fpm == 'A':
                 try_1 = '/opt/caldb/data/nustar/fpm/bcf/psf/nuA2dpsf20100101v001.fits'
                 try_2 = '/usr/local/caldb/data/nustar/fpm/bcf/psf/nuA2dpsf20100101v001.fits'
-            elif self.fpm = 'B':
+            elif self.fpm == 'B':
                 try_1 = '/opt/caldb/data/nustar/fpm/bcf/psf/nuB2dpsf20100101v001.fits'
                 try_2 = '/usr/local/caldb/data/nustar/fpm/bcf/psf/nuB2dpsf20100101v001.fits'
             
@@ -227,13 +229,27 @@ class NustarDo:
     deconvolve = {'apply':False, 'iterations':10} # set before nustar_setmap to run deconvolution on map
     gaussian_filter = {'apply':False, 'sigma':2, 'mode':'nearest'}
     
-    def nustar_setmap(self, time_norm=True, lose_off_limb=True, limits=[],
-                   submap=[], rebin_factor=1, norm='linear'):
+    def nustar_setmap(self, time_norm=True, lose_off_limb=True, limits=None,
+                   submap=None, rebin_factor=1, norm='linear', house_keeping_file=None):
+        if limits == None:
+            limits = []
+        if submap == None:
+            submap = []
         
         # Map the filtered evt, into one corrected for livetime (so units count/s) 
-        self.nustar_map = custom_map.make_sunpy(self.cleanevt, self.evt_header, norm_map=time_norm)
+        self.nustar_map = custom_map.make_sunpy(self.cleanevt, self.evt_header, norm_map=False)
         
         self.time_norm = time_norm
+        if self.time_norm == True:
+            self.livetime(hk_filename=house_keeping_file, show_fig=False)
+            #livetime correction
+            time_range = [(datetime.datetime.strptime(tm, '%Y/%m/%d, %H:%M:%S') - self.rel_t).total_seconds() for tm in self.time_range]
+            indices = ((self.hk_times>=time_range[0]) & (self.hk_times<time_range[1]))
+            ltimes_in_range = self.hk_livetimes[indices]
+            livetime = np.average(ltimes_in_range)
+            lc_cor_nustar_map = self.nustar_map.data / (livetime * (time_range[1] - time_range[0]))
+            self.nustar_map = sunpy.map.Map(lc_cor_nustar_map, self.nustar_map.meta)
+            
         
         if (lose_off_limb == True) and (len(submap) == 0):
             #fix really large plot, instead of going from -3600 to 3600 in x and y
@@ -306,7 +322,7 @@ class NustarDo:
             #can rebin the pixels if we want to further bring out faint features
             #set to 1 means no actual rebinning
             nx,ny = np.shape(nm.data)
-            if rebin_factor => 1/nx and rebin_factor => 1/ny:
+            if rebin_factor >= 1/nx and rebin_factor >= 1/ny:
                 dimensions = u.Quantity([nx*rebin_factor, ny*rebin_factor], u.pixel)
                 rsn_map = nm.resample(dimensions)
             else:
@@ -511,9 +527,9 @@ class NustarDo:
         elif tmrng is not None:
             tstart = datetime.datetime.strptime(tmrng[0], '%Y/%m/%d, %H:%M:%S') #date must be in this format 'yyyy/mm/dd, HH:MM:SS'
             tend = datetime.datetime.strptime(tmrng[1], '%Y/%m/%d, %H:%M:%S')
-            rel_t = datetime.datetime(2010,1 ,1 ,0 ,0 ,0) #the date NuSTAR times are defined from
-            tstart_s = (tstart - rel_t).total_seconds() #both dates are converted to number of seconds from 2010-Jan-1  
-            tend_s = (tend - rel_t).total_seconds()
+            self.rel_t = datetime.datetime(2010,1 ,1 ,0 ,0 ,0) #the date NuSTAR times are defined from
+            tstart_s = (tstart - self.rel_t).total_seconds() #both dates are converted to number of seconds from 2010-Jan-1  
+            tend_s = (tend - self.rel_t).total_seconds()
             tmrng = [tstart_s, tend_s] 
 
         time_filter = ( (evtdata['TIME']>tmrng[0]) & (evtdata['TIME']<tmrng[1]) )
@@ -630,23 +646,22 @@ class NustarDo:
             sub_reg = self.rectangles
             self.sub_reg_lc = sub_reg
             
-        rel_t = datetime.datetime(2010,1 ,1 ,0 ,0 ,0)
         #tz_correction = datetime.datetime.now() - datetime.datetime.utcnow() - timedelta(seconds=3599) # GMT=UTC+1 in the summer, GMT=UTC in winter
         tz_correction = float(datetime.datetime.now().strftime('%s')) - float(datetime.datetime.now(pytz.timezone('Europe/London')).strftime('%s')) # GMT=UTC+1 in the summer, GMT=UTC in winter
         tz_correction = timedelta(seconds=tz_correction)
         if tstart == None:
             tstart = np.min(cleanevt['TIME'])
-            rel_tstart = tstart #already relative to 1/1/2010 and in seconds
+            self.rel_tstart = tstart #already relative to 1/1/2010 and in seconds
         else:
             tstart = datetime.datetime.strptime(tstart, '%Y/%m/%d, %H:%M:%S') #date must be in this format 
-            rel_tstart = (tstart - rel_t).total_seconds()
+            self.rel_tstart = (tstart - self.rel_t).total_seconds()
 
         if tend == None:
             tend = np.max(cleanevt['TIME'])
-            rel_tend = tend #already relative to 1/1/2010 and in seconds
+            self.rel_tend = tend #already relative to 1/1/2010 and in seconds
         else:
             tend = datetime.datetime.strptime(tend, '%Y/%m/%d, %H:%M:%S')
-            rel_tend = (tend - rel_t).total_seconds() 
+            self.rel_tend = (tend - self.rel_t).total_seconds() 
             
         if count_rate == True:
             self.livetime(hk_filename=house_keeping_file, show_fig=False) #run to get times and livetimes
@@ -660,7 +675,7 @@ class NustarDo:
 
         if self.t_bin['method'] == 'approx':
             if (type(cleanevt) == astropy.io.fits.fitsrec.FITS_rec) and (sub_reg == None): #data form of NuSTAR
-                t_bin_conversion = int((rel_tend - rel_tstart) // self.t_bin['seconds_per_bin']) #get approximately t_bin seconds per bin as start and end of 
+                t_bin_conversion = int((self.rel_tend - self.rel_tstart) // self.t_bin['seconds_per_bin']) #get approximately t_bin seconds per bin as start and end of 
                 #data are fixed when the histogram is created
                 assert t_bin_conversion >= 1, 'Number of bins cannot be <1. Decrease \'t_bin\' value to get more bins.'
 
@@ -681,12 +696,12 @@ class NustarDo:
                 raise TypeError('\'astropy.io.fits.fitsrec.FITS_rec\' is the only supported data type at the moment.')
 
         if self.t_bin['method'] == 'exact': #if since if the 'approx' flag is up and also submap!=None then time profile should be made here
-            t_bin_number = int((rel_tend - rel_tstart) // self.t_bin['seconds_per_bin']) #get whole number of bins that are t_bin seconds long and
+            t_bin_number = int((self.rel_tend - self.rel_tstart) // self.t_bin['seconds_per_bin']) #get whole number of bins that are t_bin seconds long and
             #doesn't include any time at the end that only has data for some of the last range
 
             assert t_bin_number >= 1, 'Number of bins cannot be <1. Decrease \'t_bin\' value to get more bins.'
 
-            edge = rel_tstart
+            edge = self.rel_tstart
             t_bin_edges = np.zeros(t_bin_number+1) #+1 for the last edge
             for t in range(len(t_bin_edges)):
                 t_bin_edges[t] = edge
@@ -707,8 +722,8 @@ class NustarDo:
                     pixels = self.arcsec_to_pixel([sub_reg[0],sub_reg[1]], [sub_reg[2],sub_reg[3]])
                     spatial_evtdata = self.spatial_filter(self.cleanevt, pixels)
                     for t in range(len(t_bin_edges)-1):
-                        ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(rel_t.strftime("%s"))+t_bin_edges[t])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
-                        te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(rel_t.strftime("%s"))+t_bin_edges[t+1])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
+                        ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+t_bin_edges[t])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
+                        te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+t_bin_edges[t+1])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
       
                         sub_cleanevt = self.time_filter(spatial_evtdata, tmrng=[ts, te])
                         counts.append(len(sub_cleanevt['TIME']))
@@ -725,8 +740,8 @@ class NustarDo:
                         spatial_evtdata = self.spatial_filter(self.cleanevt, pixels)
                         
                         for t in range(len(t_bin_edges)-1):
-                            ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(rel_t.strftime("%s"))+t_bin_edges[t])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
-                            te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(rel_t.strftime("%s"))+t_bin_edges[t+1])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
+                            ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+t_bin_edges[t])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
+                            te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+t_bin_edges[t+1])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
                   
                             sub_cleanevt = self.time_filter(spatial_evtdata, tmrng=[ts, te])
                             counts.append(len(sub_cleanevt['TIME']))
@@ -919,7 +934,7 @@ class NustarDo:
 
         if show_fig == True:
             dt_times = self.chu_times
-            fig = plt.figure(figsize=(10,6))
+            fig = plt.figure(figsize=(10,5))
             ax = plt.axes()
             plt.plot(dt_times, chu_all,'x')
             plt.title('CHU States of NuSTAR on ' + dt_times[0].strftime('%Y/%m/%d')) #get the date in the title
