@@ -188,7 +188,7 @@ class NustarDo:
         self.cleanevt = shift_cleanevt
 
 
-    def nustar_deconv(self, map_array=None, psf_array=None, it=10):
+    def nustar_deconv(self, map_array=None, psf_array=None, it=10, clip=False):
 
         ## for defaults
         if map_array == None:
@@ -219,14 +219,14 @@ class NustarDo:
                 deconv_settings_info = {'map':None, 'psf_file':None, 'psf_array':None, 'iterations':None}
                 return map_array
 
-        deconvolved_RL = restoration.richardson_lucy(map_array, psf_array, iterations=it)
+        deconvolved_RL = restoration.richardson_lucy(map_array, psf_array, iterations=it, clip=False)
         
         deconv_settings_info = {'map':map_array, 'psf_file':psf_used, 'psf_array':psf_array, 'iterations':it}
         return deconvolved_RL
 
 
     # might be best to only allow one of these at a time, either deconvolve OR gaussian filter
-    deconvolve = {'apply':False, 'iterations':10} # set before nustar_setmap to run deconvolution on map
+    deconvolve = {'apply':False, 'iterations':10, 'clip':False} # set before nustar_setmap to run deconvolution on map
     gaussian_filter = {'apply':False, 'sigma':2, 'mode':'nearest'}
     
     def nustar_setmap(self, time_norm=True, lose_off_limb=True, limits=None,
@@ -269,7 +269,7 @@ class NustarDo:
                             'top right y].')
 
         if self.deconvolve['apply'] == True:
-            dconv = self.nustar_deconv(it=self.deconvolve['iterations'])
+            dconv = self.nustar_deconv(it=self.deconvolve['iterations'], clip=self.deconvolve['clip'])
             self.nustar_map = sunpy.map.Map(dconv, self.nustar_map.meta)
             
         if self.gaussian_filter['apply'] == True:
