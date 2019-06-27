@@ -233,7 +233,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
         if diff_image is not None:
             smap.plot_settings['cmap'] = plt.cm.coolwarm
         if (_aia_files[0][0:3] == 'HMI') or (_aia_files[0][0:3] == 'hmi'):
-            smap.plot_settings['cmap'] = matplotlib.cm.get_cmap('hmimag')
+            smap.plot_settings['cmap'] = matplotlib.cm.get_cmap('PiYG_r') # use a simpler cmap than 'hmimag', pink=positive, green=negative
 
         #save submap that you're working with to save time later
         if save_smap is not None:
@@ -1339,7 +1339,7 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
             smap.plot_settings['cmap'] = plt.cm.Purples
         if (_aia_files[0][0:3] == 'HMI') or (_aia_files[0][0:3] == 'hmi'):
             #second_smap = second_smap.rotate(angle = 180 * u.deg)
-            second_smap.plot_settings['cmap'] = matplotlib.cm.get_cmap('PiYG_r') # use a simpler cmap than 'hmimag'
+            second_smap.plot_settings['cmap'] = matplotlib.cm.get_cmap('PiYG_r') # use a simpler cmap than 'hmimag', pink=positive, green=negative
 
         #fig = plt.figure()
         #plt.imshow(second_smap.data, vmin=-50,vmax=50)
