@@ -219,6 +219,12 @@ class NustarDo:
                 deconv_settings_info = {'map':None, 'psf_file':None, 'psf_array':None, 'iterations':None}
                 return map_array
 
+        elif type(psf_array) == str:
+            psf_used = psf_array
+            psfhdu = fits.open(psf_array)
+            psf_array = psfhdu[1].data
+            psfhdu.close()
+
         deconvolved_RL = restoration.richardson_lucy(map_array, psf_array, iterations=it, clip=False)
         
         deconv_settings_info = {'map':map_array, 'psf_file':psf_used, 'psf_array':psf_array, 'iterations':it}
@@ -876,6 +882,12 @@ class NustarDo:
 
 
     def full_obs_chus(self, start_directory=None, obs_id=None, descriptor='_chu123', ext='.fits' ,show_fig=True):
+        '''
+        Apapted from: 
+        https://github.com/ianan/nustar_sac/blob/master/idl/load_nschu.pro
+        and
+        https://github.com/NuSTAR/nustar_solar/blob/master/depricated/solar_mosaic_20150429/read_chus.pro
+        '''
         if start_directory == None:
             start_directory=self.evt_directory
         if obs_id == None:
