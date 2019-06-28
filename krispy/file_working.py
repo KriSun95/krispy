@@ -9,6 +9,7 @@ Functions to go in here (I think!?):
     ~time_bin_fits()
     ~only_fits()
     ~find_aia_files()
+    ~directory_structure()
 '''
 
 import sunpy
@@ -315,3 +316,45 @@ def find_sdo_files(directory, wavelength='', time_limits=None, cadence=12, downl
     elif double_check == 'recursive':
         still_no_friends = find_sdo_files(directory, wavelength, time_limits=time_limits, download='Yes', double_check='recursive')
     return still_no_friends
+
+
+
+def directory_structure(parent_dir=None):
+    """Finds the directory structure 2 layers deep of the directory given.
+    
+    Parameters
+    ----------
+    parent_dir : Str
+    A string of the path to the directory to be checked.
+    
+    Returns
+    -------
+    Creates a .txt file with the directory structure of the given directory 2 layers deep.
+    """
+    
+    if parent_dir == None:
+        parent_dir = './'
+    directory = os.listdir(parent_dir)
+    directory.sort()
+
+    # use 'with' as content manager so the file automatically closes
+    # 'w' mode as everytime the file is written to the original contents is erased
+    with open(parent_dir+'context.txt', 'w') as contents:
+        contents.write('The contents of this folder are:')
+    
+        for d in directory:
+            contents.write('\n'+parent_dir+d)
+            # now look into every directory and pick out files and other sub-directories
+        
+            for root, dirs, files in os.walk(parent_dir + d):
+                for d in dirs:
+                    contents.write('\n    |-> '+d)
+                    # if its a directory look one layer deeper and list that stuff as well
+                    for sub_f in os.listdir(root+'/'+d+'/'):
+                        contents.write('\n    |    |--> '+sub_f)
+                for f in files:
+                    contents.write('\n    |-> '+f)
+            
+                # only need to look in this directory once and for the files and sub-directories
+                # to be handled differently
+                break
