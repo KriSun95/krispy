@@ -959,6 +959,27 @@ class NustarDo:
             plt.xticks(rotation=30)
             plt.show()
 
+
+    lc_3D_params = {'energy_low':1.6, 'energy_high':80, 'time_range':self.time_range} # start at 1.6 keV as this is the lowest (yet not trusted) bin for NuSTAR for binning in 0.04 keV steps
+
+    def lightcurves_3D(self, all_evt_data=None, energy_increment=0.04):
+
+        if all_evt_data == None:
+            all_evt_data = self.evt_data
+
+        cleaned_all_evt = filter_with_tmrng.event_filter(all_evt_data, fpm = self.fpm, 
+                                                     energy_low = self.lc_3D_params['energy_low'], 
+                                                     energy_high = self.lc_3D_params['energy_high'], 
+                                                     tmrng=self.lc_3D_params['time_range'])
+
+        ## event list for each energy bin (get energy filter function)
+        ## get lightcurve for each energy bin
+        ## Get 2D array for counts for each energy along rows, and time steps along the columns
+        ## 1D array for the energies, 1D array for time steps
+        ## get seperate, static method for 3D plot creation, return axis object
+        ## axis limits to 2.5--80 keV (range of NuSTAR that's well calibrated)
+        pass
+
      
     def save(self, save_dir='./', overwrite=False, **kwargs):
         #replace folder of saved data if run twice or just make a new one?
