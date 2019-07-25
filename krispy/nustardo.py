@@ -960,17 +960,39 @@ class NustarDo:
             plt.show()
 
 
-    lc_3D_params = {'energy_low':1.6, 'energy_high':80, 'time_range':self.time_range} # start at 1.6 keV as this is the lowest (yet not trusted) bin for NuSTAR for binning in 0.04 keV steps
+    lc_3D_params = {'energy_low':1.6, 'energy_high':80, 'time_range':None} # start at 1.6 keV as this is the lowest (yet not trusted) bin for NuSTAR for binning in 0.04 keV steps
 
-    def lightcurves_3D(self, all_evt_data=None, energy_increment=0.04):
+    def lightcurves_3D(self, all_evt_data=None, energy_increment=0.04, aspect=6):
+        '''***Under Construction***'''
 
         if all_evt_data == None:
             all_evt_data = self.evt_data
+        if self.lc_3D_params['time_range'] == None:
+            self.lc_3D_params['time_range'] = self.time_range
 
         cleaned_all_evt = filter_with_tmrng.event_filter(all_evt_data, fpm = self.fpm, 
                                                      energy_low = self.lc_3D_params['energy_low'], 
                                                      energy_high = self.lc_3D_params['energy_high'], 
                                                      tmrng=self.lc_3D_params['time_range'])
+
+        energies = np.arange(1.6 , self.lc_3D_params['energy_high'], energy_increment)
+        no_of_time = 200
+        times = np.arange(no_of_time, 1)
+
+        er_and_tc = []
+        for e in range(len(energies)-1):
+            specific_lc_inds = filter_with_tmrng.by_energy(cleaned_all_evt, energies[e], energies[e+1])
+            specific_lc_data = cleaned_all_evt[specific_lc_inds]
+            counts = np.histogram(specific_lc_data['TIME'], no_of_time)[0]
+            er_and_tc.append(counts)
+        er_and_tc = np.array(er_and_tc)
+        print(np.max(er_and_tc))
+        fig = plt.figure(figsize=(6,8))
+        plt.imshow(er_and_tc, origin='lower', aspect=aspect, vmax=1)
+        plt.ylim([self.lc_3D_params['energy_low'], self.lc_3D_params['energy_high']])
+        plt.xlabel('Time')
+        plt.ylabel('Energy')
+        plt.show()
 
         ## event list for each energy bin (get energy filter function)
         ## get lightcurve for each energy bin
@@ -978,7 +1000,6 @@ class NustarDo:
         ## 1D array for the energies, 1D array for time steps
         ## get seperate, static method for 3D plot creation, return axis object
         ## axis limits to 2.5--80 keV (range of NuSTAR that's well calibrated)
-        pass
 
      
     def save(self, save_dir='./', overwrite=False, **kwargs):
