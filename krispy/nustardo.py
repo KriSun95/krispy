@@ -533,9 +533,9 @@ class NustarDo:
         elif tmrng is not None:
             tstart = datetime.datetime.strptime(tmrng[0], '%Y/%m/%d, %H:%M:%S') #date must be in this format 'yyyy/mm/dd, HH:MM:SS'
             tend = datetime.datetime.strptime(tmrng[1], '%Y/%m/%d, %H:%M:%S')
-            self.rel_t = datetime.datetime(2010,1 ,1 ,0 ,0 ,0) #the date NuSTAR times are defined from
-            tstart_s = (tstart - self.rel_t).total_seconds() #both dates are converted to number of seconds from 2010-Jan-1  
-            tend_s = (tend - self.rel_t).total_seconds()
+            rel_t = datetime.datetime(2010,1 ,1 ,0 ,0 ,0) #the date NuSTAR times are defined from
+            tstart_s = (tstart - rel_t).total_seconds() #both dates are converted to number of seconds from 2010-Jan-1  
+            tend_s = (tend - rel_t).total_seconds()
             tmrng = [tstart_s, tend_s] 
 
         time_filter = ( (evtdata['TIME']>tmrng[0]) & (evtdata['TIME']<tmrng[1]) )
