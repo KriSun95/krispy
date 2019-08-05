@@ -1222,7 +1222,7 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
     return {'syn_flux':[syn_flux[0],'DN pix^-1 s^-1'], 't_res':[temp_response, 'DN cm^5 pix^-1 s^-1'], 'errors':errors}
 
 
-def timefilter_evt(file, time_range=None):
+def timefilter_evt(file, time_range=None, save_dir=None):
     """Takes a .evt file and filters the events list to a given time range. Only for region selection, do not use directly with spectral fitting software.
     
     Parameters
@@ -1232,6 +1232,10 @@ def timefilter_evt(file, time_range=None):
     
     time_range : list
             A list of length 2 with the start and end date and time. Must be given in a specific format, e.g. time_range=['2018/09/10, 16:22:30', '2018/09/10, 16:24:30'].
+            Default: None
+            
+    save_dir : Str
+            String of the directory for the filtered file to be saved.
             Default: None
             
     Returns
@@ -1245,7 +1249,10 @@ def timefilter_evt(file, time_range=None):
     
     file_regex = re.compile(r'.\w+') # form to split up filename string
     ext = file_regex.findall(file) # splits up file into all components, directories, filename, extension
-    new_file_name = ''.join(ext[:-1]) + '_tf' + ext[-1] # '_tf' for time filtered
+    if save_dir == None:
+        new_file_name = ''.join(ext[:-1]) + '_tf' + ext[-1] # '_tf' for time filtered
+    else:
+        new_file_name = save_dir + ext[-2] + '_tf' + ext[-1]
     
     hdulist = fits.open(file)
     evtdata=hdulist[1].data # data to be filtered
