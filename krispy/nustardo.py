@@ -1220,3 +1220,40 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
                   'Syn_F':{'+': f_err[0], '-':f_err[1]}}
 
     return {'syn_flux':[syn_flux[0],'DN pix^-1 s^-1'], 't_res':[temp_response, 'DN cm^5 pix^-1 s^-1'], 'errors':errors}
+
+
+def timefilter_evt(file, time_range=None):
+    """Takes a .evt file and filters the events list to a given time range
+    
+    Parameters
+    ----------
+    file : Str
+            File (or directory/file) of the .evt file to be filtered by time.
+    
+    time_range : list
+            A list of length 2 with the start and end date and time. Must be given in a specific format, e.g. time_range=['2018/09/10, 16:22:30', '2018/09/10, 16:24:30'].
+            Default: None
+            
+    Returns
+    -------
+    Creates a new file file with '_tf' before the file extension (meaning time filtered) and returns the name of the new file.
+    """
+    
+    if time_range == None:
+        print('No time_range given. Nothing will be done.')
+        return
+    
+    file_regex = re.compile(r'.\w+') # form to split up filename string
+    ext = file_regex.findall(file) # splits up file into all components, directories, filename, extension
+    new_file_name = ''.join(ext[:-1]) + '_tf' + ext[-1] # '_tf' for time filtered
+    
+    hdulist = fits.open(file)
+    evtdata=hdulist[1].data # data to be filtered
+
+    evt_in_time = NustarDo().time_filter(evtdata, tmrng=time_range) # picks events inside time range
+
+    hdulist[1].data = evt_in_time # replaces this hdu with the filtered events list
+    hdulist.writeto(new_file_name, overwrite=True) # saves the edited file, original stays as is
+    hdulist.close()
+    
+    return new_file_name
