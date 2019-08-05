@@ -1223,7 +1223,7 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
 
 
 def timefilter_evt(file, time_range=None):
-    """Takes a .evt file and filters the events list to a given time range
+    """Takes a .evt file and filters the events list to a given time range. Only for region selection, do not use directly with spectral fitting software.
     
     Parameters
     ----------
