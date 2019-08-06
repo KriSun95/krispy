@@ -9,5 +9,6 @@ from . import jupy
 from . import interaction_plot
 
 from . import nustardo
+from . import nu_spec
 
 from . import puzzle_solver
