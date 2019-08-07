@@ -7,6 +7,70 @@ Functions to go in here (I think!?):
 import sys
 from os.path import *
 import os
+import numpy as np
+from astropy.io import fits
+
+
+def read_pha(file):
+    ''' Takes a .pha file and extracts useful information from it.
+    
+    Parameters
+    ----------
+    file : Str
+            String for the .pha file of the spectrum under investigation.
+            
+    Returns
+    -------
+    The counts, channel numbers, and the livetime for the observation. 
+    '''
+
+    hdul = fits.open(file)
+    data = hdul[1].data
+    header_FOR_LIVETIME = hdul[0].header
+    hdul.close()
+
+    return data['counts'], data['channel'], header_FOR_LIVETIME['LIVETIME']
+
+
+def read_arf(file):
+    ''' Takes a .arf file and extracts useful information from it.
+    
+    Parameters
+    ----------
+    file : Str
+            String for the .arf file of the spectrum under investigation.
+            
+    Returns
+    -------
+    The low and high boundary of energy bins, and the ancillary response [cm^2].  
+    '''
+
+    hdul = fits.open(file)
+    data = hdul[1].data
+    hdul.close()
+    
+    return data['energ_lo'], data['energ_hi'], data['specresp']
+
+
+def read_rmf(file):
+    ''' Takes a .rmf file and extracts useful information from it.
+    
+    Parameters
+    ----------
+    file : Str
+            String for the .rmf file of the spectrum under investigation.
+            
+    Returns
+    -------
+    The low and high boundary of energy bins, number of sub-set channels in the energy bin, starting index of each sub-set of channels, 
+    number of channels in each sub-set, redistribution matrix [counts per photon]. 
+    '''
+
+    hdul = fits.open(file)
+    data = hdul[2].data
+    hdul.close()
+    
+    return data['energ_lo'], data['energ_hi'], data['n_grp'], data['f_chan'], data['n_chan'], data['matrix']
 
 
 def col2arr_py(data):
@@ -63,7 +127,7 @@ def col2arr_py(data):
     return chan_array
 
 
-def vrmf2arr_py(data=None, no_of_channels=None, f_chan_array=None, n_chan_array=None):
+def vrmf2arr_py(data=None, no_of_channels=None, n_grp_list=None, f_chan_array=None, n_chan_array=None):
     ''' Takes redistribution parameters for each energy channel from a .rmf file and returns it in the correct format.
     
     Parameters
@@ -74,6 +138,10 @@ def vrmf2arr_py(data=None, no_of_channels=None, f_chan_array=None, n_chan_array=
             
     no_of_channels : int
             Number of channels/ energy bins.
+            Default : None
+
+    n_grp_list : list
+            Number of sub-set channels in that energy bin.
             Default : None
             
     f_chan_array : numpy.array
@@ -134,7 +202,7 @@ def vrmf2arr_py(data=None, no_of_channels=None, f_chan_array=None, n_chan_array=
             c=0
 
             # for number of sub-set channels in each energy channel groups
-            for ng in range(dgrp[r]):
+            for ng in range(n_grp_list[r]):
                 # want redist. prob. for number of sub-set channels 
                 ## if c+m is larger than len(row)-1 then only want what we can get
                 wanted_r = [row[int(c+m)] for m in np.arange(n_chan_array[r,ng]) if c+m <= len(row)-1 ]
@@ -148,7 +216,7 @@ def vrmf2arr_py(data=None, no_of_channels=None, f_chan_array=None, n_chan_array=
                 c = c + n_chan_array[r,ng]
 
             # if dgrp[r] == 0 then above won't do anything, need this as not to miss out the 0th energy channel
-            if dgrp[r] == 0:
+            if n_grp_list[r] == 0:
                 wanted_r = [row[int(c+m)] for m in np.arange(n_chan_array[r,0]) if c+m <= len(row)-1 ]
                 for z,wr in enumerate(wanted_r):
                     mat_array[r, int(f_chan_array[r, 0])+z] = wr
@@ -156,7 +224,7 @@ def vrmf2arr_py(data=None, no_of_channels=None, f_chan_array=None, n_chan_array=
     return mat_array
 
 
-def make_srm(rmf_array=None, arf_array=None):
+def make_srm(rmf_array=(), arf_array=()):
     ''' Takes rmf and arf and produces the spectral response matrix fro NuSTAR.
     
     Parameters
@@ -174,7 +242,7 @@ def make_srm(rmf_array=None, arf_array=None):
     An array that is the spectral response (srm).
     '''
     
-    if rmf_array == None or arf_array == None:
+    if len(rmf_array) == 0 or len(arf_array) == 0:
         print('Need both RMF and ARF information to proceed.')
         return
     
