@@ -1291,14 +1291,8 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
     time_of_second_lot = []
     for td in second_directory_with_files:
         z = sunpy.map.Map(td)
-        # but HMI does time in TAI (international atomic time), so convert to UTC is needed
-        if z.meta['detector'] == 'HMI':
-            sun_time = Time(z.meta['t_obs'][:-4], format='isot', scale='tai')
-            sun_time = sun_time.utc.isot # convert to UTC in the form of ISOT (YYYY-mm-ddTHH:MM:SS.fff)
-            sun_time = sun_time + 'Z' # now the same form as AIA
-        else:
-            sun_time = z.meta['t_obs']
-        time_of_second_lot.append(sun_time)
+        # but HMI does time in TAI (international atomic time) I hear you cry? Well 'date-obs' is in utc for both
+        time_of_second_lot.append(z.meta['date-obs'])
         del z
 
     d = 0
@@ -1307,16 +1301,8 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
 
         aia_map = sunpy.map.Map(directory_with_files[f])
 
-        # but HMI does time in TAI (international atomic time), so convert to UTC is needed
-        if aia_map.meta['detector'] == 'HMI':
-            sun_time = Time(aia_map.meta['t_obs'][:-4], format='isot', scale='tai')
-            sun_time = sun_time.utc.isot # convert to UTC in the form of ISOT (YYYY-mm-ddTHH:MM:SS.fff)
-            sun_time = sun_time + 'Z' # now the same form as AIA
-        else:
-            sun_time = aia_map.meta['t_obs']
-
         #find closest overlay file
-        first_image_time = datetime.datetime.strptime(sun_time, '%Y-%m-%dT%H:%M:%S.%fZ')
+        first_image_time = datetime.datetime.strptime(aia_map.meta['date-obs'], '%Y-%m-%dT%H:%M:%S.%fZ')
         
         distance = [abs(first_image_time - datetime.datetime.strptime(over, '%Y-%m-%dT%H:%M:%S.%fZ')) for over in time_of_second_lot]
         closest = np.argmin(distance)
