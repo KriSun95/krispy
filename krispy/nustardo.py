@@ -196,11 +196,11 @@ class NustarDo:
 
         if psf_array == None:
             if self.fpm == 'A':
-                try_1 = '/opt/caldb/data/nustar/fpm/bcf/psf/nuA2dpsf20100101v001.fits'
-                try_2 = '/usr/local/caldb/data/nustar/fpm/bcf/psf/nuA2dpsf20100101v001.fits'
+                try_1 = '/opt/caldb/data/nustar/fpm/bcf/psf/nuA2dpsfen1_20100101v001.fits'
+                try_2 = '/usr/local/caldb/data/nustar/fpm/bcf/psf/nuA2dpsfen1_20100101v001.fits'
             elif self.fpm == 'B':
-                try_1 = '/opt/caldb/data/nustar/fpm/bcf/psf/nuB2dpsf20100101v001.fits'
-                try_2 = '/usr/local/caldb/data/nustar/fpm/bcf/psf/nuB2dpsf20100101v001.fits'
+                try_1 = '/opt/caldb/data/nustar/fpm/bcf/psf/nuB2dpsfen1_20100101v001.fits'
+                try_2 = '/usr/local/caldb/data/nustar/fpm/bcf/psf/nuB2dpsfen1_20100101v001.fits'
             
             if os.path.exists(try_1):
                 psfhdu = fits.open(try_1)
