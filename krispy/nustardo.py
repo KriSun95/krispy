@@ -198,9 +198,11 @@ class NustarDo:
             if self.fpm == 'A':
                 try_1 = '/opt/caldb/data/nustar/fpm/bcf/psf/nuA2dpsfen1_20100101v001.fits'
                 try_2 = '/usr/local/caldb/data/nustar/fpm/bcf/psf/nuA2dpsfen1_20100101v001.fits'
+                try_3 = '/home/kris/Desktop/link_to_kris_ganymede/old_scratch_kris/data_and_coding_folder/nustar_psfs/nuA2dpsfen1_20100101v001.fits'
             elif self.fpm == 'B':
                 try_1 = '/opt/caldb/data/nustar/fpm/bcf/psf/nuB2dpsfen1_20100101v001.fits'
                 try_2 = '/usr/local/caldb/data/nustar/fpm/bcf/psf/nuB2dpsfen1_20100101v001.fits'
+                try_3 = '/home/kris/Desktop/link_to_kris_ganymede/old_scratch_kris/data_and_coding_folder/nustar_psfs/nuB2dpsfen1_20100101v001.fits'
             
             if os.path.exists(try_1):
                 psfhdu = fits.open(try_1)
@@ -212,6 +214,11 @@ class NustarDo:
                 psf_array = psfhdu[1].data
                 psfhdu.close()
                 psf_used = try_2
+            elif os.path.exists(try_3):
+                psfhdu = fits.open(try_3)
+                psf_array = psfhdu[1].data
+                psfhdu.close()
+                psf_used = try_3
             else:
                 print('Could not find PSF file. Please provide the PSF filename or array.') 
                 print('Returning original map.')
@@ -234,6 +241,7 @@ class NustarDo:
     # might be best to only allow one of these at a time, either deconvolve OR gaussian filter
     deconvolve = {'apply':False, 'iterations':10, 'clip':False} # set before nustar_setmap to run deconvolution on map
     gaussian_filter = {'apply':False, 'sigma':2, 'mode':'nearest'}
+    sub_lt_zero = np.nan
     
     def nustar_setmap(self, time_norm=True, lose_off_limb=True, limits=None,
                    submap=None, rebin_factor=1, norm='linear', house_keeping_file=None):
@@ -320,6 +328,9 @@ class NustarDo:
                 raise TypeError('\nCheck the limits that were given please. It should be a list with two float/int '
                                 'entries')
 
+        self.dmin = dmin # make it possible to get min and max normalisation values of the NuSTAR map
+        self.dmax = dmax
+
         # Tidy up before plotting
         dd[dd < dmin]=0
         nm = sunpy.map.Map(dd, self.nustar_map.meta)
@@ -342,7 +353,7 @@ class NustarDo:
             #change all zeros to NaNs so they appear white in the plot otherwise zeros appear as the lowest colour 
             #on the colourbar
             rsn_map_data = rsn_map.data
-            rsn_map_data[rsn_map_data <= 0] = np.nan
+            rsn_map_data[rsn_map_data <= 0] = self.sub_lt_zero
             rsn_map = sunpy.map.Map(rsn_map_data, rsn_map.meta)
 
             # Setup the scaling of the map and colour table
