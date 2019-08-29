@@ -346,9 +346,10 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
 
 #make contour maps
 def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=None, chu='', fpm='', energy_rng=[], submap=[], 
-                             cmlims = [], nustar_shift=None, time_bins=[], resample_aia=[], counter=0, contour_lvls=[],
+                         cmlims = [], nustar_shift=None, time_bins=[], resample_aia=[], counter=0, contour_lvls=[],
                          contour_fmt='percent', contour_colour='black', aia='ns_overlap_only', iron18=True, 
-                         save_inc=False, gauss_sigma=4, background_time='begin', save_bg=False, A_and_B=False, frame_to_correlate=0, AB_pixshift=None):
+                         save_inc=False, gauss_sigma=4, background_time='begin', save_bg=False, A_and_B=False, frame_to_correlate=0, 
+                         AB_pixshift=None, deconvolve=False, it=20):
     """Takes a list of times, a nustar fits file and and list of iron 18 AIA fits files and produces an AIA map with 
     contours from the nustar observation between adjacent time in the time list.
     
@@ -472,6 +473,8 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
     #26/11/2018: ~added try and except to the cleanevt bit.
     #08/04/2019: ~can now combine A and B.
     #23/05/2019: ~fixed some issues from when I enabled combining two FPMs
+
+    warnings.warn('This function, contourmaps_from_dir(), is now deprecated and should not be used. Use the Contour class instead.', DeprecationWarning)
     
     import filter_with_tmrng # this file has to be in the directory
     
@@ -558,7 +561,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
                 ave_livetime_B = np.average(ltimes_in_rangeB)
 
             nustar_map = nustar.map.make_sunpy(cleanevt, hdr, norm_map=False)
-            ##nustar_map_normdata = nustar_map.data
+            final_map_meta = nustar_map.meta
             nustar_map_normdata = nustar_map.data / ((t_2 - t_1).total_seconds() * ave_livetime_A)
 
             '''
@@ -667,6 +670,26 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
                 A_shift = None
                 B_shift = None
 
+            if deconvolve == True:
+                bl_c = SkyCoord((submap[0]+0.01)*u.arcsec, (submap[1]+0.01)*u.arcsec, frame=nustar_map.coordinate_frame)
+                tr_c = SkyCoord((submap[2]-0.01)*u.arcsec, (submap[3]-0.01)*u.arcsec, frame=nustar_map.coordinate_frame)
+                #0.01 arcsec padding to make sure the contours aren't cut off and so that the final plot won't have weird 
+                #blank space bits
+                dconvfA = '/home/kris/Desktop/link_to_kris_ganymede/old_scratch_kris/data_and_coding_folder/nustar_psfs/nuA2dpsfen1_20100101v001.fits'
+                dconvfB = '/home/kris/Desktop/link_to_kris_ganymede/old_scratch_kris/data_and_coding_folder/nustar_psfs/nuB2dpsfen1_20100101v001.fits'
+                psfhdu = fits.open(dconvfA)
+                psfA = psfhdu[1].data
+                psfhdu.close()
+                if A_and_B == True:
+                    psfhdu = fits.open(dconvfB)
+                    psfB = psfhdu[1].data
+                    psfhdu.close()
+                elif fpm == 'B':
+                    psfhdu = fits.open(dconvfB)
+                    psfA = psfhdu[1].data
+                    psfhdu.close()
+
+            #print(manual_pixel_shift, nustar_shift, t, frame_to_correlate)
             if (manual_pixel_shift == False) and ((nustar_shift == 'cc') or (A_and_B == True)):
                 if (t == 0) or (frame_to_correlate == 'individual'):
 
@@ -714,8 +737,10 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
 
                     #must rescale aia to suit the nustar images
                     data_for_corr_A = resize(data_for_corr, np.shape(dataA))
-
-                    dataA = ndimage.gaussian_filter(dataA, gauss_sigma, mode='nearest')
+                    if deconvolve == True:
+                        dataA = restoration.richardson_lucy(dataA, psfA, iterations=it, clip=False)
+                    else:
+                        dataA = ndimage.gaussian_filter(dataA, gauss_sigma, mode='nearest')
 
                     corr_with_A = signal.correlate2d(data_for_corr_A, dataA, boundary='symm', mode='same')
                     y_A, x_A = np.unravel_index(np.argmax(corr_with_A), corr_with_A.shape)  # find the match
@@ -726,7 +751,10 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
  
                     if A_and_B == True:
                         data_for_corr_B = resize(data_for_corr, np.shape(dataB))
-                        dataB = ndimage.gaussian_filter(dataB, gauss_sigma, mode='nearest')
+                        if deconvolve == True:
+                            dataB = restoration.richardson_lucy(dataB, psfB, iterations=it, clip=False)
+                        else:
+                            dataB = ndimage.gaussian_filter(dataB, gauss_sigma, mode='nearest')
 
                         corr_with_B = signal.correlate2d(data_for_corr_B, dataB, boundary='symm', mode='same')
                         y_B, x_B = np.unravel_index(np.argmax(corr_with_B), corr_with_B.shape)  # find the match
@@ -753,12 +781,20 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
 
                 shift_evt_A = krispy.nustardo.shift(cleanevt, pix_xshift=A_shift[0], pix_yshift=A_shift[1])
                 nustar_map_A = nustar.map.make_sunpy(shift_evt_A, hdr, norm_map=False)
+                if deconvolve == True:
+                    nustar_map_A = nustar_map_A.submap(bl_c,tr_c)
+                    deconv_A = restoration.richardson_lucy(nustar_map_A.data, psfA, iterations=it, clip=False)
+                    nustar_map_A = sunpy.map.Map(deconv_A, nustar_map_A.meta)
+                final_map_meta = nustar_map_A.meta
                 nustar_map_normdata_A = nustar_map_A.data / ((t_2 - t_1).total_seconds() * ave_livetime_A)
 
-                
                 if A_and_B == True:
                     shift_evt_B = krispy.nustardo.shift(cleanevt_other, pix_xshift=B_shift[0], pix_yshift=B_shift[1])
                     nustar_map_B = nustar.map.make_sunpy(shift_evt_B, hdr_other, norm_map=False)
+                    if deconvolve == True:
+                        nustar_map_B = nustar_map_B.submap(bl_c,tr_c)
+                        deconv_B = restoration.richardson_lucy(nustar_map_B.data, psfB, iterations=it, clip=False)
+                        nustar_map_B = sunpy.map.Map(deconv_B, nustar_map_B.meta)
                     nustar_map_normdata_B = nustar_map_B.data / ((t_2 - t_1).total_seconds() * ave_livetime_B)
                     
                     nustar_map_normdata = nustar_map_normdata_A + nustar_map_normdata_B
@@ -777,6 +813,12 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
                     shift_evt_A = krispy.nustardo.shift(cleanevt, pix_xshift=A_shift[0], pix_yshift=A_shift[1])
                     
                     nustar_map_A = nustar.map.make_sunpy(shift_evt_A, hdr, norm_map=False)
+                    if deconvolve == True:
+                        nustar_map_A = nustar_map_A.submap(bl_c,tr_c)
+                        array = nustar_map_A.data
+                        deconv_A = restoration.richardson_lucy(array, psfA, iterations=it, clip=False)
+                        nustar_map_A = sunpy.map.Map(deconv_A, nustar_map_A.meta)
+                    final_map_meta = nustar_map_A.meta
                     nustar_map_normdata_A = nustar_map_A.data / ((t_2 - t_1).total_seconds() * ave_livetime_A)
                 if len(AB_pixshift[1]) >= 1:
                     if frame_to_correlate == 'individual':
@@ -786,6 +828,10 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
                     
                     shift_evt_B = krispy.nustardo.shift(cleanevt_other, pix_xshift=B_shift[0], pix_yshift=B_shift[1])
                     nustar_map_B = nustar.map.make_sunpy(shift_evt_B, hdr_other, norm_map=False)
+                    if deconvolve == True:
+                        nustar_map_B = nustar_map_B.submap(bl_c,tr_c)
+                        deconv_B = restoration.richardson_lucy(nustar_map_B.data, psfB, iterations=it, clip=False)
+                        nustar_map_B = sunpy.map.Map(deconv_B, nustar_map_B.meta)
                     nustar_map_normdata_B = nustar_map_B.data / ((t_2 - t_1).total_seconds() * ave_livetime_B)
                 if A_and_B == True:
                     nustar_map_normdata = nustar_map_normdata_A + nustar_map_normdata_B
@@ -794,13 +840,16 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
                 if nustar_shift != 'cc':
                     nustar_shift = None 
 
-            dd=ndimage.gaussian_filter(nustar_map_normdata, gauss_sigma, mode='nearest');
+            if deconvolve == True:
+                dd = nustar_map_normdata
+            else:
+                dd=ndimage.gaussian_filter(nustar_map_normdata, gauss_sigma, mode='nearest');
             
             # Tidy things up before plotting
             dmin=1e-3
             dmax=1e1
             dd[dd < dmin]=0
-            nm=sunpy.map.Map(dd, nustar_map.meta);
+            nm=sunpy.map.Map(dd, final_map_meta);
 
             del nustar_map_normdata
                 
@@ -813,15 +862,16 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             #print(shifted_nustar_map.meta)
 
             # Submap to plot ############################################################################################
-            bl_s = SkyCoord((submap[0]+0.01)*u.arcsec, (submap[1]+0.01)*u.arcsec, frame=shifted_nustar_map.coordinate_frame)
-            tr_s = SkyCoord((submap[2]-0.01)*u.arcsec, (submap[3]-0.01)*u.arcsec, frame=shifted_nustar_map.coordinate_frame)
-            #0.01 arcsec padding to make sure the contours aren't cut off and so that the final plot won't have weird 
-            #blank space bits
-            shifted_nustar_submap = shifted_nustar_map.submap(bl_s,tr_s)
+            if deconvolve == False:
+                bl_s = SkyCoord((submap[0]+0.01)*u.arcsec, (submap[1]+0.01)*u.arcsec, frame=shifted_nustar_map.coordinate_frame)
+                tr_s = SkyCoord((submap[2]-0.01)*u.arcsec, (submap[3]-0.01)*u.arcsec, frame=shifted_nustar_map.coordinate_frame)
+                #0.01 arcsec padding to make sure the contours aren't cut off and so that the final plot won't have weird 
+                #blank space bits
+                shifted_nustar_map = shifted_nustar_map.submap(bl_s,tr_s)
             
             cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", [contour_colour,contour_colour])
-            shifted_nustar_submap.plot_settings['norm'] = colors.LogNorm(vmin=dmin,vmax=dmax)
-            shifted_nustar_submap.plot_settings['cmap'] = cmap
+            shifted_nustar_map.plot_settings['norm'] = colors.LogNorm(vmin=dmin,vmax=dmax)
+            shifted_nustar_map.plot_settings['cmap'] = cmap
 
             #############################################################################################################
             bl_fi = SkyCoord(submap[0]*u.arcsec, submap[1]*u.arcsec, frame=aia_map.coordinate_frame)
@@ -840,7 +890,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             fig = plt.figure(figsize=(9,8));
             compmap = sunpy.map.Map(smap, composite=True);
             del smap
-            compmap.add_map(shifted_nustar_submap);
+            compmap.add_map(shifted_nustar_map);
             
             if contour_fmt == 'percent':
                 compmap.set_levels(1,contour_lvls,percent = True);
@@ -856,7 +906,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             elif cmlims == []:
                 compmap.plot();
             
-            plt.colorbar(label='DN s$^{-1}$');
+            #plt.colorbar(label='DN s$^{-1}$');
             
             char_to_arcsec = 3.0 #-ish
             border = 2
@@ -897,8 +947,8 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             plt.close(fig)
             print(f'\rSaved {d} submap(s).', end='')
             
-            max_contours.append(shifted_nustar_submap.data.max())
-            del shifted_nustar_submap
+            max_contours.append(shifted_nustar_map.data.max())
+            del shifted_nustar_map
 
         elif (len(cleanevt) == 0 and aia == 'all') or aia == 'solo': #just AIA maps wih the same settings
             background_in_trng_data = []
