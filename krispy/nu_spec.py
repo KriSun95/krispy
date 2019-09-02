@@ -1,6 +1,7 @@
 '''
 Functions to go in here (I think!?):
     KC: 06/08/2019, added-
+    ~grppha/minimum count grouping check
     ~NuSTAR spectral stuff
 '''
 
@@ -9,6 +10,75 @@ from os.path import *
 import os
 import numpy as np
 from astropy.io import fits
+
+
+def grppha_min_check(pha_file, group_min=None, print_tries=False):
+    ''' Takes a .pha file, loads in the counts, and checks the bins left over from grouping the bins with a minimum 
+    value.
+    
+    Parameters
+    ----------
+    pha_file : Str
+            String for the .pha file of the spectrum under investigation.
+            
+    group_min : Int
+            The minimum number of counts allowed in a bin. This input is a starting number and the is checked 
+            incrementally.
+            Default: None
+            
+    print_tries : Bool
+            States whether the result of every try of 'group_min' should be displayed (True) or only the final 
+            result (False, default).
+            Default: False
+            
+    Returns
+    -------
+    The minimum bin number that gives zero counts left over at the end, if it exists, else None. 
+    '''
+    
+    if type(group_min)!=int or group_min<=0: 
+        print('The \'group_min\' parameter must be an integer and > 0.')
+        return
+    
+    # grppha groups in counts, not counts s^-1 or anything
+    n = 1
+    hdul = fits.open(file)
+    data = hdul[n].data
+    hdul.close()
+    
+    orig_counts = data['counts']
+    orig_channel = data['channel']
+    total_counts = np.sum(orig_counts)
+    
+    if type(group_min) == int:
+        combin = [1] # just to establish the variable
+        while len(combin) != 0:
+            binned_counts = []
+            binned_channel = []
+            combin = []
+            for c in range(len(orig_counts)):
+                if orig_counts[c] >= group_min and len(combin) == 0:
+                    binned_counts.append(orig_counts[c])
+                    binned_channel.append(orig_channel[c])
+                elif orig_counts[c] > 0:
+                    combin.append(orig_counts[c])
+                    if len(combin) == 1:
+                        binned_channel.append(orig_channel[c])
+                    if np.sum(combin) >= group_min:
+                        binned_counts.append(np.sum(combin)) 
+                        combin = []
+
+            if print_tries == True:
+                print('Group min: ', group_min, ' has counts left over: ', len(combin), ' of bins ', combin)
+                
+            if len(combin) != 0:
+                group_min += 1
+            elif group_min >= total_counts:
+                print('The minimum group number being tried is the same as the total number of counts.')
+                return
+            else:
+                print('Group minimum that works is: ', group_min)
+                return group_min
 
 
 def read_pha(file):
