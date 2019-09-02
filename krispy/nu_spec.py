@@ -33,7 +33,8 @@ def grppha_min_check(pha_file, group_min=None, print_tries=False):
             
     Returns
     -------
-    The minimum bin number that gives zero counts left over at the end, if it exists, else None. 
+    The minimum bin number that gives zero counts left over at the end, if it exists, else None.
+    Also the grouped counts and starting boundary for the channel is returned.
     '''
     
     if type(group_min)!=int or group_min<=0: 
@@ -42,7 +43,7 @@ def grppha_min_check(pha_file, group_min=None, print_tries=False):
     
     # grppha groups in counts, not counts s^-1 or anything
     n = 1
-    hdul = fits.open(file)
+    hdul = fits.open(pha_file)
     data = hdul[n].data
     hdul.close()
     
@@ -65,9 +66,9 @@ def grppha_min_check(pha_file, group_min=None, print_tries=False):
                     if len(combin) == 1:
                         binned_channel.append(orig_channel[c])
                     if np.sum(combin) >= group_min:
-                        binned_counts.append(np.sum(combin)) 
+                        binned_counts.append(np.sum(combin))
                         combin = []
-
+        
             if print_tries == True:
                 print('Group min: ', group_min, ' has counts left over: ', len(combin), ' of bins ', combin)
                 
@@ -78,7 +79,7 @@ def grppha_min_check(pha_file, group_min=None, print_tries=False):
                 return
             else:
                 print('Group minimum that works is: ', group_min)
-                return group_min
+                return group_min, binned_channel, binned_counts
 
 
 def read_pha(file):
