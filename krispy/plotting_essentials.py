@@ -232,7 +232,6 @@ def cmap_midcolours(**kwargs):
         colorval = scalarMap.to_rgba(5) #pick the colour in the middle
 
         cmap_dict.update({n:colorval}) 
-        print(cmap_dict)
         
     #standard colourmaps given custom names to be used for plotting etc.
     custom_cmaps = {'sdoaiaFeXVIII':'Blues', 'sdoaiaFeXVI':'Purples'} #custom names for standard colourmaps

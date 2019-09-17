@@ -19,6 +19,7 @@ from astropy.io import fits
 import matplotlib.colors as mc
 from copy import deepcopy
 import re #for regular expressions
+import time
 
 
 class Contours:
@@ -210,16 +211,15 @@ class Contours:
             # sys._getframe().f_code.co_name give the funciton name
             print('Parameter missing (either directory or filenames) from: ', sys._getframe().f_code.co_name)
             return []
-    
+
         bgs = []
         bgs_header = []
         for file in aia_files:
-            z = sunpy.map.Map(aia_dir+file)
-            bgs.append(z.data)
-            bgs_header.append(z.meta)
-            del z
-
-        bgs = np.array(bgs)
+            hdulist = fits.open(aia_dir + file)
+            bgs_header.append(hdulist[0].header)
+            bgs.append(hdulist[0].data)
+            hdulist.close()
+     
         if where == 'start':
             bg = bgs[0]
             hdr = bgs_header[0]
@@ -230,14 +230,12 @@ class Contours:
         elif where == 'end':
             bg = bgs[-1]
             hdr = bgs_header[-1]
-            return sunpy.map.Map(bg, bgs_header[-1])
         elif where == 'average':
-            bg = bgs.sum(axis=0) / len(bgs)
+            bg = np.sum(bgs, axis=0) / len(bgs)
             hdr = bgs_header[0]
         else:
             print('Need a valid \'where\' input (start, middle, end, average): ', sys._getframe().f_code.co_name)
             return None
-        
         return sunpy.map.Map(bg, hdr)
         
     
@@ -554,6 +552,9 @@ class Contours:
         submap = self.submap if submap == None else submap
         iterations = self.iterations if iterations == None else iterations
         aia_dir = self.aia_directory if aia_dir == None else aia_dir
+
+        start = time.time()
+        print('Starting setup')
         
         if deconvolve == True:
             nustar_obj, nustar_maps_corr = self.nu_deconv(nu_file=nu_file, colour_and_energy=colour_and_energy, 
@@ -586,18 +587,17 @@ class Contours:
                                                     colour_and_energy=colour_and_energy, 
                                                     time_interval=time_range, submap=submap, 
                                                     iterations=iterations)
-        
         # what do I need for plotting that isn't an attribute yet?
         self.nu_final_maps =  nu_final
         self.nu_final_objects = nu_objs
         self.background_frame = background_frame
     
     
-    def plot_contours(self, iron='', background_limits=None, background_contours=False, save_name=''):
+    def plot_contours(self, iron='', background_limits=None, background_contours=False, save_name='', annotate=True):
             
         ax = self.create_contours(nusun_objects=self.nu_final_maps, nu_objects=self.nu_final_objects, 
                                   aia_object=self.background_frame, iron=iron, contours=self.colour_and_contours, 
-                                  submap=self.submap, annotate=True,  background_contours=background_contours, 
+                                  submap=self.submap, annotate=annotate,  background_contours=background_contours, 
                                   bg_limits=background_limits)
         
         if save_name != '':
