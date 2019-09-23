@@ -372,7 +372,10 @@ class Contours:
 
     def create_contours(self, nusun_objects=None, nu_objects=None, aia_object=None, 
                         iron='', contours=None, submap=None, annotate=True, 
-                        background_contours=False, bg_limits=None):
+                        background_contours=False, bg_limits=None, plot=True):
+
+        if plot == False:
+            plt.rcParams['figure.frameon'] = False
         
         if contours == None:
             contours=self.colour_and_contours
@@ -438,9 +441,14 @@ class Contours:
                     plt.annotate(clabel ,(x,y), ha='left', size=char_to_arcsec, color=key) #+0.6*xspacing
                     y += yspacing
                 x += xspacing
-
+        
         del aia_object
         meta_info = {}
+        len_contour_lists = []
+        for c, key in enumerate(nusun_objects):
+            contour_lvls = contours[key]
+            len_contour_lists.append(len(contour_lvls['lvls']))
+
         for c, key in enumerate(nusun_objects):
 
             cmap = mc.LinearSegmentedColormap.from_list("", [key,key])
@@ -477,6 +485,9 @@ class Contours:
                 if max_length < 0:
                     max_length = 0
                 y = y_reset
+                if len_contour_lists[c] < np.max(len_contour_lists):
+                    y_correction = 0.5*( (tot_num_of_levels - len_contour_lists[c]) / (tot_num_of_levels))
+                    y += tot_num_of_levels*yspacing*y_correction
                 yspacing = yspacing_reset
                 for lvl in contour_lvls['lvls'][::-1]:
                     clabel = str(format(lvl, '.'+str(max_length)+'f')) + string
@@ -484,8 +495,10 @@ class Contours:
                     y += yspacing
                 x += xspacing
 
-        e_unique, fpm_unique, chu_unique = self.unique_entries(meta_info)
+        y = y_reset+tot_num_of_levels*(yspacing)
 
+        e_unique, fpm_unique, chu_unique = self.unique_entries(meta_info)
+        
         # varying factors being investigated
         if annotate == True:
             varying = [l for l in [e_unique, chu_unique, fpm_unique] if len(l)==len(nusun_objects) and len(nusun_objects)!=1] 
@@ -522,7 +535,7 @@ class Contours:
             if type(background_contours) == dict:
                 x_subtitle -= xspacing
             plt.annotate(complete_legend ,(x_subtitle,y), ha='left', size=char_to_arcsec)
-
+        
         del nusun_objects
         
         if type(bg_limits) != type(None):
@@ -535,7 +548,7 @@ class Contours:
             compmap.plot()
 
         plt.title(f'{map_title} at {time_range[0]} to {time_range[1][-8:]}')
-
+        plt.rcParams['figure.frameon']=True
         return compmap
     
     
@@ -552,9 +565,6 @@ class Contours:
         submap = self.submap if submap == None else submap
         iterations = self.iterations if iterations == None else iterations
         aia_dir = self.aia_directory if aia_dir == None else aia_dir
-
-        start = time.time()
-        print('Starting setup')
         
         if deconvolve == True:
             nustar_obj, nustar_maps_corr = self.nu_deconv(nu_file=nu_file, colour_and_energy=colour_and_energy, 
@@ -593,16 +603,16 @@ class Contours:
         self.background_frame = background_frame
     
     
-    def plot_contours(self, iron='', background_limits=None, background_contours=False, save_name='', annotate=True):
-            
+    def plot_contours(self, iron='', background_limits=None, background_contours=False, save_name='', annotate=True, plot=True):
+        
         ax = self.create_contours(nusun_objects=self.nu_final_maps, nu_objects=self.nu_final_objects, 
                                   aia_object=self.background_frame, iron=iron, contours=self.colour_and_contours, 
                                   submap=self.submap, annotate=annotate,  background_contours=background_contours, 
-                                  bg_limits=background_limits)
+                                  bg_limits=background_limits, plot=plot)
         
         if save_name != '':
             plt.savefig(save_name, dpi=300, bbox_inches='tight')
-            
+        
         return ax
     
     
