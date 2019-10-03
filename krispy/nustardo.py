@@ -34,6 +34,7 @@ import pickle
 import subprocess
 import pytz
 from skimage import restoration
+from . import interp
 
 '''
 Alterations:
@@ -1182,10 +1183,10 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
     A float that is the synthetic count rate per pixel for the data given, temperature response and errors.
     """
     if log_data == True:
-        temp_response = find_my_y(np.log10(plasma_temp), np.log10(temp_response_dataxy['x']), np.log10(temp_response_dataxy['y']), logged_data=True)
+        temp_response = interp.find_my_y(np.log10(plasma_temp), np.log10(temp_response_dataxy['x']), np.log10(temp_response_dataxy['y']), logged_data=True)
     else:
         #find temperature response at the given plasma temperature in DN cm^5 pix^-1 s^-1
-        temp_response = find_my_y(plasma_temp, temp_response_dataxy['x'], temp_response_dataxy['y'])
+        temp_response = interp.find_my_y(plasma_temp, temp_response_dataxy['x'], temp_response_dataxy['y'])
         
     syn_flux = [tr * plasma_em * (1 / source_area) for tr in temp_response]
     
@@ -1197,10 +1198,10 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
         e_response = []
         for Ts in [min_T, max_T]:
             if log_data == True:
-                r = find_my_y(np.log10(Ts), np.log10(temp_response_dataxy['x']), np.log10(temp_response_dataxy['y']), logged_data=True)
+                r = interp.find_my_y(np.log10(Ts), np.log10(temp_response_dataxy['x']), np.log10(temp_response_dataxy['y']), logged_data=True)
             else:
                 #find temperature response at the given plasma temperature in DN cm^5 pix^-1 s^-1
-                r = find_my_y(Ts, temp_response_dataxy['x'], temp_response_dataxy['y'])
+                r = interp.find_my_y(Ts, temp_response_dataxy['x'], temp_response_dataxy['y'])
             e_response.append(r[0])
         #e_response.sort()
         

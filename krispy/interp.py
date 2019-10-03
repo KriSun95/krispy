@@ -14,7 +14,7 @@ Alterations:
 '''
 
 #interpolation function
-def find_my_y(your_x, data_x, data_y):
+def find_my_y(your_x, data_x, data_y, logged_data=False):
     """Takes an input x, linear interpolates the data and produces a corresponding y(s).
     
     Parameters
@@ -28,6 +28,10 @@ def find_my_y(your_x, data_x, data_y):
             
     data_y : 1-d list/array
             This is the original set of y values.
+            
+    logged_data : Bool
+            If the data is logged coming in and you want linear values back out set this to True.
+            Default: False
             
     Returns
     -------
@@ -60,4 +64,7 @@ def find_my_y(your_x, data_x, data_y):
         found_y.append(_found_y)
     
     #return all the y's found, no guarentee the there is a one-to-one mapping
-    return found_y
+    if logged_data == True:
+        return [10**y for y in found_y]
+    else:
+        return found_y
