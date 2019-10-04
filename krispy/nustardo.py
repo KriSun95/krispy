@@ -1203,11 +1203,10 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
                 #find temperature response at the given plasma temperature in DN cm^5 pix^-1 s^-1
                 r = interp.find_my_y(Ts, temp_response_dataxy['x'], temp_response_dataxy['y'])
             e_response.append(r[0])
-        #e_response.sort()
         
         temp_max_response = temp_response_dataxy['x'][np.argmax(temp_response_dataxy['y'])]
         
-        if (e_response[0] < temp_response) and (e_response[1] < temp_response):
+        if (e_response[0] < temp_response[0]) and (e_response[1] < temp_response[0]):
             if min_T < temp_max_response < plasma_temp:
                 e_response[0] = np.max(temp_response_dataxy['y'])
             elif plasma_temp < temp_max_response < max_T:
@@ -1228,8 +1227,8 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
         
         errors = {'T':{'+': errors['T']['+'], '-':errors['T']['-']}, 
                   'EM':{'+': errors['EM']['+'],' -':errors['EM']['-']}, 
-                  'R':{'+': abs(np.max(e_response) - temp_response[0]), '-':abs(temp_response[0] - np.min(e_response))}, 
-                  'Syn_F':{'+': f_err[0], '-':f_err[1]}}
+                  't_res_err':{'+': abs(np.max(e_response) - temp_response[0]), '-':abs(temp_response[0] - np.min(e_response))}, 
+                  'syn_flux_err':{'+': f_err[0], '-':f_err[1]}}
 
     return {'syn_flux':[syn_flux[0],'DN pix^-1 s^-1'], 't_res':[temp_response, 'DN cm^5 pix^-1 s^-1'], 'errors':errors}
 
