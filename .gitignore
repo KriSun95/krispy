@@ -3,3 +3,4 @@ ideas.txt
 *.pyc
 *.py~
 krispy_with_python_packages.txt
+__pycache__
