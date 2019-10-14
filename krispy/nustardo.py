@@ -700,7 +700,7 @@ class NustarDo:
                 counts = np.histogram(cleanevt['TIME'], t_bin_conversion) #gives out bin values and bin edges
                 self.lc_counts = counts[0]
                 times = counts[1][:-1]
-                t_bin_edges = counts[1]
+                self.t_bin_edges = counts[1]
                 
                 start_hhmmss = str((datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=np.min(times))).strftime('%H:%M:%S'))
                 start_yyyymmdd = str((datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=np.min(times))).strftime('%Y/%m/%d'))
@@ -720,18 +720,18 @@ class NustarDo:
             assert t_bin_number >= 1, 'Number of bins cannot be <1. Decrease \'t_bin\' value to get more bins.'
 
             edge = self.rel_tstart
-            t_bin_edges = np.zeros(t_bin_number+1) #+1 for the last edge
-            for t in range(len(t_bin_edges)):
-                t_bin_edges[t] = edge
+            self.t_bin_edges = np.zeros(t_bin_number+1) #+1 for the last edge
+            for t in range(len(self.t_bin_edges)):
+                self.t_bin_edges[t] = edge
                 edge += self.t_bin['seconds_per_bin']
-            times = t_bin_edges[:-1]
+            times = self.t_bin_edges[:-1]
             
             start_hhmmss = str((datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=np.min(times))).strftime('%H:%M:%S'))
             start_yyyymmdd = str((datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=np.min(times))).strftime('%Y/%m/%d'))
             
             if (type(cleanevt) == astropy.io.fits.fitsrec.FITS_rec) and (sub_reg == None): #data form of NuSTAR
 
-                counts = np.histogram(cleanevt['TIME'], t_bin_edges) #gives out bin values and bin edges
+                counts = np.histogram(cleanevt['TIME'], self.t_bin_edges) #gives out bin values and bin edges
                 self.lc_counts = counts[0]
                     
             elif (type(cleanevt) == astropy.io.fits.fitsrec.FITS_rec) and (sub_reg != None):
@@ -739,9 +739,9 @@ class NustarDo:
                     counts = []
                     pixels = self.arcsec_to_pixel([sub_reg[0],sub_reg[1]], [sub_reg[2],sub_reg[3]])
                     spatial_evtdata = self.spatial_filter(self.cleanevt, pixels)
-                    for t in range(len(t_bin_edges)-1):
-                        ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+t_bin_edges[t])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
-                        te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+t_bin_edges[t+1])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
+                    for t in range(len(self.t_bin_edges)-1):
+                        ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+self.t_bin_edges[t])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
+                        te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+self.t_bin_edges[t+1])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
       
                         sub_cleanevt = self.time_filter(spatial_evtdata, tmrng=[ts, te])
                         counts.append(len(sub_cleanevt['TIME']))
@@ -757,9 +757,9 @@ class NustarDo:
                         pixels = self.arcsec_to_pixel([sub_r[0],sub_r[1]], [sub_r[2],sub_r[3]])
                         spatial_evtdata = self.spatial_filter(self.cleanevt, pixels)
                         
-                        for t in range(len(t_bin_edges)-1):
-                            ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+t_bin_edges[t])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
-                            te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+t_bin_edges[t+1])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
+                        for t in range(len(self.t_bin_edges)-1):
+                            ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+self.t_bin_edges[t])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
+                            te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+self.t_bin_edges[t+1])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
                   
                             sub_cleanevt = self.time_filter(spatial_evtdata, tmrng=[ts, te])
                             counts.append(len(sub_cleanevt['TIME']))
@@ -772,9 +772,9 @@ class NustarDo:
                             if count_rate == True:
                                 
                                 #livetime correction
-                                livetimes = np.zeros(len(t_bin_edges)-1)
-                                for t in range(len(t_bin_edges)-1):
-                                    indices = ((self.hk_times>=t_bin_edges[t]) & (self.hk_times<t_bin_edges[t+1]))
+                                livetimes = np.zeros(len(self.t_bin_edges)-1)
+                                for t in range(len(self.t_bin_edges)-1):
+                                    indices = ((self.hk_times>=self.t_bin_edges[t]) & (self.hk_times<self.t_bin_edges[t+1]))
                                     ltimes_in_range = self.hk_livetimes[indices]
                                     livetimes[t] = np.average(ltimes_in_range)
                                 
@@ -841,9 +841,9 @@ class NustarDo:
             if count_rate == True:
                 
                 #livetime correction
-                livetimes = np.zeros(len(t_bin_edges)-1)
-                for t in range(len(t_bin_edges)-1):
-                    indices = ((self.hk_times>=t_bin_edges[t]) & (self.hk_times<t_bin_edges[t+1]))
+                livetimes = np.zeros(len(self.t_bin_edges)-1)
+                for t in range(len(self.t_bin_edges)-1):
+                    indices = ((self.hk_times>=self.t_bin_edges[t]) & (self.hk_times<self.t_bin_edges[t+1]))
                     ltimes_in_range = self.hk_livetimes[indices]
                     livetimes[t] = np.average(ltimes_in_range)
                 
@@ -881,7 +881,7 @@ class NustarDo:
                 plt.xlim([dt_times[0] - timedelta(seconds=60), dt_times[-1] + timedelta(seconds=60)])
                 plt.xlabel('Start Time - '+start_hhmmss)
                 
-                plt.ylim([0, np.max(self.lc_counts[np.isfinite(lc_counts)])*1.05])
+                plt.ylim([0, np.max(self.lc_counts[np.isfinite(self.lc_counts)])*1.05])
                 plt.ylabel('Counts')
                 
                 fmt = mdates.DateFormatter('%H:%M:%S')
@@ -1012,6 +1012,36 @@ class NustarDo:
         ## 1D array for the energies, 1D array for time steps
         ## get seperate, static method for 3D plot creation, return axis object
         ## axis limits to 2.5--80 keV (range of NuSTAR that's well calibrated)
+
+
+    def detectors(self):
+        self.all_detectors = {}
+        #plt.figure()
+        ax = plt.axes()
+        for d in range(4):
+            # if the detector is the one I want then I want the time of it, else leave it alone
+            self.all_detectors['det'+str(d)] = [self.cleanevt['TIME'][c] for c,i in enumerate(self.cleanevt['DET_ID']) if i==d]
+            # get percentage of counts each detector contributed to the full time
+            self.all_detectors['det'+str(d)+'%'] = len(self.all_detectors['det'+str(d)]) / len(self.cleanevt['TIME']) * 100
+
+            dets = np.histogram(self.all_detectors['det'+str(d)], self.t_bin_edges) #gives out bin values and bin edges
+            dt_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in dets[1]]
+            
+            plt.plot(*self.stepped_lc_from_hist(self.dt_to_md(dt_times), dets[0]), label='det'+str(d)+': '+'{:.1f}'.format(self.all_detectors['det'+str(d)+'%'])+'%')
+        plt.legend()
+
+        fmt = mdates.DateFormatter('%H:%M:%S')
+        ax.xaxis.set_major_formatter(fmt)
+        ax.xaxis.set_major_locator(plt.LinearLocator(9))
+        plt.xticks(rotation=30)
+
+        plt.title('Detector Contribution')
+        plt.ylabel('Counts from detector')
+        plt.xlabel('Time')
+
+        #plt.show()
+
+        #return plt.g
 
      
     def save(self, save_dir='./', overwrite=False, **kwargs):
