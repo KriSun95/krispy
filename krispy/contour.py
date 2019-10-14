@@ -259,9 +259,8 @@ class Contours:
 
         return aia_data, aia_corr_data
     
-    
-    @staticmethod
-    def corr_fpm(nu_arrays, aia_array):
+
+    def corr_fpm(self, nu_arrays, aia_array):
 
         # take first map the now
         for key in nu_arrays:
@@ -270,8 +269,8 @@ class Contours:
             break
 
         data_for_corr = resize(aia_array, np.shape(nu_arr))
-        corr_data = signal.correlate2d(data_for_corr, nu_arr, boundary='symm', mode='same')
-        y, x = np.unravel_index(np.argmax(corr_data), corr_data.shape)  # find the match
+        self.corr_data = signal.correlate2d(data_for_corr, nu_arr, boundary='symm', mode='same')
+        y, x = np.unravel_index(np.argmax(self.corr_data), self.corr_data.shape)  # find the match
 
         # need the number of NuSTAR pixels is needed for the shift
         x_pix_shift = -(np.shape(data_for_corr)[1]/2 - x) #negative because the positive number means shift to the left/down
