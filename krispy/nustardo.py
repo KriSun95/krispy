@@ -371,7 +371,7 @@ class NustarDo:
         return rsn_map
         
         
-    def nustar_plot(self, boxes=None, show_fig=True, save_fig=None):
+    def nustar_plot(self, boxes=None, show_fig=True, save_fig=None, usr_title=None):
         matplotlib.rcParams['font.sans-serif'] = "Arial"
         matplotlib.rcParams['font.family'] = "sans-serif"
         #matplotlib.rcParams['font.size'] = 12
@@ -410,11 +410,14 @@ class NustarDo:
         fpm = 'FPM'+self.fpm
         title_obstime_start = self.time_range[0][-8:]
         title_obstime_end = self.time_range[1][-8:]
-
-        if self.chu_state == 'not_split':
-            ax.set_title('NuSTAR '+e_range_str+' keV '+fpm+' '+ title_obsdate+' '+title_obstime_start+' to '+title_obstime_end)
+        
+        if type(usr_title) == type(None):
+            if self.chu_state == 'not_split':
+                ax.set_title('NuSTAR '+e_range_str+' keV '+fpm+' '+ title_obsdate+' '+title_obstime_start+' to '+title_obstime_end)
+            else:
+                ax.set_title('NuSTAR '+e_range_str+' keV '+fpm+' '+self.chu_state+' '+ title_obsdate+' '+title_obstime_start+' to '+title_obstime_end)
         else:
-            ax.set_title('NuSTAR '+e_range_str+' keV '+fpm+' '+self.chu_state+' '+ title_obsdate+' '+title_obstime_start+' to '+title_obstime_end)
+            ax.set_title(usr_title)
         
         ax.set_ylabel('y [arcsec]')
         ax.set_xlabel('x [arcsec]')

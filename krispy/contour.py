@@ -371,7 +371,7 @@ class Contours:
 
     def create_contours(self, nusun_objects=None, nu_objects=None, aia_object=None, 
                         iron='', contours=None, submap=None, annotate=True, 
-                        background_contours=False, bg_limits=None, plot=True):
+                        background_contours=False, bg_limits=None, plot=True, usr_title=None):
 
         if plot == False:
             plt.rcParams['figure.frameon'] = False
@@ -390,6 +390,7 @@ class Contours:
             map_title = 'SDO/AIA ' + str(aia_object.meta['WAVELNTH']) + ' \AA'
 
         compmap = sunpy.map.Map(aia_object, composite=True)
+        tot_num_of_levels = 0 # to avoid non-assignment error later on
         
         # scale annotations to fit all contour info
         preconts = 1 if type(background_contours) == dict else 0
@@ -546,7 +547,11 @@ class Contours:
         elif bg_limits == None:
             compmap.plot()
 
-        plt.title(f'{map_title} at {time_range[0]} to {time_range[1][-8:]}')
+        if type(usr_title) == type(None):
+            plt.title(f'{map_title} at {time_range[0]} to {time_range[1][-8:]}')
+        else:
+            plt.title(usr_title)
+
         plt.rcParams['figure.frameon']=True
         return compmap
     
@@ -602,12 +607,12 @@ class Contours:
         self.background_frame = background_frame
     
     
-    def plot_contours(self, iron='', background_limits=None, background_contours=False, save_name='', annotate=True, plot=True):
+    def plot_contours(self, iron='', background_limits=None, background_contours=False, save_name='', annotate=True, plot=True, usr_title=None):
         
         ax = self.create_contours(nusun_objects=self.nu_final_maps, nu_objects=self.nu_final_objects, 
                                   aia_object=self.background_frame, iron=iron, contours=self.colour_and_contours, 
                                   submap=self.submap, annotate=annotate,  background_contours=background_contours, 
-                                  bg_limits=background_limits, plot=plot)
+                                  bg_limits=background_limits, plot=plot, usr_title=usr_title)
         
         if save_name != '':
             plt.savefig(save_name, dpi=300, bbox_inches='tight')
