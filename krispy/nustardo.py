@@ -450,9 +450,11 @@ class NustarDo:
                     b += 1
                     
         if save_fig != None:
-            plt.savefig(save_fig)
+            plt.savefig(save_fig, dpi=300, bbox_inches='tight')
         if show_fig == True:
             plt.show('all')
+
+        return plt.gca()
             
     
     def nustar_peek(self):

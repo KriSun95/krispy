@@ -392,7 +392,7 @@ class Contours:
         compmap = sunpy.map.Map(aia_object, composite=True)
         tot_num_of_levels = 0 # to avoid non-assignment error later on
         
-        # scale annotations to fit all contour info
+        # scale annotations to fit all contour info if > 4
         preconts = 1 if type(background_contours) == dict else 0
         if ( preconts + len(nusun_objects) ) > 4:
             scale = 4 / ( preconts + len(nusun_objects) )
@@ -400,10 +400,11 @@ class Contours:
             scale = 1
         
         # all annotation spacing
-        size = np.shape(aia_object.data)
-        char_to_arcsec = 0.045*size[0] * scale
+        size = np.shape(aia_object.data) #should the font, etc be dependent on the array size?
+        # spacing probably should but charactersize should be constant...probably
+        char_to_arcsec = 0.045*350 * scale #(350, 359) #
         border = 0.01*size[0]
-        xspacing = 0.15*size[1] * scale
+        xspacing = 0.15*size[1] * scale - 2 # old spacing = 0.15*size[1] * scale
         x = submap[0] + border
         y = submap[1] + border 
         y_reset = deepcopy(y)
