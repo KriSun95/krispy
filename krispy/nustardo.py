@@ -370,6 +370,8 @@ class NustarDo:
         self.rsn_map = rsn_map
         return rsn_map
         
+
+    annotations = {'apply':False, 'text':'Some text', 'position':(0,0), 'color':'black', 'fontsize':12}
         
     def nustar_plot(self, boxes=None, show_fig=True, save_fig=None, usr_title=None):
         matplotlib.rcParams['font.sans-serif'] = "Arial"
@@ -391,6 +393,9 @@ class NustarDo:
 
         self.rsn_map.plot()
         self.rsn_map.draw_limb(color='black',linewidth=1,linestyle='dashed',zorder=0)
+
+        if self.annotations['apply'] == True:
+            plt.annotate(self.annotations['text'], self.annotations['position'], color=self.annotations['color'], fontsize=self.annotations['fontsize'])
 
         # Manually plot a heliographic overlay - hopefully future no_ticks option in draw_grid
         overlay = ax.get_coords_overlay('heliographic_stonyhurst')
@@ -453,8 +458,6 @@ class NustarDo:
             plt.savefig(save_fig, dpi=300, bbox_inches='tight')
         if show_fig == True:
             plt.show('all')
-
-        return plt.gca()
             
     
     def nustar_peek(self):
