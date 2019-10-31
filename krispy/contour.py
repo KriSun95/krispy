@@ -233,8 +233,11 @@ class Contours:
         elif where == 'average':
             bg = np.sum(bgs, axis=0) / len(bgs)
             hdr = bgs_header[0]
+        elif where == 'sum':
+            bg = np.sum(bgs, axis=0)
+            hdr = bgs_header[0]
         else:
-            print('Need a valid \'where\' input (start, middle, end, average): ', sys._getframe().f_code.co_name)
+            print('Need a valid \'where\' input (start, middle, end, average, sum): ', sys._getframe().f_code.co_name)
             return None
         return sunpy.map.Map(bg, hdr)
         
@@ -371,7 +374,8 @@ class Contours:
 
     def create_contours(self, nusun_objects=None, nu_objects=None, aia_object=None, 
                         iron='', contours=None, submap=None, annotate=True, 
-                        background_contours=False, bg_limits=None, plot=True, usr_title=None):
+                        background_contours=False, bg_limits=None, plot=True, 
+                        background_cmap=None, usr_title=None):
 
         if plot == False:
             plt.rcParams['figure.frameon'] = False
@@ -388,6 +392,9 @@ class Contours:
             map_title = 'SDO/AIA FeXVIII'
         else:
             map_title = 'SDO/AIA ' + str(aia_object.meta['WAVELNTH']) + ' \AA'
+
+        if type(background_cmap) != type(None):
+            aia_object.plot_settings['cmap'] = background_cmap
 
         compmap = sunpy.map.Map(aia_object, composite=True)
         tot_num_of_levels = 0 # to avoid non-assignment error later on
@@ -608,12 +615,12 @@ class Contours:
         self.background_frame = background_frame
     
     
-    def plot_contours(self, iron='', background_limits=None, background_contours=False, save_name='', annotate=True, plot=True, usr_title=None):
+    def plot_contours(self, iron='', background_limits=None, background_contours=False, background_cmap=None, save_name='', annotate=True, plot=True, usr_title=None):
         
         ax = self.create_contours(nusun_objects=self.nu_final_maps, nu_objects=self.nu_final_objects, 
                                   aia_object=self.background_frame, iron=iron, contours=self.colour_and_contours, 
-                                  submap=self.submap, annotate=annotate,  background_contours=background_contours, 
-                                  bg_limits=background_limits, plot=plot, usr_title=usr_title)
+                                  submap=self.submap, annotate=annotate, background_contours=background_contours, 
+                                  bg_limits=background_limits, plot=plot, background_cmap=background_cmap, usr_title=usr_title)
         
         if save_name != '':
             plt.savefig(save_name, dpi=300, bbox_inches='tight')

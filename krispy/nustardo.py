@@ -192,10 +192,10 @@ class NustarDo:
     def nustar_deconv(self, map_array=None, psf_array=None, it=10, clip=False):
 
         ## for defaults
-        if map_array == None:
+        if type(map_array) == type(None):
             map_array = self.nustar_map.data
 
-        if psf_array == None:
+        if type(psf_array) == type(None):
             if self.fpm == 'A':
                 try_1 = '/opt/caldb/data/nustar/fpm/bcf/psf/nuA2dpsfen1_20100101v001.fits'
                 try_2 = '/usr/local/caldb/data/nustar/fpm/bcf/psf/nuA2dpsfen1_20100101v001.fits'
@@ -235,7 +235,7 @@ class NustarDo:
 
         deconvolved_RL = restoration.richardson_lucy(map_array, psf_array, iterations=it, clip=False)
         
-        deconv_settings_info = {'map':map_array, 'psf_file':psf_used, 'psf_array':psf_array, 'iterations':it}
+        self.deconv_settings_info = {'map':map_array, 'psf_file':psf_used, 'psf_array':psf_array, 'iterations':it}
         return deconvolved_RL
 
 
@@ -265,7 +265,6 @@ class NustarDo:
             lc_cor_nustar_map = self.nustar_map.data / (livetime * (time_range[1] - time_range[0]))
             self.nustar_map = sunpy.map.Map(lc_cor_nustar_map, self.nustar_map.meta)
             
-        
         if (lose_off_limb == True) and (len(submap) == 0):
             #fix really large plot, instead of going from -3600 to 3600 in x and y
             bl = SkyCoord(-1200*u.arcsec, -1200*u.arcsec, frame=self.nustar_map.coordinate_frame)
