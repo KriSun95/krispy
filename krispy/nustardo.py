@@ -461,6 +461,7 @@ class NustarDo:
 
     annotations = {'apply':False, 'text':'Some text', 'position':(0,0), 'color':'black', 'fontsize':12, 'weight':'normal'}
     rcParams_default_setup = True
+    cbar_title = 'Counts'
         
     def nustar_plot(self, boxes=None, show_fig=True, save_fig=None, usr_title=None):
         # adapted from Iain's python code
@@ -519,11 +520,12 @@ class NustarDo:
         tx.set_major_formatter('s')
         ty.set_major_formatter('s')
         ax.grid(False)
+
         # Add a colour bar
         if self.time_norm == True:
-            plt.colorbar(fraction=0.035, pad=0.03,label='Counts $s^{-1}$')
+            plt.colorbar(fraction=0.035, pad=0.03,label=self.cbar_title+' $s^{-1}$')
         else:
-            plt.colorbar(fraction=0.035, pad=0.03,label='Counts')
+            plt.colorbar(fraction=0.035, pad=0.03,label=self.cbar_title)
             
         if boxes is not None:
             if np.shape(boxes)==(4,):
