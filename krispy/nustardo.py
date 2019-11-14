@@ -134,6 +134,8 @@ class NustarDo:
             raise ValueError('\nThere there are no counts within these paramenters. '
                              '\nThis may be because no counts were recorded or that the paramenters are outwith the '
                              'scope of NuSTAR and/or the observation.')
+
+
     @staticmethod
     def shift(evt_data, pix_xshift=None, pix_yshift=None):
         if pix_xshift != None:
@@ -154,7 +156,7 @@ class NustarDo:
             meta[key] = kwarg
 
         #convert numbers so that they are easier to work with
-        indices_for_centre = {'x':meta['centre_pix_val'][0]-1, 'y':meta['centre_pix_val'][1]-1}
+        indices_for_centre = {'x':meta['centre_pix_val'][0], 'y':meta['centre_pix_val'][1]}
         assert 1 <= len(meta['arc_per_pix']) <= 2, '\'arc_per_pix\' needs to have one or two arguments only.'
         if len(meta['arc_per_pix']) == 2:
             delta_x = meta['arc_per_pix'][0]
@@ -163,6 +165,7 @@ class NustarDo:
             delta_x = meta['arc_per_pix'][0]
             delta_y = meta['arc_per_pix'][0]
 
+        # if have an arcsec length and want the length in pixels
         pixel_lengths = []
         if meta['length'] == True:
             for arg in args:
@@ -178,6 +181,44 @@ class NustarDo:
             y_index = indices_for_centre['y'] + (arg[1] / delta_y)
             pixel_coords.append([int(round(x_index,0)), int(round(y_index,0))])
         return pixel_coords
+
+
+    @staticmethod
+    def pixel_to_arcsec(*args, **kwargs):
+        #NuSTAR values: ['crpix1'+0.5,'crpix2','cdelt1']
+        meta = {'centre_pix_val': [1499.5+0.5, 1500], 'arc_per_pix':[2.45810736], 'length':False} 
+        #change list with kwargs
+        for key, kwarg in kwargs.items():   
+            meta[key] = kwarg
+
+        #convert numbers so that they are easier to work with
+        indices_for_centre = {'x':meta['centre_pix_val'][0], 'y':meta['centre_pix_val'][1]}
+        assert 1 <= len(meta['arc_per_pix']) <= 2, '\'arc_per_pix\' needs to have one or two arguments only.'
+        if len(meta['arc_per_pix']) == 2:
+            delta_x = meta['arc_per_pix'][0]
+            delta_y = meta['arc_per_pix'][1]
+        elif len(meta['arc_per_pix']) == 1:
+            delta_x = meta['arc_per_pix'][0]
+            delta_y = meta['arc_per_pix'][0]
+
+        # if have a pixel length and want the length in arcsec
+        arcsec_lengths = []
+        if meta['length'] == True:
+            for arg in args:
+                x_length = arg[0] * delta_x
+                y_length = arg[1] * delta_y
+                arcsec_lengths.append([x_length, y_length])
+            return arcsec_lengths
+
+        #input coordinates as [col,row] in pixels
+        arcsec_coords = []
+        for arg in args:
+            # arg[0] is x pixel position, so column
+            x_arcsec = (arg[0] - indices_for_centre['x']) * delta_x
+            # arg[1] is y pixel position, so row
+            y_arcsec = (arg[1] - indices_for_centre['y']) * delta_y
+            arcsec_coords.append([x_arcsec, y_arcsec])
+        return arcsec_coords
 
 
     def nustar_shift_map(self, x_shift_arc, y_shift_arc):   
@@ -239,20 +280,63 @@ class NustarDo:
         return deconvolved_RL
 
 
+    @staticmethod
+    def find_boxOfData(array):
+        '''If there is an array with loads of 0s or nans and a region of numbers then this returns the rows 
+           and columns the block of numbers is encased between'''
+        array = np.array(array)
+        array[np.isnan(array)] = 0
+
+        # first and last row
+        dataRows = []
+        for i,row in enumerate(array):
+            rSum = np.sum(row)
+            if rSum > 0:
+                dataRows.append(i)
+        between_rows = [dataRows[0], dataRows[-1]]
+       
+        # first and last column
+        dataCols = []
+        for j,col in enumerate(array.T):
+            cSum = np.sum(col)
+            if cSum > 0:
+                dataCols.append(j)
+        between_cols = [dataCols[0], dataCols[-1]]
+
+        return {'rowIndices':between_rows, 'columnIndices':between_cols}
+            
+
+
     # might be best to only allow one of these at a time, either deconvolve OR gaussian filter
     deconvolve = {'apply':False, 'iterations':10, 'clip':False} # set before nustar_setmap to run deconvolution on map
     gaussian_filter = {'apply':False, 'sigma':2, 'mode':'nearest'}
     sub_lt_zero = np.nan
+    own_map = None # if you already have a map that you want a submap of then set this, be careful not to time normalize again though
     
     def nustar_setmap(self, time_norm=True, lose_off_limb=True, limits=None,
                    submap=None, rebin_factor=1, norm='linear', house_keeping_file=None):
+        # adapted from Iain's python code
+
+        # Map the filtered evt, into one corrected for livetime (so units count/s) 
+        if type(self.own_map) == type(None):
+            self.nustar_map = custom_map.make_sunpy(self.cleanevt, self.evt_header, norm_map=False)
+        else:
+            self.nustar_map = self.own_map
+            if time_norm == True:
+                time_norm = input('Caution! Do you mean to time normalize your \'own_map\'? True or False: ')
+
+        # field of view in arcseconds
+        FoVlimits = self.find_boxOfData(self.nustar_map.data)
+        bottom_left = self.pixel_to_arcsec([FoVlimits['columnIndices'][0], FoVlimits['rowIndices'][0]])[0]
+        top_right = self.pixel_to_arcsec([FoVlimits['columnIndices'][1]+1, FoVlimits['rowIndices'][1]+1])[0] # plus one as index stops one short
+        self.FoV = [*bottom_left, *top_right]
+
         if limits == None:
             limits = []
         if submap == None:
             submap = []
-        
-        # Map the filtered evt, into one corrected for livetime (so units count/s) 
-        self.nustar_map = custom_map.make_sunpy(self.cleanevt, self.evt_header, norm_map=False)
+        elif submap == 'FoV':
+            submap = self.FoV
         
         self.time_norm = time_norm
         if self.time_norm == True:
@@ -281,6 +365,10 @@ class NustarDo:
             raise TypeError('\nCheck the submap coordinates that were given please. It should be a list with four '
                             'float/int entries in arcseconds in the form [bottom left x, bottom left y, top right x, '
                             'top right y].')
+
+        if (self.deconvolve['apply'] == True) and (self.gaussian_filter['apply'] == True):
+            print('Caution! Did you mean to set deconvolve AND gaussian blurr to True? If so, then the \
+                   deconvolution will happen first then the Gaussian filter is applied.')
 
         if self.deconvolve['apply'] == True:
             dconv = self.nustar_deconv(it=self.deconvolve['iterations'], clip=self.deconvolve['clip'])
@@ -311,8 +399,9 @@ class NustarDo:
         else:
             dd = self.nustar_map.data
             if limits == []:
-                dmin = np.min(dd[np.nonzero(self.nustar_map.data)])
-                dmax = np.max(dd[np.isfinite(self.nustar_map.data)])
+                finite_vals = dd[np.isfinite(dd)]
+                dmin = np.min(finite_vals[np.nonzero(finite_vals)])
+                dmax = np.max(finite_vals)
             elif len(limits) == 2:
                 if norm == 'lognorm':
                     if limits[0] <= 0:
@@ -370,19 +459,20 @@ class NustarDo:
         return rsn_map
         
 
-    annotations = {'apply':False, 'text':'Some text', 'position':(0,0), 'color':'black', 'fontsize':12}
+    annotations = {'apply':False, 'text':'Some text', 'position':(0,0), 'color':'black', 'fontsize':12, 'weight':'normal'}
+    rcParams_default_setup = True
         
     def nustar_plot(self, boxes=None, show_fig=True, save_fig=None, usr_title=None):
-        matplotlib.rcParams['font.sans-serif'] = "Arial"
-        matplotlib.rcParams['font.family'] = "sans-serif"
-        #matplotlib.rcParams['font.size'] = 12
-        plt.rcParams["figure.figsize"] = (10,8)
-        #plt.rcParams['mathtext.fontset'] = 'stix'
-        plt.rcParams['font.size'] = 18
-        #plt.rcParams['font.family'] = 'STIXGeneral'
-        plt.rcParams['axes.facecolor']='white'
-        plt.rcParams['savefig.facecolor']='white'
-        # Start the plot - many things here just to make matplotlib look decent
+        # adapted from Iain's python code
+
+        if self.rcParams_default_setup:
+            matplotlib.rcParams['font.sans-serif'] = "Arial"
+            matplotlib.rcParams['font.family'] = "sans-serif"
+            plt.rcParams["figure.figsize"] = (10,8)
+            plt.rcParams['font.size'] = 18
+            plt.rcParams['axes.facecolor']='white'
+            plt.rcParams['savefig.facecolor']='white'
+            # Start the plot - many things here just to make matplotlib look decent
         
         self.rectangles = boxes
 
@@ -394,7 +484,7 @@ class NustarDo:
         self.rsn_map.draw_limb(color='black',linewidth=1,linestyle='dashed',zorder=0)
 
         if self.annotations['apply'] == True:
-            plt.annotate(self.annotations['text'], self.annotations['position'], color=self.annotations['color'], fontsize=self.annotations['fontsize'])
+            plt.annotate(self.annotations['text'], self.annotations['position'], color=self.annotations['color'], fontsize=self.annotations['fontsize'], weight=self.annotations['weight'])
 
         # Manually plot a heliographic overlay - hopefully future no_ticks option in draw_grid
         overlay = ax.get_coords_overlay('heliographic_stonyhurst')
