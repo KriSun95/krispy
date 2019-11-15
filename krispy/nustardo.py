@@ -310,7 +310,7 @@ class NustarDo:
     # might be best to only allow one of these at a time, either deconvolve OR gaussian filter
     deconvolve = {'apply':False, 'iterations':10, 'clip':False} # set before nustar_setmap to run deconvolution on map
     gaussian_filter = {'apply':False, 'sigma':2, 'mode':'nearest'}
-    sub_lt_zero = np.nan
+    sub_lt_zero = np.nan # replace less than zeroes with this value for plotting in a linear scale
     own_map = None # if you already have a map that you want a submap of then set this, be careful not to time normalize again though
     
     def nustar_setmap(self, time_norm=True, lose_off_limb=True, limits=None,
@@ -462,6 +462,7 @@ class NustarDo:
     annotations = {'apply':False, 'text':'Some text', 'position':(0,0), 'color':'black', 'fontsize':12, 'weight':'normal'}
     rcParams_default_setup = True
     cbar_title = 'Counts'
+    ax_label_size = 18
         
     def nustar_plot(self, boxes=None, show_fig=True, save_fig=None, usr_title=None):
         # adapted from Iain's python code
@@ -514,8 +515,8 @@ class NustarDo:
         else:
             ax.set_title(usr_title)
         
-        ax.set_ylabel('y [arcsec]')
-        ax.set_xlabel('x [arcsec]')
+        ax.set_ylabel('y [arcsec]', fontsize=self.ax_label_size)
+        ax.set_xlabel('x [arcsec]', fontsize=self.ax_label_size)
         tx, ty = ax.coords
         tx.set_major_formatter('s')
         ty.set_major_formatter('s')
@@ -685,10 +686,11 @@ class NustarDo:
         '''
         This has to be moved above the time profile function so it is defined to be called
         '''
-        plt.rcParams["figure.figsize"] = (10,6)
-        plt.rcParams['mathtext.fontset'] = 'stix'
-        plt.rcParams['font.size'] = 18
-        plt.rcParams['font.family'] = 'STIXGeneral'
+        if self.rcParams_default_setup:
+            matplotlib.rcParams['font.sans-serif'] = "Arial"
+            matplotlib.rcParams['font.family'] = "sans-serif"
+            plt.rcParams["figure.figsize"] = (10,6)
+            plt.rcParams['font.size'] = 18
         
         if hk_filename == None:
             hk_filename, self.hk_directory, self.hk_filename = self.nustar_file_finder(start_directory=self.evt_directory, obs_id=self.obs_id, descriptor='_fpm', fpm=self.fpm, ext='.hk')
@@ -750,10 +752,12 @@ class NustarDo:
 
     def light_curve(self, cleanevt=None, hdr=None, sub_reg=None, tstart=None, tend=None, 
                     count_rate=True, house_keeping_file=None, make_final_graph=True):     
-        plt.rcParams["figure.figsize"] = (10,6)
-        plt.rcParams['mathtext.fontset'] = 'stix'
-        plt.rcParams['font.size'] = 18
-        plt.rcParams['font.family'] = 'STIXGeneral'
+
+        if self.rcParams_default_setup:
+            matplotlib.rcParams['font.sans-serif'] = "Arial"
+            matplotlib.rcParams['font.family'] = "sans-serif"
+            plt.rcParams["figure.figsize"] = (10,6)
+            plt.rcParams['font.size'] = 18
         
         if cleanevt == None:
             cleanevt = self.cleanevt

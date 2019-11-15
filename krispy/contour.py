@@ -145,7 +145,13 @@ class Contours:
             nu1 = krispy.nustardo.NustarDo(nu_file, energy_range=[colour_and_energy[key][0], colour_and_energy[key][1]], time_range=time_interval)
             nu1.deconvolve['apply'] = True
             nu1.deconvolve['iterations'] = iterations
-            nustar_obj[key] = nu1.nustar_setmap(submap = [submap[0]-0.01, submap[1]-0.01, submap[2]+0.01, submap[3]+0.01]) # to avoid white border
+            # make sure to deconvolve over FoV
+            nu1.nustar_setmap(submap='FoV')
+            nu1.deconvolve['apply'] = False
+            # use deconvolved map as own map, avoid time norm a second time, and only submap the region
+            # if own_map isn't set then the map is created from scratch again and so isn't deconvolved
+            nu1.own_map = nu1.rsn_map
+            nustar_obj[key] = nu1.nustar_setmap(submap = [submap[0]-0.01, submap[1]-0.01, submap[2]+0.01, submap[3]+0.01], time_norm=False) # to avoid white border
             nu1.deconvolve['apply'] = False # to be extra safe
             del nu1
 
@@ -153,7 +159,13 @@ class Contours:
             nu2 = krispy.nustardo.NustarDo(nu_file, energy_range=[colour_and_energy[key][0], colour_and_energy[key][1]], time_range=time_interval)
             nu2.deconvolve['apply'] = True
             nu2.deconvolve['iterations'] = iterations
-            nustar_maps_corr[key] = nu2.nustar_setmap(submap = [submap[0]-100, submap[1]-100, submap[2]+100, submap[3]+100])
+            # make sure to deconvolve over FoV
+            nu2.nustar_setmap(submap='FoV')
+            nu2.deconvolve['apply'] = False
+            # use deconvolved map as own map, avoid time norm a second time, and only submap the region
+            # if own_map isn't set then the map is created from scratch again and so isn't deconvolved
+            nu2.own_map = nu2.rsn_map
+            nustar_maps_corr[key] = nu2.nustar_setmap(submap = [submap[0]-100, submap[1]-100, submap[2]+100, submap[3]+100], time_norm=False)
             nu2.deconvolve['apply'] = False
             del nu2
 
@@ -283,8 +295,10 @@ class Contours:
         return shift
     
     
+    print_max_nu = False
+
     def apply_nu_shift_fpm(self, nu_file=None, nu_shift=None, colour_and_energy=None, 
-                           time_interval=None, submap=None, iterations=None, print_max=False):
+                           time_interval=None, submap=None, iterations=None):
         
         if type(nu_shift) == type(None):
             # sys._getframe().f_code.co_name give the funciton name
@@ -314,12 +328,22 @@ class Contours:
             nu1.cleanevt = krispy.nustardo.shift(nu1.cleanevt, pix_xshift=nu_shift[0], pix_yshift=nu_shift[1])
             
             nu1.deconvolve['apply'] = False # to be extra safe
+            tn = True
             if type(iterations) == int and iterations >= 1:
                 nu1.deconvolve['apply'] = True
                 nu1.deconvolve['iterations'] = iterations
+
+                # make sure to deconvolve over FoV
+                nu1.nustar_setmap(submap='FoV')
+                nu1.deconvolve['apply'] = False
+                # use deconvolved map as own map, avoid time norm a second time, and only submap the region
+                # if own_map isn't set then the map is created from scratch again and so isn't deconvolved
+                nu1.own_map = nu1.rsn_map
+                tn = False
+
             nu1.sub_lt_zero = 0
-            nustar_final[key] = nu1.nustar_setmap(submap = [submap[0]-0.01, submap[1]-0.01, submap[2]+0.01, submap[3]+0.01]) # to avoid white border
-            if print_max == True:
+            nustar_final[key] = nu1.nustar_setmap(submap = [submap[0]-0.01, submap[1]-0.01, submap[2]+0.01, submap[3]+0.01], time_norm=tn) # to avoid white border
+            if self.print_max_nu == True:
                 print('Max NuSTAR map value is ', np.max(nustar_final[key].data))
             nu1.deconvolve['apply'] = False # to be extra safe
             nu_objs[key] = nu1
