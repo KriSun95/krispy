@@ -273,6 +273,9 @@ class NustarDo:
             psfhdu = fits.open(psf_array)
             psf_array = psfhdu[1].data
             psfhdu.close()
+            
+        else:
+            psf_used = 'Custom Array.'
 
         deconvolved_RL = restoration.richardson_lucy(map_array, psf_array, iterations=it, clip=False)
         
@@ -367,10 +370,12 @@ class NustarDo:
                             'top right y].')
 
         if (self.deconvolve['apply'] == True) and (self.gaussian_filter['apply'] == True):
-            print('Caution! Did you mean to set deconvolve AND gaussian blurr to True? If so, then the \
-                   deconvolution will happen first then the Gaussian filter is applied.')
+            print('Caution! Did you mean to set deconvolve AND gaussian blurr to True? If so, then the'
+                  'deconvolution will happen first then the Gaussian filter is applied.')
 
         if self.deconvolve['apply'] == True:
+            print('Deconvolvution will atke place over the submap you have defined, but it should be FoV. This will be'
+                  'updated to automatically deconvolve over the FoV.')
             dconv = self.nustar_deconv(it=self.deconvolve['iterations'], clip=self.deconvolve['clip'])
             self.nustar_map = sunpy.map.Map(dconv, self.nustar_map.meta)
             
