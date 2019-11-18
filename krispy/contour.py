@@ -80,6 +80,7 @@ class Contours:
         self.colour_dict = colour_dict
         self.time_range = time_range
         self.submap = submap
+        self.nuFoV = None # this will get replaced with the NuSTAR FoV if we need it, otherwise an extended submap
         
         # now seperate colour_dict up for later function use into colour and energy, and colour and contour info
         self.colour_and_energy = {}
@@ -147,6 +148,7 @@ class Contours:
             nu1.deconvolve['iterations'] = iterations
             # make sure to deconvolve over FoV
             nu1.nustar_setmap(submap='FoV')
+            self.nuFoV = nu1.FoV
             nu1.deconvolve['apply'] = False
             # use deconvolved map as own map, avoid time norm a second time, and only submap the region
             # if own_map isn't set then the map is created from scratch again and so isn't deconvolved
@@ -165,7 +167,8 @@ class Contours:
             # use deconvolved map as own map, avoid time norm a second time, and only submap the region
             # if own_map isn't set then the map is created from scratch again and so isn't deconvolved
             nu2.own_map = nu2.rsn_map
-            nustar_maps_corr[key] = nu2.nustar_setmap(submap = [submap[0]-100, submap[1]-100, submap[2]+100, submap[3]+100], time_norm=False)
+            nustar_maps_corr[key] = nu2.nustar_setmap(submap = self.nuFoV, time_norm=False)
+            # [submap[0]-100, submap[1]-100, submap[2]+100, submap[3]+100]
             nu2.deconvolve['apply'] = False
             del nu2
 
@@ -263,14 +266,18 @@ class Contours:
     
         bl = SkyCoord((submap[0])*u.arcsec, (submap[1])*u.arcsec, frame=aia_map.coordinate_frame)
         tr = SkyCoord((submap[2])*u.arcsec, (submap[3])*u.arcsec, frame=aia_map.coordinate_frame)
-        bl_corr = SkyCoord((submap[0]-100)*u.arcsec, (submap[1]-100)*u.arcsec, frame=aia_map.coordinate_frame)
-        tr_corr = SkyCoord((submap[2]+100)*u.arcsec, (submap[3]+100)*u.arcsec, frame=aia_map.coordinate_frame)
-
-        aia_corr_data = aia_map_for_corr.submap(bl_corr, tr_corr).data
         aia_data = aia_map.submap(bl,tr)
-        
+
+
         if print_max == True:
             print('Max AIA map value is ', np.max(aia_data.data))
+
+        if type(self.nuFoV) == type(None):
+            self.nuFoV = [submap[0]-100, submap[1]-100, submap[2]+100, submap[3]+100]
+
+        bl_corr = SkyCoord((self.nuFoV[0])*u.arcsec, (self.nuFoV[1])*u.arcsec, frame=aia_map.coordinate_frame)
+        tr_corr = SkyCoord((self.nuFoV[2])*u.arcsec, (self.nuFoV[3])*u.arcsec, frame=aia_map.coordinate_frame)
+        aia_corr_data = aia_map_for_corr.submap(bl_corr, tr_corr).data
 
         return aia_data, aia_corr_data
     
@@ -282,10 +289,13 @@ class Contours:
             nu_arr = nu_arrays[key].data
             nu_arr[np.isnan(nu_arr)] = 0
             break
+        
 
         data_for_corr = resize(aia_array, np.shape(nu_arr))
         self.corr_data = signal.correlate2d(data_for_corr, nu_arr, boundary='symm', mode='same')
         y, x = np.unravel_index(np.argmax(self.corr_data), self.corr_data.shape)  # find the match
+
+        self.corr_ar = data_for_corr, nu_arr
 
         # need the number of NuSTAR pixels is needed for the shift
         x_pix_shift = -(np.shape(data_for_corr)[1]/2 - x) #negative because the positive number means shift to the left/down

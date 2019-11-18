@@ -373,9 +373,10 @@ class NustarDo:
             print('Caution! Did you mean to set deconvolve AND gaussian blurr to True? If so, then the'
                   'deconvolution will happen first then the Gaussian filter is applied.')
 
-        if self.deconvolve['apply'] == True:
-            print('Deconvolvution will atke place over the submap you have defined, but it should be FoV. This will be'
-                  'updated to automatically deconvolve over the FoV.')
+        if (self.deconvolve['apply'] == True):
+            if (submap is not self.FoV):
+                print('Deconvolvution will take place over the submap you have defined, but it should be FoV. This will be'
+                      ' updated to automatically deconvolve over the FoV.')
             dconv = self.nustar_deconv(it=self.deconvolve['iterations'], clip=self.deconvolve['clip'])
             self.nustar_map = sunpy.map.Map(dconv, self.nustar_map.meta)
             
