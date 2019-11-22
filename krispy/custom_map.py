@@ -56,7 +56,9 @@ def make_sunpy(evtdata, hdr, norm_map=False):
     y = evtdata['Y'][:]
     met = evtdata['TIME'][:]*u.s
     mjdref=hdr['MJDREFI']
+
     mid_obs_time = astropy.time.Time(mjdref*u.d+met.mean(), format = 'mjd')
+    sta_obs_time = astropy.time.Time(mjdref*u.d+met.min(), format = 'mjd')
 
     # Add in the exposure time (or livetime), just a number not units of seconds 
     exp_time=hdr['EXPOSURE']
@@ -79,7 +81,7 @@ def make_sunpy(evtdata, hdr, norm_map=False):
 
 
     dict_header = {
-    "DATE-OBS": mid_obs_time.iso,
+    "DATE-OBS": sta_obs_time.iso, #mid_obs_time.iso,
     "EXPTIME": exp_time,
     "CDELT1": scale,
     "NAXIS1": bins,
@@ -94,12 +96,12 @@ def make_sunpy(evtdata, hdr, norm_map=False):
     "CUNIT2": "arcsec",
     "CTYPE2": "HPLT-TAN",
     "PIXLUNIT": pixluname,
-    "HGLT_OBS": get_sun_B0(mid_obs_time),
+    "HGLT_OBS": sunpy.coordinates.sun.B0(mid_obs_time), #get_sun_B0(mid_obs_time),
     "HGLN_OBS": 0,
-    "RSUN_OBS": sun.solar_semidiameter_angular_size(mid_obs_time).value,
-    "RSUN_REF": sun.constants.radius.value,
+    "RSUN_OBS": sunpy.coordinates.sun.angular_radius(mid_obs_time).value, #sun.solar_semidiameter_angular_size(mid_obs_time).value,
+    "RSUN_REF": sunpy.sun.constants.radius.value, #sun.constants.radius.value,
     # Assumes dsun_obs in m if don't specify the units, so give units
-    "DSUN_OBS": get_sunearth_distance(mid_obs_time).value*u.astrophys.au
+    "DSUN_OBS": sunpy.coordinates.sun.earth_distance(mid_obs_time).value*u.astrophys.au, #get_sunearth_distance(mid_obs_time).value*u.astrophys.au
     }
     # For some reason the DSUN_OBS crashed the save...
     

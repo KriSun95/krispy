@@ -36,6 +36,9 @@ import pytz
 from skimage import restoration
 from . import interp
 
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters() # was told to do this by the machine
+
 '''
 Alterations:
     KC: 22/01/2019 - . 
@@ -507,7 +510,7 @@ class NustarDo:
         overlay.grid(color='grey', linewidth=0.5, linestyle='dashed')
 
         # Tweak the titles and labels
-        title_obsdate = '{:.20}'.format('{:%Y-%b-%d}'.format(self.rsn_map.date))
+        title_obsdate = self.rsn_map.date.strftime('%Y-%b-%dT%H:%M:%S.%f')[:-13] #'{:.20}'.format('{:%Y-%b-%d}'.format(self.rsn_map.date))
         e_range_str = str(self.energy_range[0])+'-'+str(self.energy_range[1])
         fpm = 'FPM'+self.fpm
         title_obstime_start = self.time_range[0][-8:]

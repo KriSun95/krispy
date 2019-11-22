@@ -256,4 +256,54 @@ def cmap_midcolours(**kwargs):
         cmap_dict.update({key:colorval}) 
             
             
-    return cmap_dict #a dictionary with key names and the corresponding rgba values    
+    return cmap_dict #a dictionary with key names and the corresponding rgba values   
+
+
+def getTimeAverage(name=None, time_ranges=None, lightcurve_data=None):
+    """Given a list of datetime times then the average value of lightcurve_data will be found between those times.
+    
+    Parameters
+    ----------
+    name : Str
+        The name given to the data set.
+        Defualt: None
+
+    time_ranges : list of datetimes
+        The times that you want the average value in between.
+        Defualt: None
+
+    lightcurve_data : dict
+        A dictionary in the form {'times': [...] ,'data': [...]}.
+        Defualt: None
+            
+    Returns
+    -------
+    A list of average values of lightcurve_data between the times specified.
+    """
+    
+    # to keep track of what wavelength I'm on
+    if type(name) != type(None):
+        print('For '+name+': ')
+        
+    if type(time_ranges) == type(None):
+        print('Need a list of time ranges in datetime objects.')
+        return
+    
+    if type(time_ranges) == type(None):
+        print('Need the lightcurve data as a dictionary, e.g. {\'times\':[dt_obj], \'data\':[...].')
+        return
+    
+    # find average values in the time periods indicated
+    ave = []
+    for tr in range(len(time_ranges)-1): 
+        vals = []
+        for c,t in enumerate(lightcurve_data['times']):
+            
+            # the times within the time range, add corresponding values into the vals list to be averaged
+            if time_ranges[tr] < t <= time_ranges[tr+1]:
+                vals.append(lightcurve_data['data'][c])
+        ave.append(np.average(vals))
+    
+    # return the average lightcurve value between the time range values
+    # so len(averages) = len(time_ranges)-1
+    return ave
