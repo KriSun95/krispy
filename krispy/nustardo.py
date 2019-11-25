@@ -341,8 +341,11 @@ class NustarDo:
             limits = []
         if submap == None:
             submap = []
-        elif submap == 'FoV':
-            submap = self.FoV
+        elif type(submap) == str:
+            if submap.upper() == 'FOV':
+                submap = self.FoV
+            else:
+                print('The only string input to submap that is supported at the moment is FOV, fov, FoV, etc.')
         
         self.time_norm = time_norm
         if self.time_norm == True:
