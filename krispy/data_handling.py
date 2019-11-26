@@ -18,7 +18,7 @@ import astropy.units as u
 from skimage import future
 
 #make a light curve
-def make_lightcurve(directory, bottom_left, top_right, mask=None):
+def make_lightcurve(directory, bottom_left, top_right, mask=None, isHMI=None):
     """Takes a directory and coordinates for a region in arcseconds returns start time of the light curve, times and 
     DN per second per pixel.
     
@@ -37,12 +37,21 @@ def make_lightcurve(directory, bottom_left, top_right, mask=None):
     mask : array
             An array the same size as the region between bottom_left and top_right that has 1s where the feature you want a 
             lightcurve of is and 0s everywhere else (can use the draw_mask() funciton to create this mask over the same region).
+            Defualt: None
+
+    isHMI : int, float, or None
+            This number identifies what values should be summed for an HMI lightcurve. If >=0 then only fluxes greater than this value 
+            are summed, if <0 then only fluxes less than this value are summed. Each entry is return with the number of pixels that 
+            contributed to its sum. 
+            Defualt: None
             
     Returns
     -------
     Array of times (as datetime objects) and light curve values in input_unit per pixel (AIA).
     -AND/OR-
-    Dictionary of times and input_unit per pixel seperated by filter combo and exposure time (XRT).
+    Dictionary of times (as datetime objects) and input_unit per pixel seperated by filter combo and exposure time (XRT).
+    -AND/OR-
+    Array of times (as datetime objects) and total + or - Gauss in the region with number of contributing pixels (HMI).
     """
 
     if type(directory) == str:
@@ -74,6 +83,9 @@ def make_lightcurve(directory, bottom_left, top_right, mask=None):
             xrt_filter = aia_map.meta['ec_fw1_'] + '_' + aia_map.meta['ec_fw2_']  
             key = 'filter' + xrt_filter + '_exptime' + str(aia_map.meta['exptime']).replace('.','-')
             obs_time = datetime.datetime.strptime(times, '%Y-%m-%dT%H:%M:%S.%f')
+        elif 'HMI' in aia_map.meta['instrume']:
+            map_type = 'HMI' 
+            obs_time = datetime.datetime.strptime(times, '%Y-%m-%dT%H:%M:%S.%fZ')
         
         bl = SkyCoord(bottom_left[0]*u.arcsec, bottom_left[1]*u.arcsec, frame=aia_map.coordinate_frame)
         tr = SkyCoord(top_right[0]*u.arcsec, top_right[1]*u.arcsec, frame=aia_map.coordinate_frame)
@@ -95,18 +107,31 @@ def make_lightcurve(directory, bottom_left, top_right, mask=None):
             else:
                 t_norm_data = aia_submap_lc.data / aia_submap_lc.meta['exptime']
                 #aia_submap_lc = sunpy.map.Map(t_norm_data, aia_submap_lc.meta)
+        elif 'HMI' in aia_submap_lc.meta['instrume']:
+            if 'history' in aia_submap_lc.meta:
+                t_norm_data = aia_submap_lc.data
         else:
-            print('The data either: isn\'t from the AIA or XRT, or it has not been prepped.')
+            print('The data either: isn\'t from the AIA or XRT or HMI, or it has not been prepped.')
             return
 
         del aia_submap_lc
 
-        # if a mask is provided of teh region with 1 in the desired pixels and 0s everywhere else
-        if type(mask) == type(None):
-            ave_value = np.sum( np.array(t_norm_data) * np.array(mask) ) / np.sum(np.array(mask))
-        else:
-            ave_value = np.sum(np.array(t_norm_data)) / ((np.shape(np.array(t_norm_data))[0] * \
+        # if a mask is provided of the region with 1 in the desired pixels and 0s everywhere else
+        if (type(isHMI) == type(None)) and (map_type != 'HMI'):
+            if type(mask) == type(None):
+                ave_value = np.sum( np.array(t_norm_data) * np.array(mask) ) / np.sum(np.array(mask))
+            else:
+                ave_value = np.sum(np.array(t_norm_data)) / ((np.shape(np.array(t_norm_data))[0] * \
                                               np.shape(np.array(t_norm_data))[1]))
+        elif (map_type == 'HMI') and (type(isHMI) != type(None)) and (type(isHMI)==type(1) or type(isHMI)==type(1.0)):
+            if isHMI >= 0:
+                t_norm_data[t_norm_data < isHMI] = 0 # set everything less than this value to zero
+            elif isHMI < 0:
+                t_norm_data[t_norm_data > isHMI] = 0 # set everything greater than this value to zero
+            ave_value = [np.sum(t_norm_data), np.count_nonzero(t_norm_data)] # return total Gauss (- or +) with the number of pixels that produced that total
+        else:
+            print('isHMI has to be set to a number if HMI data is provided (flux below negative inputs will be summed and flux about positive inputs will be summed). Otherwise it should be set to None')
+
 
         if map_type == 'XRT': #xrt need keys to seperate different filter combos and exptimes
             if key in lc_values_xrt:
@@ -115,13 +140,13 @@ def make_lightcurve(directory, bottom_left, top_right, mask=None):
             elif key not in lc_values_xrt:
                 lc_values_xrt[key] = [ave_value]
                 lc_times_xrt[key] = [obs_time]
-        elif map_type == 'AIA':
+        elif (map_type == 'AIA') or (map_type == 'HMI'):
             lc_times.append(obs_time)
             lc_values.append(ave_value)
 
         print(f'\r[function: make_lightcurve()] Looked at {d+1} files of {no_of_files}.', end='')
 
-    if map_type == 'AIA':
+    if (map_type == 'AIA') or (map_type == 'HMI'):
         return lc_times, lc_values
     elif map_type == 'XRT': 
         return lc_times_xrt, lc_values_xrt
