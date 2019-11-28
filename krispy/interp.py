@@ -20,7 +20,7 @@ def find_my_y(your_x, data_x, data_y, logged_data=False):
     Parameters
     ----------
     your_x : float
-            A single number, of which you want the corresponding y value(s) of through linear interpolation of the data 
+            A single number, of which you want the corresponding y value(s) through linear interpolation of the data 
             given (data_x, data_y).
     
     data_x : 1-d list/array
@@ -30,7 +30,7 @@ def find_my_y(your_x, data_x, data_y, logged_data=False):
             This is the original set of y values.
             
     logged_data : Bool
-            If the data is logged coming in and you want linear values back out set this to True.
+            If the data is logged (base 10) coming in and you want linear values back out set this to True.
             Default: False
             
     Returns

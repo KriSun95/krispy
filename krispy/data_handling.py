@@ -152,8 +152,8 @@ def make_lightcurve(directory, bottom_left, top_right, mask=None, isHMI=None):
         return lc_times_xrt, lc_values_xrt
 
 
-def getTimeAverage(name=None, time_ranges=None, lightcurve_data=None):
-    """Given a list of datetime times then the average value of lightcurve_data will be found between those times.
+def getTime(name=None, time_ranges=None, lightcurve_data=None, get='average'):
+    """Given a list of datetime times then the average, sum, or values value of lightcurve_data will be found between those times.
     
     Parameters
     ----------
@@ -168,10 +168,14 @@ def getTimeAverage(name=None, time_ranges=None, lightcurve_data=None):
     lightcurve_data : dict
         A dictionary in the form {'times': [...] ,'data': [...]}.
         Defualt: None
+
+    get : Str
+        Decide whether you want the 'average', 'sum', 'values' back over the time range.
+        Defualt: 'average'
             
     Returns
     -------
-    A list of average values of lightcurve_data between the times specified.
+    A list of average, sum, or values of lightcurve_data between the times specified.
     """
     
     # to keep track of what wavelength I'm on
@@ -195,7 +199,12 @@ def getTimeAverage(name=None, time_ranges=None, lightcurve_data=None):
             # the times within the time range, add corresponding values into the vals list to be averaged
             if time_ranges[tr] < t <= time_ranges[tr+1]:
                 vals.append(lightcurve_data['data'][c])
-        ave.append(np.average(vals))
+        if get == 'average':
+            ave.append(np.average(vals))
+        elif get == 'sum':
+            ave.append(np.sum(vals))
+        elif get == 'values':
+            ave.append(vals)
     
     # return the average lightcurve value between the time range values
     # so len(averages) = len(time_ranges)-1

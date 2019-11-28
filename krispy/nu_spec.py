@@ -82,6 +82,75 @@ def grppha_min_check(pha_file, group_min=None, print_tries=False):
                 return group_min, binned_channel, binned_counts
 
 
+def read_xspec_txt(f):
+    ''' Takes a the output .txt file from XSPEC and extracts useful information from it.
+    
+    Parameters
+    ----------
+    f : Str
+            String for the .txt file.
+            
+    Returns
+    -------
+    The counts, photons, and ratios from the XSPEC output. 
+    '''
+
+    f = f if f.endswith('.txt') else f+'.txt'
+    
+    asc = open(f, 'r')  # We need to re-open the file
+    data = asc.read()
+    asc.close()
+    
+    sep_lists = data.split('!')[1].split('NO NO NO NO NO') #seperate counts info from photon info from ratio info
+    _file = {}
+    for l in range(len(sep_lists)):
+        tmp_list = sep_lists[l].split('\n')[1:-1] # seperate list by lines and remove the blank space from list ends
+        num_list = []
+        for s in tmp_list:
+            new_line = s.split(' ') # numbers are seperated by spaces
+            for c, el in enumerate(new_line):
+                if el == 'NO':
+                    # if a value is NO then make it a NaN
+                    new_line[c] = np.nan
+            num_line = list(map(float, new_line)) # have the values as strings, map them to floats
+            num_list.append(num_line)
+        num_list = np.array(num_list)
+        ## first block of NO NO NO... should be counts, second photons, third ratio
+        if l == 0:
+            _file['counts'] = num_list
+        if l == 1:
+            _file['photons'] = num_list
+        if l == 2:
+            _file['ratio'] = num_list
+    return _file
+
+
+def seperate_numbers_from_model(read_xspec_data, fitting_mode='1apec1fpm'):
+    ''' Takes a the output from read_xspec_txt() function and splits the output into data, model, erros, energies, etc.
+    
+    Parameters
+    ----------
+    read_xspec_data : Dict
+            Dictionary output from read_xspec_txt().
+
+    fitting_mode : Str
+            Information about the fit in XSPEC, e.g. 1apec model fit with on focal plane modules data: '1apec1fpm'.
+            Default: '1apec1fpm'
+            
+    Returns
+    -------
+    The counts, photons, and ratios from the XSPEC output. 
+    '''
+    if fitting_mode == '1apec1fpm' or fitting_mode == '1apec2fpm':
+        seperated = {'energy':read_xspec_data['counts'][:,0], 
+                     'e_energy':read_xspec_data['counts'][:,1], 
+                     'data1':read_xspec_data['counts'][:,2], 
+                     'edata1':read_xspec_data['counts'][:,3], 
+                     'model':read_xspec_data['counts'][:,4]}
+        
+    return seperated
+
+
 def read_pha(file):
     ''' Takes a .pha file and extracts useful information from it.
     
@@ -304,7 +373,7 @@ def make_srm(rmf_array=(), arf_array=()):
             Array representing the redistribution matrix.
             Default : None
             
-    no_of_channels : numpy 1D array/list
+    arf_array : numpy 1D array/list
             List representing the ancillary response.
             Default : None
             
