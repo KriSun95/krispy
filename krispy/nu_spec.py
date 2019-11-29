@@ -125,7 +125,7 @@ def read_xspec_txt(f):
     return _file
 
 
-def seperate_numbers_from_model(read_xspec_data, fitting_mode='1apec1fpm'):
+def seperate(read_xspec_data, fitting_mode='1apec1fpm'):
     ''' Takes a the output from read_xspec_txt() function and splits the output into data, model, erros, energies, etc.
     
     Parameters
@@ -169,7 +169,34 @@ def read_pha(file):
     header_FOR_LIVETIME = hdul[0].header
     hdul.close()
 
-    return data['counts'], data['channel'], header_FOR_LIVETIME['LIVETIME']
+    return data['channel'], data['counts'], header_FOR_LIVETIME['LIVETIME']
+
+
+def nustar_ctsSpec(file):
+    ''' Takes a .pha file and returns plotting innformation.
+    
+    Parameters
+    ----------
+    file : Str
+            String for the .pha file of the spectrum under investigation.
+            
+    Returns
+    -------
+    The energy is the middle of the energy bin for the counts, the half-range that energy bin spans, count rate per keV and its error. 
+    '''
+
+    channel, counts, livetime = read_pha(file)
+    
+    energy_binStart = channel*0.04+1.6
+    energy_binMid = energy_binStart + 0.02 # add 0.02 to get value in the middle of the energy bin
+    energy_binMid_err = 0.02
+    
+    ev40_to_kev = 1000/40
+    cts = (counts * ev40_to_kev) / livetime # now in cts keV^-1 s^-1
+    
+    cts_err = (np.sqrt(counts) * ev40_to_kev) / livetime
+    
+    return energy_binMid, energy_binMid_err, cts, cts_err
 
 
 def read_arf(file):
@@ -267,7 +294,7 @@ def col2arr_py(data):
     return chan_array
 
 
-def vrmf2arr_py(data=None, no_of_channels=None, n_grp_list=None, f_chan_array=None, n_chan_array=None):
+def vrmf2arr_py(data=None, n_grp_list=None, f_chan_array=None, n_chan_array=None):
     ''' Takes redistribution parameters for each energy channel from a .rmf file and returns it in the correct format.
     
     Parameters
@@ -278,10 +305,6 @@ def vrmf2arr_py(data=None, no_of_channels=None, n_grp_list=None, f_chan_array=No
             
     no_of_channels : int
             Number of channels/ energy bins.
-            Default : None
-
-    n_grp_list : list
-            Number of sub-set channels in that energy bin.
             Default : None
             
     f_chan_array : numpy.array
@@ -322,6 +345,8 @@ def vrmf2arr_py(data=None, no_of_channels=None, n_grp_list=None, f_chan_array=No
     for n in data:
         for nn in n:
             unravel_dmat.append(nn)
+
+    no_of_channels = len(n_grp_list)
 
     nrows = len(data)
     ncols = no_of_channels
@@ -364,12 +389,12 @@ def vrmf2arr_py(data=None, no_of_channels=None, n_grp_list=None, f_chan_array=No
     return mat_array
 
 
-def make_srm(rmf_array=(), arf_array=()):
+def make_srm(rmf_matrix=(), arf_array=()):
     ''' Takes rmf and arf and produces the spectral response matrix fro NuSTAR.
     
     Parameters
     ----------
-    rmf_array : numpy 2D array
+    rmf_matrix : numpy 2D array
             Array representing the redistribution matrix.
             Default : None
             
@@ -382,9 +407,47 @@ def make_srm(rmf_array=(), arf_array=()):
     An array that is the spectral response (srm).
     '''
     
-    if len(rmf_array) == 0 or len(arf_array) == 0:
+    if len(rmf_matrix) == 0 or len(arf_array) == 0:
         print('Need both RMF and ARF information to proceed.')
         return
     
-    srm = np.array([rmf_array[r, :] * arf_array[r] for r in range(len(arf_array))]) # each energy bin row in the rmf is multiplied the arf value for the same energy bin
+    srm = np.array([rmf_matrix[r, :] * arf_array[r] for r in range(len(arf_array))]) # each energy bin row in the rmf is multiplied the arf value for the same energy bin
     return srm
+
+
+def make_model(energies=None, photon_model=None, parameters=None, srm=None):
+    ''' Takes a photon model array ( or function if you provide the pinputs with parameters), the spectral response matrix and returns a model count spectrum.
+    
+    Parameters
+    ----------
+    energies : array/list
+            List of energies.
+            Default : None
+
+    photon_model : function/array/list
+            Array -OR- function representing the photon model (if it's a function, provide the parameters of the function as a list, e.g. paramters = [energies, const, power]).
+            Default : None
+            
+    parameters : list
+            List representing the inputs a photon model function, if a function is provided, excludeing the energies the spectrum is over.
+            Default : None
+
+    srm : matrix/array
+            Spectral response matrix.
+            Default : None
+            
+    Returns
+    -------
+    A model count spectrum.
+    '''
+
+    ## if parameters is None then assume the photon_model input is already a spectrum to test, else make the model spectrum from the funciton and parameters
+    if type(parameters) == type(None):
+        photon_spec = photon_model
+    else:
+        photon_spec = photon_model(energies, *parameters)
+    
+    model_cts_matrix = np.array([srm[r, :] * photon_spec[r] for r in range(len(photon_spec))])
+    model_cts_spectrum = model_cts_matrix.sum(axis=0) # sum the rows together
+    
+    return model_cts_spectrum
