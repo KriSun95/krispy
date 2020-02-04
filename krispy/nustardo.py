@@ -806,6 +806,8 @@ class NustarDo:
                     print('Will not show plot.')
                     return
 
+        self.lc_livetimes = 0 # just to have it defined
+
         if self.t_bin['method'] == 'approx':
             if (type(cleanevt) == astropy.io.fits.fitsrec.FITS_rec) and (sub_reg == None): #data form of NuSTAR
                 t_bin_conversion = int((self.rel_tend - self.rel_tstart) // self.t_bin['seconds_per_bin']) #get approximately t_bin seconds per bin as start and end of 
@@ -892,6 +894,7 @@ class NustarDo:
                                     indices = ((self.hk_times>=self.t_bin_edges[t]) & (self.hk_times<self.t_bin_edges[t+1]))
                                     ltimes_in_range = self.hk_livetimes[indices]
                                     livetimes[t] = np.average(ltimes_in_range)
+                                self.lc_livetimes = livetimes
                                 
                                 counts_per_second = np.array(counts) / (livetimes * (times[1]-times[0]))
                                 
@@ -961,6 +964,7 @@ class NustarDo:
                     indices = ((self.hk_times>=self.t_bin_edges[t]) & (self.hk_times<self.t_bin_edges[t+1]))
                     ltimes_in_range = self.hk_livetimes[indices]
                     livetimes[t] = np.average(ltimes_in_range)
+                self.lc_livetimes = livetimes
                 
                 counts_per_second = self.lc_counts / (livetimes * (times[1]-times[0])) 
                 fig = plt.figure()
@@ -1268,7 +1272,7 @@ class NustarDo:
         # Light curve info
         lc_folder = nustar_folder + 'light_curve_data/'
         os.mkdir(lc_folder)
-        lc_list_to_save = ['lc_times', 'lc_counts', 'lc_count_rates', 'sub_reg_lc']
+        lc_list_to_save = ['lc_times', 'lc_counts', 'lc_count_rates', 'sub_reg_lc', 'lc_livetimes']
         lc_info = list(set(dir(self)) & set(lc_list_to_save))
         lc_to_store = {}
         for name in lc_info:
