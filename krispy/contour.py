@@ -61,6 +61,8 @@ class Contours:
         ''' Take in the inputs to the class and set them to class attributes. Seperate them for use in 
         later functions'''
         
+        self.nuFoV = None # this will get replaced with the NuSTAR FoV if we need it, otherwise an extended submap
+
         # so the class functions can potentially be used without specifying a function 
         if type(nu_file) == type(None):
             return
@@ -80,7 +82,6 @@ class Contours:
         self.colour_dict = colour_dict
         self.time_range = time_range
         self.submap = submap
-        self.nuFoV = None # this will get replaced with the NuSTAR FoV if we need it, otherwise an extended submap
         
         # now seperate colour_dict up for later function use into colour and energy, and colour and contour info
         self.colour_and_energy = {}
@@ -175,12 +176,12 @@ class Contours:
         return nustar_obj, nustar_maps_corr
     
     
-    def aia_file_times(self, aia_file_dir=None):
+    def aia_file_times(self, aia_file_dir=None, aia_file_list=None):
         
         if aia_file_dir == None:
             aia_file_dir=self.aia_directory
-        
-        aia_file_list = np.array(os.listdir(aia_file_dir))
+        if type(aia_file_list) == type(None):
+            aia_file_list = np.array(os.listdir(aia_file_dir))
         times = []
 
         for file in aia_file_list:
@@ -624,7 +625,7 @@ class Contours:
 
         aia_file_list = np.array(os.listdir(aia_dir))
         
-        times_list = self.aia_file_times(aia_dir)
+        times_list = self.aia_file_times(aia_dir, aia_file_list=aia_file_list)
 
         good_indices = self.useful_time_inds(times_list, time_interval=time_range)
 

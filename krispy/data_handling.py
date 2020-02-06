@@ -36,7 +36,8 @@ def make_lightcurve(directory, bottom_left, top_right, mask=None, isHMI=None):
 
     mask : array
             An array the same size as the region between bottom_left and top_right that has 1s where the feature you want a 
-            lightcurve of is and 0s everywhere else (can use the draw_mask() funciton to create this mask over the same region).
+            lightcurve of is and 0s everywhere else (can use the draw_mask() funciton to create this mask over the same region, 
+            where the 'bottom_left' and 'top_right' arguments become the region of the mask).
             Defualt: None
 
     isHMI : int, float, or None
@@ -118,7 +119,7 @@ def make_lightcurve(directory, bottom_left, top_right, mask=None, isHMI=None):
 
         # if a mask is provided of the region with 1 in the desired pixels and 0s everywhere else
         if (type(isHMI) == type(None)) and (map_type != 'HMI'):
-            if type(mask) == type(None):
+            if type(mask) != type(None):
                 ave_value = np.sum( np.array(t_norm_data) * np.array(mask) ) / np.sum(np.array(mask))
             else:
                 ave_value = np.sum(np.array(t_norm_data)) / ((np.shape(np.array(t_norm_data))[0] * \

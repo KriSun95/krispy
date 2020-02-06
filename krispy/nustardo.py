@@ -1299,10 +1299,10 @@ def shift(evt_data, pix_xshift=None, pix_yshift=None):
     return evt_data
 
 
-def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_area, errors=None, log_data=False):
+def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_area, errors=None, Tresp_syserror=0, log_data=False):
     """Takes data for a channel's temperature response, plasma temperature and emission measure and area of source and 
     returns the expected count rate per pixel.
-    *** Make sure units  work ***
+    *** Check output and make sure your units  work ***
     
     Parameters
     ----------
@@ -1310,10 +1310,10 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
             The x and y data for the temperature response of the chennel of interest, e.g. {'x':[...], 'y':[...]}.
     
     plasma_temp : float
-            Temperature of the response you want.
+            Temperature of the response you want in MK.
             
     plasma_em : float
-            Emission measure of the plasma.
+            Emission measure of the plasma in cm^-3.
     
     source_area : float
             Area of the source.
@@ -1322,14 +1322,19 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
             A dictionary of dictionaries containing the errors on T and EM, e.g. {'T':{'+':a, '-':b}, 
             'EM':{'+':c, '-':d}}.
             Defualt: None
+
+    Tresp_syserror : float
+            Fractional systematic error on the temperature response, e.g. 20% error on temp_response_dataxy['y'] means Tresp_error=0.2
+            Default: 0
             
     log_data : bool
-            Do you want the data log (base 10) for the interpolation?
+            Do you want the data (x and y) logged (base 10) for the interpolation?
             Default: False
             
     Returns
     -------
-    A float that is the synthetic count rate per pixel for the data given, temperature response and errors.
+    A dictionary of floats that is the synthetic count rate per pixel for the data given, temperature response, 
+    temperature, and emission measure with units and errors.
     """
     if log_data == True:
         temp_response = interp.find_my_y(np.log10(plasma_temp), np.log10(temp_response_dataxy['x']), np.log10(temp_response_dataxy['y']), logged_data=True)
@@ -1355,6 +1360,7 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
         
         temp_max_response = temp_response_dataxy['x'][np.argmax(temp_response_dataxy['y'])]
         
+        # what if there is a bump between central value and error range
         if (e_response[0] < temp_response[0]) and (e_response[1] < temp_response[0]):
             if min_T < temp_max_response < plasma_temp:
                 e_response[0] = np.max(temp_response_dataxy['y'])
@@ -1362,6 +1368,10 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
                 e_response[1] = np.max(temp_response_dataxy['y'])
         
         min_R, max_R = e_response[0], e_response[1] #R from min_T and R from max_T
+
+        # include temperature response error
+        up_resp = 1 + Tresp_syserror
+        down_resp = 1 - Tresp_syserror
         
         #flux from min_T(max_EM) and flux from max_T(min_EM)
         min_flux, max_flux = min_R * max_EM * (1 / source_area), max_R * min_EM * (1 / source_area)
@@ -1369,17 +1379,19 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
         
         e_response = np.array(e_response)[np.isfinite(e_response)]
         flux_range = np.array(flux_range)[np.isfinite(flux_range)]
-        f_err = [np.max(flux_range) - syn_flux[0], syn_flux[0] - np.min(flux_range)]
+        # max flux could be up_resp more, and min flux could be be down_resp more
+        f_err = [up_resp*np.max(flux_range) - syn_flux[0], syn_flux[0] - down_resp*np.min(flux_range)]
         for n,f in enumerate(f_err):
             if f < 0:
                 f_err[n] = np.max(f_err)
         
-        errors = {'T':{'+': errors['T']['+'], '-':errors['T']['-']}, 
-                  'EM':{'+': errors['EM']['+'],' -':errors['EM']['-']}, 
-                  't_res_err':{'+': abs(np.max(e_response) - temp_response[0]), '-':abs(temp_response[0] - np.min(e_response))}, 
-                  'syn_flux_err':{'+': f_err[0], '-':f_err[1]}}
+        errors = {'syn_flux_err':{'+': f_err[0], '-':f_err[1]}, 
+                  't_res_err':{'+': abs(up_resp*np.max(e_response) - temp_response[0]), '-':abs(temp_response[0] - down_resp*np.min(e_response))}, 
+                  't_res_syserr':[Tresp_syserror*100, '%'], 
+                  'T_err':{'+': errors['T']['+'], '-':errors['T']['-']}, 
+                  'EM_err':{'+': errors['EM']['+'],' -':errors['EM']['-']}}
 
-    return {'syn_flux':[syn_flux[0],'DN pix^-1 s^-1'], 't_res':[temp_response, 'DN cm^5 pix^-1 s^-1'], 'errors':errors}
+    return {'syn_flux':[syn_flux[0],'DN pix^-1 s^-1'], 't_res':[temp_response, 'DN cm^5 pix^-1 s^-1'], 'T':[plasma_temp, 'MK'], 'EM':[plasma_em, 'cm^-3'], 'errors':errors}
 
 
 def timefilter_evt(file, time_range=None, save_dir=None):
