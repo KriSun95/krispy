@@ -763,7 +763,7 @@ class NustarDo:
     t_bin = {'seconds_per_bin':10, 'method':'approx'}
 
     def light_curve(self, cleanevt=None, hdr=None, sub_reg=None, tstart=None, tend=None, 
-                    count_rate=True, house_keeping_file=None, make_final_graph=True):     
+                    count_rate=True, house_keeping_file=None, show_fig=True):     
 
         if self.rcParams_default_setup:
             matplotlib.rcParams['font.sans-serif'] = "Arial"
@@ -778,6 +778,7 @@ class NustarDo:
         if sub_reg == 'boxes':
             sub_reg = self.rectangles
             self.sub_reg_lc = sub_reg
+        single_lc = True # just start by assuming one light curve, don't worry, this only gets set to False if not
             
         #tz_correction = datetime.datetime.now() - datetime.datetime.utcnow() - timedelta(seconds=3599) # GMT=UTC+1 in the summer, GMT=UTC in winter
         tz_correction = float(datetime.datetime.now().strftime('%s')) - float(datetime.datetime.now(pytz.timezone('Europe/London')).strftime('%s')) # GMT=UTC+1 in the summer, GMT=UTC in winter
@@ -884,9 +885,9 @@ class NustarDo:
                         box = ' (Box '+str(b)+')'
                         all_counts[box] = np.array(counts)
 
-                        if make_final_graph == True:
+                        #if make_final_graph == True:
                             
-                            if count_rate == True:
+                        if count_rate == True:
                                 
                                 #livetime correction
                                 livetimes = np.zeros(len(self.t_bin_edges)-1)
@@ -915,9 +916,9 @@ class NustarDo:
                                 ax.xaxis.set_major_formatter(fmt)
                                 ax.xaxis.set_major_locator(plt.LinearLocator(9))
                                 plt.xticks(rotation=30)
-                                plt.show()
+                                #plt.show()
                                 all_count_rates[box] = counts_per_second
-                            else:
+                        else:
                                 fig = plt.figure()
                                 ax = plt.axes()
                                 dt_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in times]
@@ -935,7 +936,7 @@ class NustarDo:
                                 ax.xaxis.set_major_formatter(fmt)
                                 ax.xaxis.set_major_locator(plt.LinearLocator(9))
                                 plt.xticks(rotation=30)
-                                plt.show()
+                                #plt.show()
                     self.lc_counts = all_counts
                     if all_count_rates == []:
                         self.lc_count_rates = None
@@ -943,8 +944,10 @@ class NustarDo:
                         self.lc_count_rates = all_count_rates
                      
                     self.lc_times = dt_times
+                    if show_fig:
+                        plt.show()
                         
-                    make_final_graph = False
+                    single_lc = False
                         
                 else:
                     raise TypeError('Check the form of the sub-region was given in, e.g. need [bx,by,tx,ty] or [[bx,by,tx,ty], ...].')
@@ -955,7 +958,7 @@ class NustarDo:
             if (self.t_bin['method'] != 'exact') and (self.t_bin['method'] != 'approx'):
                 raise ValueError('Only options for the time bins is \'approx\' or \'exact\'.')
                 
-        if make_final_graph == True: #only in case multiple regions are plotted then they are handled in its own 'for' loop
+        if single_lc == True: #only in case multiple regions are plotted then they are handled in its own 'for' loop
             if count_rate == True:
                 
                 #livetime correction
@@ -986,7 +989,7 @@ class NustarDo:
                 ax.xaxis.set_major_locator(plt.LinearLocator(9))
                 plt.xticks(rotation=30)
                 
-                plt.show()
+                #plt.show()
                 self.lc_times = dt_times
                 self.lc_count_rates = counts_per_second
             else:
@@ -1007,9 +1010,11 @@ class NustarDo:
                 ax.xaxis.set_major_formatter(fmt)
                 ax.xaxis.set_major_locator(plt.LinearLocator(9))
                 plt.xticks(rotation=30)
-                plt.show()
+                #plt.show()
                 self.lc_times = dt_times
                 self.lc_count_rates = None
+        if show_fig:
+            plt.show()
 
 
     def full_obs_chus(self, start_directory=None, obs_id=None, descriptor='_chu123', ext='.fits' ,show_fig=True):
@@ -1163,7 +1168,7 @@ class NustarDo:
         #return plt.g
 
      
-    def save(self, save_dir='./', overwrite=False, **kwargs):
+    def save(self, save_dir='./', folder_name=None, overwrite=False, **kwargs):
         #replace folder of saved data if run twice or just make a new one?
         """
         Can I automate the process using dir(nu) since this has every variable created?
@@ -1195,8 +1200,10 @@ class NustarDo:
             ***** chu function ***** deconvolve settings *****
         '''
         
-        if self.chu_state != 'not_split':
+        if self.chu_state != 'not_split' and folder_name is None:
             nustar_folder = save_dir + self.obs_id + self.fpm + '_' + self.chu_state + '_nustar_folder'
+        elif folder_name is not None:
+            nustar_folder = folder_name
         else:
             nustar_folder = save_dir + self.obs_id + self.fpm + '_nustar_folder'
 
