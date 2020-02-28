@@ -346,6 +346,7 @@ class NustarDo:
                 submap = self.FoV
             else:
                 print('The only string input to submap that is supported at the moment is FOV, fov, FoV, etc.')
+        self.submap = submap
         
         self.time_norm = time_norm
         if self.time_norm == True:
@@ -645,7 +646,7 @@ class NustarDo:
         #find indices within the x and y pixel range
         indices = (sub_region_in_pixels[0][0] < x)&(x<= sub_region_in_pixels[1][0]) & \
         (sub_region_in_pixels[0][1] < y)&(y <= sub_region_in_pixels[1][1])
-        evt_data = evt_data[indices]
+        evt_data = evt_data[:len(indices)][indices] # [:len(indices)] is a quick fix, doesn't work otherwise if cleanevt is loaded from pickle
         return evt_data
     
     
@@ -1225,7 +1226,9 @@ class NustarDo:
             number_exist = len(np.nonzero(['nustar_folder' in f for f in os.listdir(save_dir)])[0])
             nustar_folder = nustar_folder + '(' + str(number_exist) + ')/'
             os.mkdir(nustar_folder)
-            print("Directory " , nustar_folder + '/' , " already exists. Creating another.", end='')
+            print("Directory " , nustar_folder , " already exists. Creating another.", end='')
+
+        self.nustar_folder = nustar_folder
             
         # Now 'nustar_folder' is the folder things will be save into
         # Start with evt file information
@@ -1290,10 +1293,26 @@ class NustarDo:
         # Can save your own stuff
         if len(kwargs) > 0:
             own_folder = nustar_folder
-            with open(own_folder + 'own_data.pickle', 'wb') as own_save_file:
+            with open(own_folder + 'kwargs_data.pickle', 'wb') as own_save_file:
                 pickle.dump(kwargs, own_save_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+        # save the object that can be loaded back in
+        with open(nustar_folder + nustar_folder[:-1].split('/')[-1] + '.pickle', 'wb') as object_file:
+            pickle.dump(self.__dict__, object_file, protocol=pickle.HIGHEST_PROTOCOL)
+        self.object_file = nustar_folder + nustar_folder[:-1].split('/')[-1] + '.pickle'
                 
         print(' Now Populated.')
+
+
+    def load(self, object_file=None):
+        '''Takes the object's namespace from the save() method and loads it back in to all it's attributes.'''
+        if not hasattr(self, 'object_file') and object_file is None:
+            print('\'object_file\' attribute and input to this function are both \'None\', please provide one. \n Note: the input for this method takes priority.')
+            return
+        object_file = object_file if (object_file is not None) else self.object_file
+        
+        with open(object_file, "rb") as input_file:
+            self.__dict__ = pickle.load(input_file)
 
 
 def shift(evt_data, pix_xshift=None, pix_yshift=None):
