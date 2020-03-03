@@ -1141,7 +1141,7 @@ class NustarDo:
 
     def detectors(self):
         self.all_detectors = {}
-        #plt.figure()
+        plt.figure()
         ax = plt.axes()
         for d in range(4):
             # if the detector is the one I want then I want the time of it, else leave it alone
