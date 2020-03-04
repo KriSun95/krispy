@@ -74,7 +74,7 @@ def make_lightcurve(directory, bottom_left, top_right, mask=None, isHMI=None):
     lc_times_xrt = {}
     for d,f in enumerate(directory_with_files):
         aia_map = sunpy.map.Map(f)
-        times = aia_map.meta['date_obs']
+        times = aia_map.meta['date-obs']
 
         if aia_map.meta['instrume'][:3] == 'AIA': #if the files are aia then define the instrument and obs time
             map_type = 'AIA'

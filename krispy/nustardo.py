@@ -7,8 +7,9 @@ Functions to go in here (I think!?):
 '''
 
 import sys
-from os.path import *
+#from os.path import *
 import os
+from os.path import isfile
 import astropy
 from astropy.io import fits
 import astropy.units as u
@@ -60,7 +61,7 @@ class NustarDo:
         #directory of the file
         directory_regex = re.compile(r'\w+/')
         directory = directory_regex.findall(evt_filename)
-        self.evt_directory = ''.join(directory)
+        self.evt_directory = '/'+''.join(directory)
 
         #search of the form of stuff (no slashes included), dot, then more stuff
         evt_filename_regex = re.compile(r'\w+\.\w+') 
@@ -694,7 +695,7 @@ class NustarDo:
         return full_filename, file_directory, file_name
         
         
-    def livetime(self, hk_filename=None, show_fig=True):
+    def livetime(self, hk_filename=None, set_up_plot=True, show_fig=True):
         #file = '/Users/kris/Documents/PhD/data/nustar/nu80414201001A_fpm.hk'
         '''
         This has to be moved above the time profile function so it is defined to be called
@@ -739,13 +740,10 @@ class NustarDo:
         self.hk_times = self.hk_data['time']
         self.hk_livetimes = self.hk_data['livetime']
         
-        if show_fig == True:
+        if set_up_plot:
             hktime = self.hk_times - self.hk_times[0]
             dt_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in self.hk_times]
             lt_start_hhmmss = str((datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=np.min(self.hk_times))).strftime('%Y/%m/%d, %H:%M:%S'))
-            # plt.semilogy(hktime[0:20],lvt[0:20],drawstyle='steps-mid')
-            # plt.semilogy(hktime[0:20],lvt[0:20],'r')
-            #plt.semilogy(hktime, self.hk_livetimes, drawstyle='steps-mid')
             fig = plt.figure()
             ax = plt.axes()
             plt.semilogy(self.dt_to_md(dt_times), self.hk_livetimes, drawstyle='steps-mid')
@@ -758,7 +756,9 @@ class NustarDo:
             ax.xaxis.set_major_formatter(fmt)
             ax.xaxis.set_major_locator(plt.LinearLocator(9))
             plt.xticks(rotation=30)
-            plt.show()        
+
+            if show_fig == True:
+                plt.show()        
 
         
     t_bin = {'seconds_per_bin':10, 'method':'approx'}
@@ -799,7 +799,7 @@ class NustarDo:
             self.rel_tend = (tend - self.rel_t).total_seconds() 
             
         if count_rate == True:
-            self.livetime(hk_filename=house_keeping_file, show_fig=False) #run to get times and livetimes
+            self.livetime(hk_filename=house_keeping_file, set_up_plot=False, show_fig=False) #run to get times and livetimes
             if len(self.hk_times) == 0:
                 decision = input('No livetimes present. Do you just want to see the counts vs. time instead: ')
                 if decision in ['Yes', 'yes', 'Y', 'y']:
@@ -1081,19 +1081,20 @@ class NustarDo:
 
         self.chu_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + datetime.timedelta(seconds=t)) for t in chu_time]
 
+        
+        dt_times = self.chu_times
+        fig = plt.figure(figsize=(10,5))
+        ax = plt.axes()
+        plt.plot(dt_times, chu_all,'x')
+        plt.title('CHU States of NuSTAR on ' + dt_times[0].strftime('%Y/%m/%d')) #get the date in the title
+        plt.xlabel('Start Time - ' + dt_times[0].strftime('%H:%M:%S'))
+        plt.ylabel('NuSTAR CHUs')
+        plt.xlim([dt_times[0], dt_times[-1]])
+        fmt = mdates.DateFormatter('%H:%M')
+        ax.xaxis.set_major_formatter(fmt)
+        ax.axes.set_yticklabels(tick_labels)
+        plt.xticks(rotation=30)
         if show_fig == True:
-            dt_times = self.chu_times
-            fig = plt.figure(figsize=(10,5))
-            ax = plt.axes()
-            plt.plot(dt_times, chu_all,'x')
-            plt.title('CHU States of NuSTAR on ' + dt_times[0].strftime('%Y/%m/%d')) #get the date in the title
-            plt.xlabel('Start Time - ' + dt_times[0].strftime('%H:%M:%S'))
-            plt.ylabel('NuSTAR CHUs')
-            plt.xlim([dt_times[0], dt_times[-1]])
-            fmt = mdates.DateFormatter('%H:%M')
-            ax.xaxis.set_major_formatter(fmt)
-            ax.axes.set_yticklabels(tick_labels)
-            plt.xticks(rotation=30)
             plt.show()
 
 
@@ -1139,7 +1140,7 @@ class NustarDo:
         ## axis limits to 2.5--80 keV (range of NuSTAR that's well calibrated)
 
 
-    def detectors(self):
+    def detectors(self, show_fig=True):
         self.all_detectors = {}
         plt.figure()
         ax = plt.axes()
@@ -1164,9 +1165,37 @@ class NustarDo:
         plt.ylabel('Counts from detector')
         plt.xlabel('Time')
 
-        #plt.show()
+        if show_fig:
+            plt.show()
 
         #return plt.g
+
+
+    def plotChuTimes(self, span=True):
+        # remember to show_fig=False for the plotting methods as to allow alterations of the figures once run
+        # look for and get the start and end times for each CHU file
+        chus = ['chu1', 'chu2', 'chu12', 'chu3', 'chu13', 'chu23', 'chu123']
+        colours = ['k', 'r', 'g', 'c', 'm', 'b', 'y']
+        chuChanges = {}
+        for c, chu in enumerate(chus):
+            chuFile = self.evt_directory+'nu' + self.obs_id + self.fpm + '06_' + chu + '_S_cl_sunpos.evt'
+            if not isfile(chuFile):
+                continue
+            hdulist = fits.open(chuFile) 
+            evt_data = hdulist[1].data
+            hdulist.close()
+
+            chuChanges[chu] = [datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=min(evt_data['time'])), 
+                               datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=max(evt_data['time']))]
+
+            # plot a shaded region or just the time boundaries for the chu changes
+            if span:
+                plt.axvspan(*chuChanges[chu], alpha=0.1, color=colours[c])
+            else:
+                plt.axvline(chuChanges[chu][0], color=colours[c])
+                plt.axvline(chuChanges[chu][1], color=colours[c])
+
+        self.chuChanges = chuChanges
 
      
     def save(self, save_dir='./', folder_name=None, overwrite=False, **kwargs):

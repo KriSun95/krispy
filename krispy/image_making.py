@@ -228,7 +228,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims = [], rectangle=[], s
             del m_data
             
         if iron == '18':
-            smap.plot_settings['cmap'] = plt.cm.Blues
+            smap.plot_settings['cmap'] = plt.cm.GnBu
         if iron == '16':
             smap.plot_settings['cmap'] = plt.cm.Purples
         if diff_image is not None:
@@ -885,7 +885,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
             del aia_map
 
             if iron18 == True:
-                smap.plot_settings['cmap'] = plt.cm.Blues
+                smap.plot_settings['cmap'] = plt.cm.GnBu
 
             fig = plt.figure(figsize=(9,8));
             compmap = sunpy.map.Map(smap, composite=True);
@@ -1001,7 +1001,7 @@ def contourmaps_from_dir(aia_dir, nustar_dir, nustar_file, save_dir, hk_file=Non
                 saved_backgrounds.append(smap.data)  
             
             if iron18 == True:
-                smap.plot_settings['cmap'] = plt.cm.Blues
+                smap.plot_settings['cmap'] = plt.cm.GnBu
 
             fig = plt.figure(figsize=(9,8));
             compmap = sunpy.map.Map(smap, composite=True)
@@ -1125,7 +1125,7 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=300, cmlims = [
         aia_map = sunpy.map.Map(fits_dir + f)
         
         if fexviii == True: #set colourmap and title for Iron 18
-            aia_map.plot_settings['cmap'] = plt.cm.Blues
+            aia_map.plot_settings['cmap'] = plt.cm.GnBu
             
             time_dt = datetime.datetime.strptime(aia_map.meta['date_obs'], '%Y-%m-%dT%H:%M:%S.%f')
             YMDhms = []
@@ -1146,7 +1146,7 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=300, cmlims = [
             aia_submap = aia_map.submap(bottom_left, top_right)
             
             if fexviii == True: #set colourmap and title for Iron 18
-                aia_submap.plot_settings['cmap'] = plt.cm.Blues
+                aia_submap.plot_settings['cmap'] = plt.cm.GnBu
             
             fig = plt.figure()
             if cmlims != []: #if there are colourmap limits, use them
@@ -1393,7 +1393,7 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
         #plt.show()
             
         if iron == '18':
-            smap.plot_settings['cmap'] = plt.cm.Blues
+            smap.plot_settings['cmap'] = plt.cm.GnBu
         if iron == '16':
             smap.plot_settings['cmap'] = plt.cm.Purples
         if (_aia_files[0][0:3] == 'HMI') or (_aia_files[0][0:3] == 'hmi'):
