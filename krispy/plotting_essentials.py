@@ -27,6 +27,8 @@ import matplotlib
 import sunpy.cm
 from astropy.coordinates import SkyCoord
 import astropy.units as u
+import matplotlib.pyplot as plt
+import pickle
 
 '''
 Alterations:
@@ -155,4 +157,70 @@ def cmap_midcolours(**kwargs):
         cmap_dict.update({key:colorval}) 
             
             
-    return cmap_dict #a dictionary with key names and the corresponding rgba values   
+    return cmap_dict #a dictionary with key names and the corresponding rgba values  
+
+
+def plotAIAlightcurves(directory, files, title, nustardo_obj=None):
+    """Takes a directory and a list of (pickle) files of lightcurves and produces a plot with all teh lightcurves plotted.
+    
+    Parameters
+    ----------
+    directory : Str
+            String for the directory where the pickle files reside.
+    
+    files : list of Strings
+            Files of teh pickled lightcurve data.
+            
+    title : Str
+            Title for the plot.
+
+    nustardo_obj : NustarDo Object
+            If you want to plot colours for where there is a constant CHU combination and allow the x limits to be determined by the object.
+            Default: None
+            
+    Returns
+    -------
+    Displays a figure comprised of lightcurve subplots.
+    """
+
+    # use the function above to use the colours for AIA
+    cmap_dict = cmap_midcolours()
+
+    n = len(files)
+    fig, axs = plt.subplots(n,1,figsize=(16,14), sharex=True)
+    fig.subplots_adjust(hspace=0.)
+
+    for plot, file in enumerate(files):
+        # load in each lightcurve and plot
+        with open(directory+file, "rb") as input_file:
+            data = pickle.load(input_file)
+        name = list(data.keys())[0]
+        axs[plot].plot(dt_to_md(data[name]['times']), data[name]['DN_per_sec_per_pixel'], color=cmap_dict[name])
+        axs[plot].set_ylabel('DN s$^{-1}$ pix$^{-1}$', color=cmap_dict[name])
+        axs[plot].tick_params(axis='y', labelcolor=cmap_dict[name])
+        axs[plot].set_ylim([0.99*min(data[name]['DN_per_sec_per_pixel']), 1.01*max(data[name]['DN_per_sec_per_pixel'])])
+
+        # set up twin axis to label each subplot
+        twinx_ax = axs[plot].twinx()
+        twinx_ax.set_ylabel(name)
+        twinx_ax.yaxis.label.set_color(cmap_dict[name])
+        twinx_ax.set_yticks([])
+
+        # plot CHU changes to match the NuSTAR plots?
+        if nustardo_obj is not None:
+            nustardo_obj.plotChuTimes()
+
+    # set time labels for x-axis
+    fmt = mdates.DateFormatter('%H:%M:%S')
+    axs[0].xaxis.set_major_formatter(fmt)
+    axs[0].xaxis.set_major_locator(plt.LinearLocator(9))
+
+    axs[0].set_title(title)
+    # set x limits
+    if nustardo_obj is None:
+        axs[0].set_xlim([np.min(dt_to_md(data[name]['times'])), np.max(dt_to_md(data[name]['times']))])
+    else:
+        axs[0].set_xlim([np.min(nustardo_obj.lc_times), np.max(nustardo_obj.lc_times)])
+    axs[-1].set_xlabel('Time (UTC)') 
+
+    return fig
