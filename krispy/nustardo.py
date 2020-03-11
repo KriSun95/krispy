@@ -1171,12 +1171,13 @@ class NustarDo:
         #return plt.g
 
 
-    def plotChuTimes(self, span=True):
+    def plotChuTimes(self, span=True, axis=None):
         # remember to show_fig=False for the plotting methods as to allow alterations of the figures once run
         # look for and get the start and end times for each CHU file
         chus = ['chu1', 'chu2', 'chu12', 'chu3', 'chu13', 'chu23', 'chu123']
         colours = ['k', 'r', 'g', 'c', 'm', 'b', 'y']
         chuChanges = {}
+        axis = {'ax':plt} if axis is None else {'ax':axis}
         for c, chu in enumerate(chus):
             chuFile = self.evt_directory+'nu' + self.obs_id + self.fpm + '06_' + chu + '_S_cl_sunpos.evt'
             if not isfile(chuFile):
@@ -1190,7 +1191,7 @@ class NustarDo:
 
             # plot a shaded region or just the time boundaries for the chu changes
             if span:
-                plt.axvspan(*chuChanges[chu], alpha=0.1, color=colours[c])
+                axis['ax'].axvspan(*chuChanges[chu], alpha=0.1, color=colours[c])
             else:
                 plt.axvline(chuChanges[chu][0], color=colours[c])
                 plt.axvline(chuChanges[chu][1], color=colours[c])

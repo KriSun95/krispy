@@ -160,11 +160,14 @@ def cmap_midcolours(**kwargs):
     return cmap_dict #a dictionary with key names and the corresponding rgba values  
 
 
-def plotAIAlightcurves(directory, files, title, nustardo_obj=None):
-    """Takes a directory and a list of (pickle) files of lightcurves and produces a plot with all teh lightcurves plotted.
+def plotSDOlightcurves(instrument, directory, files, title, nustardo_obj=None, samePlot=False):
+    """Takes a directory and a list of (pickle) files of lightcurves and produces a plot with all the lightcurves plotted.
     
     Parameters
     ----------
+    instrument : Str
+            Either from 'AIA' or 'HMI' so far (for average magnetic field that contributed to the total Gauss then 'HMIPIXAVERAGE').
+
     directory : Str
             String for the directory where the pickle files reside.
     
@@ -177,6 +180,10 @@ def plotAIAlightcurves(directory, files, title, nustardo_obj=None):
     nustardo_obj : NustarDo Object
             If you want to plot colours for where there is a constant CHU combination and allow the x limits to be determined by the object.
             Default: None
+
+    samePlot : Bool
+            Set to True if you want all the curves to be plotted on the same axis.
+            Default: False
             
     Returns
     -------
@@ -186,29 +193,63 @@ def plotAIAlightcurves(directory, files, title, nustardo_obj=None):
     # use the function above to use the colours for AIA
     cmap_dict = cmap_midcolours()
 
-    n = len(files)
-    fig, axs = plt.subplots(n,1,figsize=(16,14), sharex=True)
+    # manually set the number of plots to 1 if they are to all be plotted on the same axis
+    n = len(files) if samePlot is False else 1
+    fig, axs = plt.subplots(n,1,figsize=(16, 1.5*n+4), sharex=True)
+    # make sure axs can still be indexed
+    axs = axs if samePlot is False else [axs]
     fig.subplots_adjust(hspace=0.)
 
     for plot, file in enumerate(files):
+        plot = plot if samePlot is False else 0
         # load in each lightcurve and plot
         with open(directory+file, "rb") as input_file:
             data = pickle.load(input_file)
         name = list(data.keys())[0]
-        axs[plot].plot(dt_to_md(data[name]['times']), data[name]['DN_per_sec_per_pixel'], color=cmap_dict[name])
-        axs[plot].set_ylabel('DN s$^{-1}$ pix$^{-1}$', color=cmap_dict[name])
-        axs[plot].tick_params(axis='y', labelcolor=cmap_dict[name])
-        axs[plot].set_ylim([0.99*min(data[name]['DN_per_sec_per_pixel']), 1.01*max(data[name]['DN_per_sec_per_pixel'])])
+        
+        # if it's AIA lightcurves
+        if instrument.upper() == 'AIA':
+            if samePlot is False:
+                axs[plot].plot(dt_to_md(data[name]['times']), data[name]['DN_per_sec_per_pixel'], color=cmap_dict[name])
+                axs[plot].set_ylabel('DN s$^{-1}$ pix$^{-1}$', color=cmap_dict[name])
+                axs[plot].tick_params(axis='y', labelcolor=cmap_dict[name])
 
-        # set up twin axis to label each subplot
-        twinx_ax = axs[plot].twinx()
-        twinx_ax.set_ylabel(name)
-        twinx_ax.yaxis.label.set_color(cmap_dict[name])
-        twinx_ax.set_yticks([])
+                # set up twin axis to label each subplot
+                twinx_ax = axs[plot].twinx()
+                twinx_ax.set_ylabel(name)
+                twinx_ax.yaxis.label.set_color(cmap_dict[name])
+                twinx_ax.set_yticks([])
+            elif samePlot is True:
+                axs[plot].plot(dt_to_md(data[name]['times']), data[name]['DN_per_sec_per_pixel']/np.max(data[name]['DN_per_sec_per_pixel']), color=cmap_dict[name], label=name)
+                axs[plot].set_ylabel('Normalized DN s$^{-1}$ pix$^{-1}$')
+                axs[plot].legend(loc="center left", bbox_to_anchor=(1, 0, 0.5, 1))
+
+            ylims = [0.99*min(data[name]['DN_per_sec_per_pixel']), 1.01*max(data[name]['DN_per_sec_per_pixel'])] if samePlot is False else [0, 1.05]
+            axs[plot].set_ylim(ylims)
+
+        # if it's HMI 'lightcurves'
+        elif instrument[:3].upper() == 'HMI':
+            gauss = np.array(data[name]['Gauss_and_numOfPix'])[:,0]
+            # if it's negative Gauss then make it positive to plot for now and label it so
+            g = -gauss if gauss[0] < 0 else gauss
+            l = 'Neg. Mag. Flux' if gauss[0] < 0 else 'Pos. Mag. Flux'
+            c = 'green' if gauss[0] < 0 else 'fuchsia'
+
+            if instrument[3:].upper() == 'PIXAVERAGE':
+                g = g / np.array(data[name]['Gauss_and_numOfPix'])[:,1]
+                axs[plot].plot(data[name]['times'], g, color=c, label=l+'/contributing pix')
+                axs[plot].set_ylabel('Gauss per contributing pixel')
+            else:
+                axs[plot].plot(data[name]['times'], g, color=c, label=l)
+                axs[plot].set_ylabel('Total Gauss')
+            axs[plot].set_ylim([0.99*min(g), 1.01*max(g)])
+            axs[plot].legend()
 
         # plot CHU changes to match the NuSTAR plots?
-        if nustardo_obj is not None:
-            nustardo_obj.plotChuTimes()
+        if nustardo_obj is not None and n>0:
+            nustardo_obj.plotChuTimes(axis=axs[plot])
+            # avoid plotting the chu changes over and over all on the same plot
+            n = n if samePlot is False else -1
 
     # set time labels for x-axis
     fmt = mdates.DateFormatter('%H:%M:%S')
@@ -223,4 +264,4 @@ def plotAIAlightcurves(directory, files, title, nustardo_obj=None):
         axs[0].set_xlim([np.min(nustardo_obj.lc_times), np.max(nustardo_obj.lc_times)])
     axs[-1].set_xlabel('Time (UTC)') 
 
-    return fig
+    return fig, axs
