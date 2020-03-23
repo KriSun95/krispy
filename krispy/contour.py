@@ -61,7 +61,7 @@ class Contours:
         ''' Take in the inputs to the class and set them to class attributes. Seperate them for use in 
         later functions'''
         
-        self.nuFoV = None # this will get replaced with the NuSTAR FoV if we need it, otherwise an extended submap
+        self.nuFoV = None # this will get replaced with the NuSTAR FoV if we need it, otherwise the submap
 
         # so the class functions can potentially be used without specifying a function 
         if type(nu_file) == type(None):
@@ -274,10 +274,11 @@ class Contours:
             print('Max AIA map value is ', np.max(aia_data.data))
 
         if type(self.nuFoV) == type(None):
-            self.nuFoV = [submap[0]-100, submap[1]-100, submap[2]+100, submap[3]+100]
+            self.nuFoV = [submap[0], submap[1], submap[2], submap[3]]
 
-        bl_corr = SkyCoord((self.nuFoV[0])*u.arcsec, (self.nuFoV[1])*u.arcsec, frame=aia_map.coordinate_frame)
-        tr_corr = SkyCoord((self.nuFoV[2])*u.arcsec, (self.nuFoV[3])*u.arcsec, frame=aia_map.coordinate_frame)
+        # 90 arcsec buffer because of 1'.5 NuSTAR pointing uncertainty
+        bl_corr = SkyCoord((self.nuFoV[0]-90)*u.arcsec, (self.nuFoV[1]-90)*u.arcsec, frame=aia_map.coordinate_frame)
+        tr_corr = SkyCoord((self.nuFoV[2]+90)*u.arcsec, (self.nuFoV[3]+90)*u.arcsec, frame=aia_map.coordinate_frame)
         aia_corr_data = aia_map_for_corr.submap(bl_corr, tr_corr).data
 
         return aia_data, aia_corr_data
