@@ -51,6 +51,7 @@ Alterations:
     KC: 21/03/2019 - aiamaps() now can take multiple directories, save directories, difference types, change the resolution, 
                      and save the submaps being worked with.
                    - contourmaps_from_dir() can now specify when the aia map comes from in the time range that is being looked at. 
+    KC: 03/04/2020 - multiple rectangles plotted should now be different colours.
 '''
 
 #make images from the aia fits files
@@ -93,7 +94,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
     rectangle_colour : one-dimensional list of strings
             Contains the colour or colours you want associated with the rectangle you want to plot. Must contain one colour or
             the same number of colours as there are rectangles.
-            Default: ["black"]
+            Default: ["black"] for iron, else ["white"] 
             
     save_inc : Bool
             Indicates whether or not the save file should be named with respect to the file it was produced from or be
@@ -1251,7 +1252,7 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=300, cmlims = [
 
 
 #make composite images from the aia fits files
-def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cmlims = [],cmlims2=[], rectangle=[], save_inc=True, iron='',
+def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cmlims = None,cmlims2=[], rectangle=None, rectangle_colour=None, save_inc=True, iron='',
                     cm_scale='Normalize', res=None, in_order=True, alphas=[0.5,0.5], lvls=None, dpi=300):      
     """Takes a directory with fits files, constructs a map or submap of the full observation with/without a rectangle and
     saves the image in the requested directory.
@@ -1284,6 +1285,11 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
             Contains lists of the bottom left (bl) and top right (tr) coordinates to draw a rectangle on the constructed 
             map, e.g. [[blx1,bly1,trx1,try1], [blx2,bly2,trx2,try2], ...]. Must be in arcseconds, of type float or 
             integer and NOT an arcsec object.
+
+    rectangle_colour : one-dimensional list of strings
+            Contains the colour or colours you want associated with the rectangle you want to plot. Must contain one colour or
+            the same number of colours as there are rectangles.
+            Default: ["black"] for iron, else ["white"] 
             
     save_inc : Bool
             Indicates whether or not the save file should be named with respect to the file it was produced from or be
@@ -1324,6 +1330,13 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
     -------
     AIA maps saved to the requested directory (so doesn't really return anythin).
     """
+
+    rectangle_colour = ["black"] if rectangle_colour is None else rectangle_colour
+    if type(rectangle_colour) is not list:
+        rectangle_colour = [rectangle_colour]
+
+    rectangle = [] if rectangle is None else rectangle
+    cmlims = [] if cmlims is None else cmlims
 
     np.seterr(divide='ignore', invalid='ignore') #ignore warnings resulting from missing header info
     warnings.simplefilter('ignore', Warning)
@@ -1457,34 +1470,29 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
             compmap.set_alpha(1, alphas[1])
         compmap.plot()
 
-        '''        
-        if cm_scale == 'Normalize': #tell the plot the choices for the limits and colour map
-            if cmlims != []:
-                compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.Normalize())
-            elif cmlims == []:
-                compmap.plot(norm=colors.Normalize())
-        
-        elif cm_scale == 'LogNorm':
-            if cmlims != []:
-                if cmlims[0] <= 0: #vmin > 0 or error
-                    cmlims[0] = 0.1
-                    compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.LogNorm()) 
-                else:
-                    compmap.plot(vmin=cmlims[0], vmax=cmlims[1], norm=colors.LogNorm())
-            elif cmlims == []:
-                compmap.plot(norm=colors.LogNorm())
-        '''
-        
         if rectangle != []: #if a rectangle(s) is specified, make it
-            for rect in rectangle:
+            assert len(rectangle_colour)==len(rectangle) or len(rectangle_colour)==1, "Check you have either given 1 colour in the \'rectangle_colour\' list or the same number of colours as rectangles!"
+            rectangle_colour = rectangle_colour if len(rectangle_colour)==len(rectangle) else rectangle_colour*len(rectangle)
+            x, y, counter = 1, 1, 0 # x and y for box titles if needed, plus a counter for the "for" loop
+            for rect, rcol in zip(rectangle, rectangle_colour):
                 
                 bl_rect = SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=smap.coordinate_frame)
                 length = rect[2] - rect[0]
                 height = rect[3] - rect[1]
-                if (iron != ''): #if iron or a diff map is needed then make the rectangles black
-                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = 'black')
+                if (iron != '') or (diff_image != None): #if iron or a diff map is needed then make the rectangles black
+                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
                 else:
-                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec)
+                    rcol = "white" if len(rectangle_colour)==1 else rcol
+                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
+
+                # if there are multiple boxes then label them with the colour, tough if you're using the same colour the now
+                if len(rectangle_colour) > 1:
+                    # lazy check for no repeats
+                    if rectangle_colour[0] not in rectangle_colour[1:]:
+                        plt.text(x, y-counter*0.06, "Box "+str(counter+1), 
+                            xycoords="axes fraction", 
+                            verticalalignment="top", horizontalalignment="right",
+                            color=rcol)
         
         #make titles
         time = smap.meta['t_obs'] 
