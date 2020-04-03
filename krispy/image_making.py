@@ -300,7 +300,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
         if rectangle != []: #if a rectangle(s) is specified, make it
             assert len(rectangle_colour)==len(rectangle) or len(rectangle_colour)==1, "Check you have either given 1 colour in the \'rectangle_colour\' list or the same number of colours as rectangles!"
             rectangle_colour = rectangle_colour if len(rectangle_colour)==len(rectangle) else rectangle_colour*len(rectangle)
-            x, y, counter = 1, 1, 0 # x and y for box titles if needed, plus a counter for the "for" loop
+            x, y, counter = submap[2], submap[3], 0 # x and y for box titles if needed, plus a counter for the "for" loop
             for rect, rcol in zip(rectangle, rectangle_colour):
                 
                 bl_rect = SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=smap.coordinate_frame)
@@ -316,8 +316,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
                 if len(rectangle_colour) > 1:
                     # lazy check for no repeats
                     if rectangle_colour[0] not in rectangle_colour[1:]:
-                        plt.text(x, y-counter*0.06, "Box "+str(counter+1), 
-                            xycoords="axes fraction", 
+                        plt.text(x, y-counter*0.06*(submap[3]-submap[1]), "Box "+str(counter+1), 
                             verticalalignment="top", horizontalalignment="right",
                             color=rcol)
         
@@ -1473,7 +1472,7 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
         if rectangle != []: #if a rectangle(s) is specified, make it
             assert len(rectangle_colour)==len(rectangle) or len(rectangle_colour)==1, "Check you have either given 1 colour in the \'rectangle_colour\' list or the same number of colours as rectangles!"
             rectangle_colour = rectangle_colour if len(rectangle_colour)==len(rectangle) else rectangle_colour*len(rectangle)
-            x, y, counter = 1, 1, 0 # x and y for box titles if needed, plus a counter for the "for" loop
+            x, y, counter = submap[2], submap[3], 0 # x and y for box titles if needed, plus a counter for the "for" loop
             for rect, rcol in zip(rectangle, rectangle_colour):
                 
                 bl_rect = SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=smap.coordinate_frame)
@@ -1489,8 +1488,7 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
                 if len(rectangle_colour) > 1:
                     # lazy check for no repeats
                     if rectangle_colour[0] not in rectangle_colour[1:]:
-                        plt.text(x, y-counter*0.06, "Box "+str(counter+1), 
-                            xycoords="axes fraction", 
+                        plt.text(x, y-counter*0.06*(submap[3]-submap[1]), "Box "+str(counter+1), 
                             verticalalignment="top", horizontalalignment="right",
                             color=rcol)
         
