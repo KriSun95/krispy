@@ -319,6 +319,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
                         plt.text(x, y-counter*0.06*(submap[3]-submap[1]), "Box "+str(counter+1), 
                             verticalalignment="top", horizontalalignment="right",
                             color=rcol)
+                        counter += 1
         
         #make titles
         time = smap.meta['t_obs'] 
@@ -1491,6 +1492,7 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
                         plt.text(x, y-counter*0.06*(submap[3]-submap[1]), "Box "+str(counter+1), 
                             verticalalignment="top", horizontalalignment="right",
                             color=rcol)
+                        counter += 1
         
         #make titles
         time = smap.meta['t_obs'] 
