@@ -84,6 +84,11 @@ class NustarDo:
             chu_state = chu[0]
         else:
             chu_state = 'not_split'
+
+        # search for a underscore, a non-digit, and an underscore (for the mode the pipeline was run if a chu file is given)
+        mode_regex = re.compile(r"_\D_")
+        mode = mode_regex.findall(name_of_file)
+        self.pipeline_mode = mode[0] if len(mode)>0 else ""
         
         #search for all seperate sub-strings composed of digits, first one in evt_filename is observation id
         obs_id_regex = re.compile(r'\d+')
@@ -1073,6 +1078,9 @@ class NustarDo:
         chu_all[chu_all == 13] = 105 #chu23
         chu_all[chu_all == 14] = 106 #chu123
 
+        chu_time = chu_time[chu_all > 0] # if there is still no chu assignment for that time then remove
+        chu_all = chu_all[chu_all > 0]
+
         self.chu_all = chu_all
 
         self.chu_reference = {'chu1':100, 'chu2':101, 'chu12':102, 'chu3':103, 'chu13':104, 'chu23':105, 'chu123':106}
@@ -1178,8 +1186,13 @@ class NustarDo:
         colours = ['k', 'r', 'g', 'c', 'm', 'b', 'y']
         chuChanges = {}
         axis = {'ax':plt} if axis is None else {'ax':axis}
+        pipeline_modes = ["_S_", "_N_"]
+
         for c, chu in enumerate(chus):
-            chuFile = self.evt_directory+'nu' + self.obs_id + self.fpm + '06_' + chu + '_S_cl_sunpos.evt'
+            for pm in pipeline_modes:
+                chuFile = self.evt_directory+'nu' + self.obs_id + self.fpm + '06_' + chu + pm + 'cl_sunpos.evt'
+                if isfile(chuFile):
+                    break
             if not isfile(chuFile):
                 continue
             hdulist = fits.open(chuFile) 

@@ -160,7 +160,7 @@ def cmap_midcolours(**kwargs):
     return cmap_dict #a dictionary with key names and the corresponding rgba values  
 
 
-def plotSDOlightcurves(instrument, directory, files, title, nustardo_obj=None, samePlot=False):
+def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, title="Lightcurves", nustardo_obj=None, samePlot=False):
     """Takes a directory and a list of (pickle) files of lightcurves and produces a plot with all the lightcurves plotted.
     
     Parameters
@@ -170,12 +170,19 @@ def plotSDOlightcurves(instrument, directory, files, title, nustardo_obj=None, s
 
     directory : Str
             String for the directory where the pickle files reside.
+            Default: "./"
     
     files : list of Strings
-            Files of teh pickled lightcurve data.
+            Files of the pickled lightcurve data. This input takes priority over the data input.
+            Default: None
+
+    data_list : list of dictionaries
+            List of dictionaries of the pickled lightcurve data.
+            Default: None
             
     title : Str
             Title for the plot.
+            Default: "Lightcurves"
 
     nustardo_obj : NustarDo Object
             If you want to plot colours for where there is a constant CHU combination and allow the x limits to be determined by the object.
@@ -194,18 +201,35 @@ def plotSDOlightcurves(instrument, directory, files, title, nustardo_obj=None, s
     cmap_dict = cmap_midcolours()
 
     # manually set the number of plots to 1 if they are to all be plotted on the same axis
-    n = len(files) if samePlot is False else 1
+    if files is not None:
+        n = len(files) if samePlot is False else 1
+        ps = range(len(files))
+    else:
+        n = len(data_list) if samePlot is False else 1
+        ps = range(len(data_list))
+
     fig, axs = plt.subplots(n,1,figsize=(16, 1.5*n+4), sharex=True)
     # make sure axs can still be indexed
     axs = axs if samePlot is False else [axs]
     fig.subplots_adjust(hspace=0.)
 
-    for plot, file in enumerate(files):
-        plot = plot if samePlot is False else 0
+    # set time labels for x-axis
+    fmt = mdates.DateFormatter('%H:%M:%S')
+    axs[-1].xaxis.set_major_formatter(fmt)
+    axs[-1].xaxis.set_major_locator(plt.LinearLocator(9))
+
+    for plot in ps:
+
         # load in each lightcurve and plot
-        with open(directory+file, "rb") as input_file:
-            data = pickle.load(input_file)
+        if files is not None:
+            with open(directory+files[plot], "rb") as input_file:
+                data = pickle.load(input_file)
+        else:
+        	data = data_list[plot] 
+
         name = list(data.keys())[0]
+
+        plot = plot if samePlot is False else 0
         
         # if it's AIA lightcurves
         if instrument.upper() == 'AIA':
@@ -219,6 +243,8 @@ def plotSDOlightcurves(instrument, directory, files, title, nustardo_obj=None, s
                 twinx_ax.set_ylabel(name)
                 twinx_ax.yaxis.label.set_color(cmap_dict[name])
                 twinx_ax.set_yticks([])
+                twinx_ax.xaxis.set_major_formatter(fmt)
+                twinx_ax.xaxis.set_major_locator(plt.LinearLocator(9))
             elif samePlot is True:
                 axs[plot].plot(dt_to_md(data[name]['times']), data[name]['DN_per_sec_per_pixel']/np.max(data[name]['DN_per_sec_per_pixel']), color=cmap_dict[name], label=name)
                 axs[plot].set_ylabel('Normalized DN s$^{-1}$ pix$^{-1}$')
@@ -250,11 +276,6 @@ def plotSDOlightcurves(instrument, directory, files, title, nustardo_obj=None, s
             nustardo_obj.plotChuTimes(axis=axs[plot])
             # avoid plotting the chu changes over and over all on the same plot
             n = n if samePlot is False else -1
-
-    # set time labels for x-axis
-    fmt = mdates.DateFormatter('%H:%M:%S')
-    axs[0].xaxis.set_major_formatter(fmt)
-    axs[0].xaxis.set_major_locator(plt.LinearLocator(9))
 
     axs[0].set_title(title)
     # set x limits

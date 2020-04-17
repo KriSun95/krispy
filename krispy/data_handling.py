@@ -5,6 +5,7 @@ Functions to go in here (I think!?):
         ~ anything that helps with data handling or extraction, not really plotting, file working, or image making.
 '''
 from . import file_working
+from . import contour
 
 import numpy as np
 import sunpy
@@ -18,7 +19,7 @@ import astropy.units as u
 from skimage import future
 
 #make a light curve
-def make_lightcurve(directory, bottom_left, top_right, mask=None, isHMI=None):
+def make_lightcurve(directory, bottom_left, top_right, time_filter=None, mask=None, isHMI=None):
     """Takes a directory and coordinates for a region in arcseconds returns start time of the light curve, times and 
     DN per second per pixel.
     
@@ -33,6 +34,11 @@ def make_lightcurve(directory, bottom_left, top_right, mask=None, isHMI=None):
             
     top_right : 1-d array
             The top right coordinates, [x,y] (as floats), for the light curve region in arcseconds.
+
+    time_filter : list, 2 strings
+            If you provide a directory but only want a lightcurve made from a certain time range, e.g. 
+            ["%Y/%m/%d, %H:%M:%S", "%Y/%m/%d, %H:%M:%S"].
+            Defualt: None
 
     mask : array
             An array the same size as the region between bottom_left and top_right that has 1s where the feature you want a 
@@ -66,6 +72,13 @@ def make_lightcurve(directory, bottom_left, top_right, mask=None, isHMI=None):
             _aia_files = file_working.only_fits(_aia_files)
             _directory_with_files = [_d+f for f in _aia_files]
             directory_with_files += _directory_with_files
+
+    if time_filter is not None:
+        _q = contour.Contours()
+        _file_times = _q.aia_file_times(aia_file_dir="", aia_file_list=directory_with_files)
+        _in_time = _q.useful_time_inds(times_list=_file_times, time_interval=time_filter)
+        directory_with_files = directory_with_files[_in_time]
+
     no_of_files = len(directory_with_files)
 
     lc_values = [] #average value for selected area: DN/s/pix
@@ -145,7 +158,7 @@ def make_lightcurve(directory, bottom_left, top_right, mask=None, isHMI=None):
             lc_times.append(obs_time)
             lc_values.append(ave_value)
 
-        print(f'\r[function: make_lightcurve()] Looked at {d+1} files of {no_of_files}.', end='')
+        print(f'\r[function: make_lightcurve()] Looked at {d+1} files of {no_of_files}.        ', end='')
 
     if (map_type == 'AIA') or (map_type == 'HMI'):
         return lc_times, lc_values

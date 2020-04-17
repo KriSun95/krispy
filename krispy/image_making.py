@@ -12,6 +12,7 @@ Functions to go in here (I think!?):
     ~iron18 cmap is now 'Blues' and the mid-colour can be found in plotting_essentials
 '''
 from . import file_working
+from . import contour
 
 import matplotlib.pyplot as plt
 import matplotlib
@@ -56,7 +57,7 @@ Alterations:
 
 #make images from the aia fits files
 def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None, rectangle_colour=None, save_inc=True, iron='',
-           cm_scale='Normalize', diff_image=None, res=None, save_smap=None, colourbar=True):      
+           cm_scale='Normalize', diff_image=None, res=None, save_smap=None, colourbar=True, time_filter=None):      
     """Takes a directory with fits files, constructs a map or submap of the full observation with/without a rectangle and
     saves the image in the requested directory.
     
@@ -127,6 +128,11 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
             Indicates whether or not to draw the colour bar for the map.
             Default: True
 
+    time_filter : list, 2 strings
+            If you provide a directory but only want a lightcurve made from a certain time range, e.g. 
+            ["%Y/%m/%d, %H:%M:%S", "%Y/%m/%d, %H:%M:%S"].
+            Defualt: None
+
     Returns
     -------
     AIA maps saved to the requested directory (so doesn't really return anythin).
@@ -161,6 +167,12 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
             _aia_files = file_working.only_fits(_aia_files)
             _directory_with_files = [_d+f for f in _aia_files]
             directory_with_files += _directory_with_files
+
+    if time_filter is not None:
+        _q = contour.Contours()
+        _file_times = _q.aia_file_times(aia_file_dir="", aia_file_list=directory_with_files)
+        _in_time = _q.useful_time_inds(times_list=_file_times, time_interval=time_filter)
+        directory_with_files = directory_with_files[_in_time]
 
     no_of_files = len(directory_with_files)
 
@@ -360,7 +372,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
         del compmap
 
         gc.collect()
-        print(f'\r[function: aiamaps()] Saved {d} submap(s) of {no_of_files}.', end='')
+        print(f'\r[function: aiamaps()] Saved {d} submap(s) of {no_of_files}.        ', end='')
 
     aia_map = 0
     smap = 0
@@ -1538,7 +1550,7 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
         del compmap
 
         gc.collect()
-        print(f'\r[function: overlay_aiamaps()] Saved {d} submap(s) of {no_of_files}.', end='')
+        print(f'\r[function: overlay_aiamaps()] Saved {d} submap(s) of {no_of_files}.        ', end='')
 
     aia_map = 0
     smap = 0
