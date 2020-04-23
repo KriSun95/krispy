@@ -1206,8 +1206,8 @@ class NustarDo:
             if span:
                 axis['ax'].axvspan(*chuChanges[chu], alpha=0.1, color=colours[c])
             else:
-                plt.axvline(chuChanges[chu][0], color=colours[c])
-                plt.axvline(chuChanges[chu][1], color=colours[c])
+                axis['ax'].axvline(chuChanges[chu][0], color=colours[c])
+                axis['ax'].axvline(chuChanges[chu][1], color=colours[c])
 
         self.chuChanges = chuChanges
 

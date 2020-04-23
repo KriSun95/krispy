@@ -213,11 +213,6 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
     axs = axs if samePlot is False else [axs]
     fig.subplots_adjust(hspace=0.)
 
-    # set time labels for x-axis
-    fmt = mdates.DateFormatter('%H:%M:%S')
-    axs[-1].xaxis.set_major_formatter(fmt)
-    axs[-1].xaxis.set_major_locator(plt.LinearLocator(9))
-
     for plot in ps:
 
         # load in each lightcurve and plot
@@ -230,6 +225,11 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
         name = list(data.keys())[0]
 
         plot = plot if samePlot is False else 0
+
+        # set time labels for x-axis
+        fmt = mdates.DateFormatter('%H:%M:%S')
+        axs[plot].xaxis.set_major_formatter(fmt)
+        axs[plot].xaxis.set_major_locator(plt.LinearLocator(9))
         
         # if it's AIA lightcurves
         if instrument.upper() == 'AIA':
@@ -280,9 +280,48 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
     axs[0].set_title(title)
     # set x limits
     if nustardo_obj is None:
-        axs[0].set_xlim([np.min(dt_to_md(data[name]['times'])), np.max(dt_to_md(data[name]['times']))])
+        axs[0].set_xlim([np.min(data[name]['times']), np.max(data[name]['times'])])
     else:
         axs[0].set_xlim([np.min(nustardo_obj.lc_times), np.max(nustardo_obj.lc_times)])
     axs[-1].set_xlabel('Time (UTC)') 
 
     return fig, axs
+
+
+def plotMarkers(markers, span=True, axis=None):
+    """Takes markers to be plotted on an axis as vertical lines or a spanned shaded region.
+    
+    Parameters
+    ----------
+    markers : list of a list of ranges
+            Points on the x-axis that want to be marked. If span=True then len(markers)>=2.
+
+    span : Bool
+            Set true for the regions to be shaded, false for just vertical lines.
+            Default: True
+    
+    axis : Axis Object
+            Axis to be plotted on. If None then "plt" is used.
+            Default: None
+            
+    Returns
+    -------
+    The colour and marker range.
+    """
+    colours = ['k', 'r', 'g', 'c', 'm', 'b', 'y']
+    markers_out = {}
+    axis = {'ax':plt} if axis is None else {'ax':axis}
+
+    for m in range(len(markers)):
+        # make sure c cycles through the colours
+        c = int( m - (m//len(colours))*len(colours) )
+
+        # plot a shaded region or just the time boundaries for the chu changes
+        if span:
+            axis['ax'].axvspan(*markers[m], alpha=0.1, color=colours[c])
+        else:
+            axis['ax'].axvline(markers[m][0], color=colours[c])
+            axis['ax'].axvline(markers[m][1], color=colours[c])
+        markers_out[colours[c]] = markers[m]
+
+    return markers_out
