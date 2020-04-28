@@ -168,7 +168,9 @@ def only_fits(fits_list, ext = '.fits'):
 
 #The missing file finder function
 def find_sdo_files(directory, wavelength='', time_limits=None, cadence=12, download=None, double_check='Yes'):
-    """Checks a directory for missing files from downloading AIA images and can check/download the 
+    """***This function no longer work. It will be updated or removed soon.***
+
+    Checks a directory for missing files from downloading AIA images and can check/download the 
     files from the missing time.
 
     ***This function may need to run several times. It depends on how well the files are downloaded***
@@ -208,6 +210,11 @@ def find_sdo_files(directory, wavelength='', time_limits=None, cadence=12, downl
     -------
     A list of the files with no friends cadence seconds after them.
     """
+
+    # this function no longer works at the moment
+    print("This function no longer work. It will be updated or removed soon.")
+    return
+
     files_list = list(os.listdir(directory))
     files = [ f for f in files_list if f.endswith('.fits')]
     files.sort()

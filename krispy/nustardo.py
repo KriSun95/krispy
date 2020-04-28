@@ -103,6 +103,9 @@ class NustarDo:
         self.chu_state = chu_state
         self.rectangles = None #set so that you don't have to plot a map to get a light curve
 
+        # for plot titles
+        self.e_range_str = str(self.energy_range[0])+'-'+str(self.energy_range[1]) if self.energy_range[1]<79 else ">"+str(self.energy_range[0])
+
         self.rel_t = datetime.datetime(2010,1 ,1 ,0 ,0 ,0) # nustar times are measured in seconds from this date
         
         #extract the data within the provided parameters
@@ -521,16 +524,15 @@ class NustarDo:
 
         # Tweak the titles and labels
         title_obsdate = self.rsn_map.date.strftime('%Y-%b-%dT%H:%M:%S.%f')[:-13] #'{:.20}'.format('{:%Y-%b-%d}'.format(self.rsn_map.date))
-        e_range_str = str(self.energy_range[0])+'-'+str(self.energy_range[1])
         fpm = 'FPM'+self.fpm
         title_obstime_start = self.time_range[0][-8:]
         title_obstime_end = self.time_range[1][-8:]
         
         if type(usr_title) == type(None):
             if self.chu_state == 'not_split':
-                ax.set_title('NuSTAR '+e_range_str+' keV '+fpm+' '+ title_obsdate+' '+title_obstime_start+' to '+title_obstime_end)
+                ax.set_title('NuSTAR '+self.e_range_str+' keV '+fpm+' '+ title_obsdate+' '+title_obstime_start+' to '+title_obstime_end)
             else:
-                ax.set_title('NuSTAR '+e_range_str+' keV '+fpm+' '+self.chu_state+' '+ title_obsdate+' '+title_obstime_start+' to '+title_obstime_end)
+                ax.set_title('NuSTAR '+self.e_range_str+' keV '+fpm+' '+self.chu_state+' '+ title_obsdate+' '+title_obstime_start+' to '+title_obstime_end)
         else:
             ax.set_title(usr_title)
         
@@ -910,7 +912,7 @@ class NustarDo:
                                 dt_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in times]
 
                                 plt.plot(*self.stepped_lc_from_hist(self.dt_to_md(dt_times), counts_per_second))
-                                plt.title('NuSTAR FPM'+self.fpm+' '+str(self.energy_range[0])+'-'+str(self.energy_range[1])+' keV Light Curve - '+start_yyyymmdd + box)
+                                plt.title('NuSTAR FPM'+self.fpm+' '+self.e_range_str+' keV Light Curve - '+start_yyyymmdd + box)
 
                                 plt.xlim([dt_times[0] - timedelta(seconds=60), dt_times[-1] + timedelta(seconds=60)])
                                 plt.xlabel('Start Time - '+start_hhmmss)
@@ -930,7 +932,7 @@ class NustarDo:
                                 dt_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in times]
 
                                 plt.plot(*self.stepped_lc_from_hist(self.dt_to_md(dt_times), counts))
-                                plt.title('NuSTAR FPM'+self.fpm+' '+str(self.energy_range[0])+'-'+str(self.energy_range[1])+' keV Light Curve - '+start_yyyymmdd + box)
+                                plt.title('NuSTAR FPM'+self.fpm+' '+self.e_range_str+' keV Light Curve - '+start_yyyymmdd + box)
 
                                 plt.xlim([dt_times[0] - timedelta(seconds=60), dt_times[-1] + timedelta(seconds=60)])
                                 plt.xlabel('Start Time - '+start_hhmmss)
@@ -982,7 +984,7 @@ class NustarDo:
                 dt_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in times]
 
                 plt.plot(*self.stepped_lc_from_hist(self.dt_to_md(dt_times), counts_per_second))
-                plt.title('NuSTAR FPM'+self.fpm+' '+str(self.energy_range[0])+'-'+str(self.energy_range[1])+' keV Light Curve - '+start_yyyymmdd)
+                plt.title('NuSTAR FPM'+self.fpm+' '+self.e_range_str+' keV Light Curve - '+start_yyyymmdd)
 
                 plt.xlim([dt_times[0] - timedelta(seconds=60), dt_times[-1] + timedelta(seconds=60)])
                 plt.xlabel('Start Time - '+start_hhmmss)
@@ -1004,7 +1006,7 @@ class NustarDo:
                 dt_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in times]
 
                 plt.plot(*self.stepped_lc_from_hist(self.dt_to_md(dt_times), self.lc_counts))
-                plt.title('NuSTAR FPM'+self.fpm+' '+str(self.energy_range[0])+'-'+str(self.energy_range[1])+' keV Light Curve - '+start_yyyymmdd)
+                plt.title('NuSTAR FPM'+self.fpm+' '+self.e_range_str+' keV Light Curve - '+start_yyyymmdd)
                 
                 plt.xlim([dt_times[0] - timedelta(seconds=60), dt_times[-1] + timedelta(seconds=60)])
                 plt.xlabel('Start Time - '+start_hhmmss)
@@ -1169,7 +1171,7 @@ class NustarDo:
         ax.xaxis.set_major_locator(plt.LinearLocator(9))
         plt.xticks(rotation=30)
 
-        plt.title('Detector Contribution')
+        plt.title('Detector Contribution '+self.e_range_str+" keV")
         plt.ylabel('Counts from detector')
         plt.xlabel('Time')
 
