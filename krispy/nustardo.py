@@ -103,7 +103,7 @@ class NustarDo:
         self.chu_state = chu_state
         self.rectangles = None #set so that you don't have to plot a map to get a light curve
 
-        # for plot titles
+        # for plot title
         self.e_range_str = str(self.energy_range[0])+'-'+str(self.energy_range[1]) if self.energy_range[1]<79 else ">"+str(self.energy_range[0])
 
         self.rel_t = datetime.datetime(2010,1 ,1 ,0 ,0 ,0) # nustar times are measured in seconds from this date
@@ -146,6 +146,16 @@ class NustarDo:
             raise ValueError('\nThere there are no counts within these paramenters. '
                              '\nThis may be because no counts were recorded or that the paramenters are outwith the '
                              'scope of NuSTAR and/or the observation.')
+
+        # now for the time tick marks...
+        clevt_duration = np.max(self.cleanevt['TIME'])-np.min(self.cleanevt['TIME'])
+        if clevt_duration > 3600*0.5:
+        	self.xlocator = mdates.MinuteLocator(byminute=[0, 10, 20, 30, 40, 50], interval = 1)
+        elif 600 < clevt_duration <= 3600*0.5:
+        	self.xlocator = mdates.MinuteLocator(byminute=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55], interval = 1)
+        else:
+        	self.xlocator = mdates.MinuteLocator(interval = 2)
+        
 
 
     @staticmethod
@@ -761,7 +771,7 @@ class NustarDo:
             plt.ylim([0,1])
             fmt = mdates.DateFormatter('%H:%M')
             ax.xaxis.set_major_formatter(fmt)
-            ax.xaxis.set_major_locator(plt.LinearLocator(9))
+            ax.xaxis.set_major_locator(self.xlocator) # xlocator was plt.LinearLocator(9)
             plt.xticks(rotation=30)
 
             if show_fig == True:
@@ -920,9 +930,9 @@ class NustarDo:
                                 plt.ylim([0, np.max(counts_per_second[np.isfinite(counts_per_second)])*1.05])
                                 plt.ylabel('Counts $s^{-1}$')
 
-                                fmt = mdates.DateFormatter('%H:%M:%S')
+                                fmt = mdates.DateFormatter('%H:%M')
                                 ax.xaxis.set_major_formatter(fmt)
-                                ax.xaxis.set_major_locator(plt.LinearLocator(9))
+                                ax.xaxis.set_major_locator(self.xlocator)
                                 plt.xticks(rotation=30)
                                 #plt.show()
                                 all_count_rates[box] = counts_per_second
@@ -940,9 +950,9 @@ class NustarDo:
                                 plt.ylim([0, np.max(counts[np.isfinite(counts)])*1.05])
                                 plt.ylabel('Counts')
 
-                                fmt = mdates.DateFormatter('%H:%M:%S')
+                                fmt = mdates.DateFormatter('%H:%M')
                                 ax.xaxis.set_major_formatter(fmt)
-                                ax.xaxis.set_major_locator(plt.LinearLocator(9))
+                                ax.xaxis.set_major_locator(self.xlocator)
                                 plt.xticks(rotation=30)
                                 #plt.show()
                     self.lc_counts = all_counts
@@ -992,9 +1002,9 @@ class NustarDo:
                 plt.ylim([0, np.max(counts_per_second[np.isfinite(counts_per_second)])*1.05])
                 plt.ylabel('Counts $s^{-1}$')
                 
-                fmt = mdates.DateFormatter('%H:%M:%S')
+                fmt = mdates.DateFormatter('%H:%M')
                 ax.xaxis.set_major_formatter(fmt)
-                ax.xaxis.set_major_locator(plt.LinearLocator(9))
+                ax.xaxis.set_major_locator(self.xlocator)
                 plt.xticks(rotation=30)
                 
                 #plt.show()
@@ -1014,9 +1024,9 @@ class NustarDo:
                 plt.ylim([0, np.max(self.lc_counts[np.isfinite(self.lc_counts)])*1.05])
                 plt.ylabel('Counts')
                 
-                fmt = mdates.DateFormatter('%H:%M:%S')
+                fmt = mdates.DateFormatter('%H:%M')
                 ax.xaxis.set_major_formatter(fmt)
-                ax.xaxis.set_major_locator(plt.LinearLocator(9))
+                ax.xaxis.set_major_locator(self.xlocator)
                 plt.xticks(rotation=30)
                 #plt.show()
                 self.lc_times = dt_times
@@ -1166,9 +1176,9 @@ class NustarDo:
             plt.plot(*self.stepped_lc_from_hist(self.dt_to_md(dt_times), dets[0]), label='det'+str(d)+': '+'{:.1f}'.format(self.all_detectors['det'+str(d)+'%'])+'%')
         plt.legend()
 
-        fmt = mdates.DateFormatter('%H:%M:%S')
+        fmt = mdates.DateFormatter('%H:%M')
         ax.xaxis.set_major_formatter(fmt)
-        ax.xaxis.set_major_locator(plt.LinearLocator(9))
+        ax.xaxis.set_major_locator(self.xlocator)
         plt.xticks(rotation=30)
 
         plt.title('Detector Contribution '+self.e_range_str+" keV")

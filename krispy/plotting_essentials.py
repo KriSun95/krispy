@@ -227,9 +227,10 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
         plot = plot if samePlot is False else 0
 
         # set time labels for x-axis
-        fmt = mdates.DateFormatter('%H:%M:%S')
+        fmt = mdates.DateFormatter('%H:%M')
+        tickTime = mdates.MinuteLocator(byminute=[0, 10, 20, 30, 40, 50], interval = 1)
         axs[plot].xaxis.set_major_formatter(fmt)
-        axs[plot].xaxis.set_major_locator(plt.LinearLocator(9))
+        axs[plot].xaxis.set_major_locator(tickTime)
         
         # if it's AIA lightcurves
         if instrument.upper() == 'AIA':
@@ -244,7 +245,7 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
                 twinx_ax.yaxis.label.set_color(cmap_dict[name])
                 twinx_ax.set_yticks([])
                 twinx_ax.xaxis.set_major_formatter(fmt)
-                twinx_ax.xaxis.set_major_locator(plt.LinearLocator(9))
+                twinx_ax.xaxis.set_major_locator(tickTime)
             elif samePlot is True:
                 axs[plot].plot(dt_to_md(data[name]['times']), data[name]['DN_per_sec_per_pixel']/np.max(data[name]['DN_per_sec_per_pixel']), color=cmap_dict[name], label=name)
                 axs[plot].set_ylabel('Normalized DN s$^{-1}$ pix$^{-1}$')
