@@ -346,22 +346,32 @@ def directory_structure(parent_dir=None):
 
     # use 'with' as content manager so the file automatically closes
     # 'w' mode as everytime the file is written to the original contents is erased
-    with open(parent_dir+'context.txt', 'w') as contents:
+    with open('./contents.txt', 'w') as contents:
         contents.write('The contents of this folder are:')
-    
-        for d in directory:
+
+        for d in directory: 
             contents.write('\n'+parent_dir+d)
             # now look into every directory and pick out files and other sub-directories
-        
+
             for root, dirs, files in os.walk(parent_dir + d):
+                # add the summary of the folder if there is one
+                if os.path.isfile(root + '/summary.txt'):
+                    with open(root + '/summary.txt', 'r') as summary:
+                        lines = summary.readlines()
+                        for l in lines:
+                            # rstrip removes trailing white space (\n for example)
+                            contents.write('\n  |  ' + l.rstrip())
+                    contents.write('\n  |')
+
                 for d in dirs:
-                    contents.write('\n    |-> '+d)
+                    contents.write('\n  |-> '+d)
                     # if its a directory look one layer deeper and list that stuff as well
                     for sub_f in os.listdir(root+'/'+d+'/'):
-                        contents.write('\n    |    |--> '+sub_f)
+                        contents.write('\n  |   |--> '+sub_f)
                 for f in files:
-                    contents.write('\n    |-> '+f)
-            
-                # only need to look in this directory once and for the files and sub-directories
+                    contents.write('\n  |-> '+f)
+                    
+                # only need to look in this directory once and for the files and sub-directories 
                 # to be handled differently
+                contents.write('\n  *')
                 break
