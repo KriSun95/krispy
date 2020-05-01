@@ -91,15 +91,15 @@ def make_lightcurve(directory, bottom_left, top_right, time_filter=None, mask=No
 
         if aia_map.meta['instrume'][:3] == 'AIA': #if the files are aia then define the instrument and obs time
             map_type = 'AIA'
-            obs_time = datetime.datetime.strptime(times, '%Y-%m-%dT%H:%M:%S.%fZ') 
+            obs_time = getTimeFromFormat(times)
         elif aia_map.meta['instrume'] == 'XRT': #if the files are xrt then define the instrument, filter combo and obs time
             map_type = 'XRT'     
             xrt_filter = aia_map.meta['ec_fw1_'] + '_' + aia_map.meta['ec_fw2_']  
             key = 'filter' + xrt_filter + '_exptime' + str(aia_map.meta['exptime']).replace('.','-')
-            obs_time = datetime.datetime.strptime(times, '%Y-%m-%dT%H:%M:%S.%f')
+            obs_time = getTimeFromFormat(times)
         elif 'HMI' in aia_map.meta['instrume']:
             map_type = 'HMI' 
-            obs_time = datetime.datetime.strptime(times, '%Y-%m-%dT%H:%M:%S.%fZ')
+            obs_time = getTimeFromFormat(times)
         
         bl = SkyCoord(bottom_left[0]*u.arcsec, bottom_left[1]*u.arcsec, frame=aia_map.coordinate_frame)
         tr = SkyCoord(top_right[0]*u.arcsec, top_right[1]*u.arcsec, frame=aia_map.coordinate_frame)
@@ -247,3 +247,35 @@ def draw_mask(array, save_mask=None):
         np.save(save_mask)
 
     return mask
+
+
+# a function to try and guess what time format you give it
+def getTimeFromFormat(timeString, **kwargs):
+    """Give it a string of a dat, it will return the time.
+    
+    Parameters
+    ----------
+    timeString : str
+        The date as a string. Format must be in the date_format_defualts
+
+    **kwargs : name=datetime format
+        Your own datetime formats.
+            
+    Returns
+    -------
+    A datetime object (hopefully) of the string you gave it.
+    """
+    date_format_defualts = {"fmt0":'%Y-%m-%dT%H:%M:%S.%fZ', "fmt1":'%Y-%m-%dT%H:%M:%S.%f', 
+                            "fmt2":'%Y/%m/%dT%H:%M:%S.%f', "fmt3":'%Y/%m/%dT%H:%M:%S.%fZ', 
+                            "fmt4":'%Y/%m/%d %H:%M:%S.%f', "fmt5":'%Y/%m/%d, %H:%M:%S.%f', 
+                            "fmt6":'%Y/%m/%d %H:%M:%S', "fmt7":'%Y/%m/%d, %H:%M:%S'}
+    date_formats = {**date_format_defualts, **kwargs}
+
+    for f in date_formats.keys():
+        # run through formats
+        try:
+            time = datetime.datetime.strptime(timeString, date_formats[f]) 
+        except ValueError:
+            continue
+
+        return time
