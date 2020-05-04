@@ -35,6 +35,7 @@ import re
 import warnings
 import astropy.units as u
 from astropy.time import Time
+import matplotlib.patches as patches
 
 '''
 Alterations:
@@ -321,7 +322,8 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
                 length = rect[2] - rect[0]
                 height = rect[3] - rect[1]
                 if (iron != '') or (diff_image != None): #if iron or a diff map is needed then make the rectangles black
-                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol, axes=plt.gca())
+                    plt.gca().add_patch(patches.Rectangle((rect[0],rect[1]), length, height, facecolor="none", linewidth=2, edgecolor=rcol))
+                    #smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol, axes=plt.gca())
                 else:
                     rcol = "white" if len(rectangle_colour)==1 else rcol
                     smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol, axes=plt.gca())
