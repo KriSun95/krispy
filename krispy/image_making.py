@@ -311,6 +311,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
 
         
         if rectangle != []: #if a rectangle(s) is specified, make it
+            print("I'm here to do teh thing")
             assert len(rectangle_colour)==len(rectangle) or len(rectangle_colour)==1, "Check you have either given 1 colour in the \'rectangle_colour\' list or the same number of colours as rectangles!"
             rectangle_colour = rectangle_colour if len(rectangle_colour)==len(rectangle) else rectangle_colour*len(rectangle)
             x, y, counter = submap[2], submap[3], 0 # x and y for box titles if needed, plus a counter for the "for" loop
