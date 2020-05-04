@@ -13,6 +13,7 @@ Functions to go in here (I think!?):
 '''
 from . import file_working
 from . import contour
+from . import data_handling
 
 import matplotlib.pyplot as plt
 import matplotlib
@@ -1405,9 +1406,9 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
         aia_map = sunpy.map.Map(directory_with_files[f])
 
         #find closest overlay file
-        first_image_time = datetime.datetime.strptime(aia_map.meta['date-obs'], '%Y-%m-%dT%H:%M:%S.%fZ')
+        first_image_time = data_handling.getTimeFromFormat(aia_map.meta['date-obs'])
         
-        distance = [abs(first_image_time - datetime.datetime.strptime(over, '%Y-%m-%dT%H:%M:%S.%fZ')) for over in time_of_second_lot]
+        distance = [abs(first_image_time - data_handling.getTimeFromFormat(over)) for over in time_of_second_lot]
         closest = np.argmin(distance)
         second_aia_map = sunpy.map.Map(second_directory_with_files[closest])
         
