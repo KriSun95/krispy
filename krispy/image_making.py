@@ -320,7 +320,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
 
                 print("About to do the thing 2 ", rect, rcol)
                 
-                bl_rect = SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=compmap.coordinate_frame)
+                bl_rect = SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=smap.coordinate_frame)
                 length = rect[2] - rect[0]
                 height = rect[3] - rect[1]
                 if (iron != '') or (diff_image != None): #if iron or a diff map is needed then make the rectangles black
