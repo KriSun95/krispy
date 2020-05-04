@@ -314,20 +314,17 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
             assert len(rectangle_colour)==len(rectangle) or len(rectangle_colour)==1, "Check you have either given 1 colour in the \'rectangle_colour\' list or the same number of colours as rectangles!"
             rectangle_colour = rectangle_colour if len(rectangle_colour)==len(rectangle) else rectangle_colour*len(rectangle)
             x, y, counter = submap[2], submap[3], 0 # x and y for box titles if needed, plus a counter for the "for" loop
-            print("About to do the thing 1 ", rectangle, rectangle_colour)
+            
             for rect, rcol in zip(rectangle, rectangle_colour):
-
-
-                print("About to do the thing 2 ", rect, rcol)
                 
                 bl_rect = SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=smap.coordinate_frame)
                 length = rect[2] - rect[0]
                 height = rect[3] - rect[1]
                 if (iron != '') or (diff_image != None): #if iron or a diff map is needed then make the rectangles black
-                    compmap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
+                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
                 else:
                     rcol = "white" if len(rectangle_colour)==1 else rcol
-                    compmap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
+                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
 
                 # if there are multiple boxes then label them with the colour, tough if you're using the same colour the now
                 if len(rectangle_colour) > 1:
