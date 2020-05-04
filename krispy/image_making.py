@@ -287,6 +287,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
                 height = rect[3] - rect[1]
                 if (iron != '') or (diff_image != None): #if iron or a diff map is needed then make the rectangles black
                     smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
+                    print("Drawn: ", bl_rect, length, height, rcol)
                 else:
                     rcol = "white" if len(rectangle_colour)==1 else rcol
                     smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
