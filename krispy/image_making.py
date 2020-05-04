@@ -275,6 +275,31 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
             else:
                 smap.save(save_smap+'submapped_'+filename) #save the submap with the prefix 'submapped_' to the original filename
 
+        if rectangle != []: #if a rectangle(s) is specified, make it
+
+            assert len(rectangle_colour)==len(rectangle) or len(rectangle_colour)==1, "Check you have either given 1 colour in the \'rectangle_colour\' list or the same number of colours as rectangles!"
+            rectangle_colour = rectangle_colour if len(rectangle_colour)==len(rectangle) else rectangle_colour*len(rectangle)
+            x, y, counter = submap[2], submap[3], 0 # x and y for box titles if needed, plus a counter for the "for" loop
+
+            for rect, rcol in zip(rectangle, rectangle_colour):
+                bl_rect = SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=smap.coordinate_frame)
+                length = rect[2] - rect[0]
+                height = rect[3] - rect[1]
+                if (iron != '') or (diff_image != None): #if iron or a diff map is needed then make the rectangles black
+                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
+                else:
+                    rcol = "white" if len(rectangle_colour)==1 else rcol
+                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
+
+                # if there are multiple boxes then label them with the colour, tough if you're using the same colour the now
+                if len(rectangle_colour) > 1:
+                    # lazy check for no repeats
+                    if rectangle_colour[0] not in rectangle_colour[1:]:
+                        plt.text(x, y-counter*0.06*(submap[3]-submap[1]), "Box "+str(counter+1), 
+                            verticalalignment="top", horizontalalignment="right",
+                            color=rcol)
+                        counter += 1
+
         fig, ax = plt.subplots(figsize=(9,8)) 
         
         compmap = sunpy.map.Map(smap, composite=True) #comp image as to keep formatting the same as NuSTAR
@@ -308,35 +333,6 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
                     plt.colorbar(label='DN pix$^{-1}$ s$^{-1}$')
                 elif res is None:
                     plt.colorbar(label='DN s$^{-1}$')
-
-        
-        if rectangle != []: #if a rectangle(s) is specified, make it
-            assert len(rectangle_colour)==len(rectangle) or len(rectangle_colour)==1, "Check you have either given 1 colour in the \'rectangle_colour\' list or the same number of colours as rectangles!"
-            rectangle_colour = rectangle_colour if len(rectangle_colour)==len(rectangle) else rectangle_colour*len(rectangle)
-            x, y, counter = submap[2], submap[3], 0 # x and y for box titles if needed, plus a counter for the "for" loop
-            print("About to do the thing 1 ", rectangle, rectangle_colour)
-            for rect, rcol in zip(rectangle, rectangle_colour):
-
-
-                print("About to do the thing 2 ", rect, rcol)
-                
-                bl_rect = SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=smap.coordinate_frame)
-                length = rect[2] - rect[0]
-                height = rect[3] - rect[1]
-                if (iron != '') or (diff_image != None): #if iron or a diff map is needed then make the rectangles black
-                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
-                else:
-                    rcol = "white" if len(rectangle_colour)==1 else rcol
-                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
-
-                # if there are multiple boxes then label them with the colour, tough if you're using the same colour the now
-                if len(rectangle_colour) > 1:
-                    # lazy check for no repeats
-                    if rectangle_colour[0] not in rectangle_colour[1:]:
-                        plt.text(x, y-counter*0.06*(submap[3]-submap[1]), "Box "+str(counter+1), 
-                            verticalalignment="top", horizontalalignment="right",
-                            color=rcol)
-                        counter += 1
         
         #make titles
         time = smap.meta['t_obs'] 
