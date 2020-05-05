@@ -318,15 +318,17 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
 
             for rect, rcol in zip(rectangle, rectangle_colour):
                 
-                bl_rect = SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=smap.coordinate_frame)
+                bl_rect = (rect[0], rect[1]) #SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=smap.coordinate_frame)
                 length = rect[2] - rect[0]
                 height = rect[3] - rect[1]
                 if (iron != '') or (diff_image != None): #if iron or a diff map is needed then make the rectangles black
-                    plt.gca().add_patch(patches.Rectangle((rect[0],rect[1]), length, height, facecolor="none", linewidth=2, edgecolor=rcol))
+                    rcol = "black" if len(rectangle_colour)==1 else rcol
+                    plt.gca().add_patch(patches.Rectangle(bl_rect, length, height, facecolor="none", linewidth=2, edgecolor=rcol))
                     #smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol, axes=plt.gca())
                 else:
                     rcol = "white" if len(rectangle_colour)==1 else rcol
-                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol, axes=plt.gca())
+                    plt.gca().add_patch(patches.Rectangle(bl_rect, length, height, facecolor="none", linewidth=2, edgecolor=rcol))
+                    #smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol, axes=plt.gca())
 
                 # if there are multiple boxes then label them with the colour, tough if you're using the same colour the now
                 if len(rectangle_colour) > 1:
@@ -1492,14 +1494,17 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
             x, y, counter = submap[2], submap[3], 0 # x and y for box titles if needed, plus a counter for the "for" loop
             for rect, rcol in zip(rectangle, rectangle_colour):
                 
-                bl_rect = SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=smap.coordinate_frame)
+                bl_rect = (rect[0], rect[1]) #SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=smap.coordinate_frame)
                 length = rect[2] - rect[0]
                 height = rect[3] - rect[1]
                 if (iron != '') or (diff_image != None): #if iron or a diff map is needed then make the rectangles black
-                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
+                    rcol = "black" if len(rectangle_colour)==1 else rcol
+                    plt.gca().add_patch(patches.Rectangle(bl_rect, length, height, facecolor="none", linewidth=2, edgecolor=rcol))
+                    #smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
                 else:
                     rcol = "white" if len(rectangle_colour)==1 else rcol
-                    smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
+                    plt.gca().add_patch(patches.Rectangle(bl_rect, length, height, facecolor="none", linewidth=2, edgecolor=rcol))
+                    #smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol)
 
                 # if there are multiple boxes then label them with the colour, tough if you're using the same colour the now
                 if len(rectangle_colour) > 1:
