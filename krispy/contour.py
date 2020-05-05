@@ -3,6 +3,8 @@ Functions to do with helping to creat contour plots:
 * Can now set up multiple contour plots seperately then combine them. 
 '''
 
+from . import data_handling
+
 import sys
 sys.path.insert(0, '../')
 import krispy
@@ -189,7 +191,7 @@ class Contours:
                 hdulist = fits.open(aia_file_dir + file)
                 header = hdulist[0].header
                 hdulist.close()
-                time = datetime.datetime.strptime(header['date-obs'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                time = data_handling.getTimeFromFormat(header['date-obs']) #datetime.datetime.strptime(header['date-obs'], '%Y-%m-%dT%H:%M:%S.%fZ')
                 times.append(time)
             else:
                 # just to provide an entry so indices can match up
@@ -209,8 +211,8 @@ class Contours:
             print('No times list has been given to: ', sys._getframe().f_code.co_name)
             return []
         
-        ti_1 = datetime.datetime.strptime(time_interval[0], '%Y/%m/%d, %H:%M:%S')
-        ti_2 = datetime.datetime.strptime(time_interval[1], '%Y/%m/%d, %H:%M:%S')
+        ti_1 = data_handling.getTimeFromFormat(time_interval[0]) #datetime.datetime.strptime(time_interval[0], '%Y/%m/%d, %H:%M:%S')
+        ti_2 = data_handling.getTimeFromFormat(time_interval[1]) #datetime.datetime.strptime(time_interval[1], '%Y/%m/%d, %H:%M:%S')
 
         dt = np.array(times_list)
 
