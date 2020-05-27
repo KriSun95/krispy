@@ -13,8 +13,8 @@ import datetime
 from datetime import timedelta
 from astropy.io import fits
 
-def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None):
-    """Takes the 94, 171, 211 channels from SDO/AIA to create an iron18 emission proxy.
+def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degradation_corr=[True, '2018-09-09T12:00:00']):
+    """Takes the 94, 171, 211 channels from SDO/AIA to create an iron18 emission proxy (Del Zanna 2013).
     
     Parameters
     ----------
@@ -25,11 +25,18 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None):
     outdir : str
             Directory for the output iron18 files.
             Default: None
+
+    tr_degradation_corr : list [bool, str]
+            Do you want the iron18 to be created where 94, 171, 211  have been corrected for the instrument degredation?
+            Also provide a time for the data-set of the form "YYYY-MM-DDTHH:mm:ss".
+            (This should always really be True with the right time.)
+            Default: [True, '2018-09-09T12:00:00']
             
     Returns
     -------
     Filenames of the iron 18 files.
     """
+
     files_094_list = list(os.listdir(dir_094))
     files_094 = []
     files_094 = [ f for f in files_094_list if f.endswith('.fits')]
@@ -44,6 +51,18 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None):
     files_211 = []
     files_211 = [ f for f in files_211_list if f.endswith('.fits')]
     files_211.sort()
+
+    degs = [1, 1, 1]
+    if tr_degradation_corr[0] is True:
+    	from aiapy.calibrate import degradation
+        from aiapy.calibrate.util import get_correction_table
+        import astropy.units as u
+        
+        correction_table = get_correction_table()
+        time_obs = time.Time(tr_degradation_corr[1], scale='utc')
+        channels=[94,171,211]*u.angstrom
+        for i in np.arange(3):
+            degs[i] = degradation(channels[i], time_obs, correction_table=correction_table)
 
     co_094 = []
     co_171 = []
@@ -83,7 +102,7 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None):
         data_211 = aia_map_211.data / aia_map_211.meta['exptime']
         data_211[data_211 < 0] = 0
 
-        Iron_18 = data_094 - data_211/120 - data_171/450
+        Iron_18 = data_094/degs[0] - data_211/(120*degs[2]) - data_171/(450*degs[1])
         Iron_18[Iron_18 < 0] = 0
         aia_map_Fe18 = sunpy.map.Map(Iron_18, aia_map_094.meta)
         
@@ -100,13 +119,15 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None):
         hdul = fits.HDUList([primary_hdu])
 
         hdul.writeto(outdir + f094[:18] + '_FeXVIII.fits', overwrite=True) 
-        #names the file as 'AIAYYYYMMDD_HHmmss_FeXVIII_tbinned.fits'
+        #names the file as 'AIAYYYYMMDD_HHmmss_FeXVIII.fits'
         
         #change header info
         fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'pixlunit', value='DN/s')
         fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'exptime', value=1)
         #add in info that this is iron 18 apart from just the filename
         fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'iron_channel', value='iron18')
+        if tr_degradation_corr[0] is True:
+            fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'temp_resp_info', value='atLaunch')
 
         output.append(f094[:18] + '_FeXVIII.fits')
     return output
