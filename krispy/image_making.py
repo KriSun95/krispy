@@ -228,6 +228,10 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
             title_addition = ' (Running Difference)' #with space before first bracket
         else:
             assert 1==0, 'Ahhhhhhhhhhhhhhhh!'
+
+        if (_aia_files[0][0:3] == 'HMI') or (_aia_files[0][0:3] == 'hmi'):
+            # HMI is mount "upside down"
+            aia_map = aia_map.rotate()
         
         if submap != None:
             bl_fi = SkyCoord(submap[0]*u.arcsec, submap[1]*u.arcsec, frame=aia_map.coordinate_frame)
