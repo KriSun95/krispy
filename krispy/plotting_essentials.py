@@ -24,7 +24,8 @@ import datetime
 import os
 import matplotlib.dates as mdates
 import matplotlib
-import sunpy.cm
+#import sunpy.cm # replaced by line below for sunpy >v1.0
+import sunpy.visualization.colormaps
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 import matplotlib.pyplot as plt
