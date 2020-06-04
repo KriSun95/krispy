@@ -64,7 +64,7 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
         correction_table = get_correction_table()
         time_obs = time.Time(tr_degradation_corr[1], scale='utc')
         channels=[94,171,211]*u.angstrom
-        for i in np.arange(3):
+        for i in range(3):
             degs[i] = degradation(channels[i], time_obs, correction_table=correction_table)
 
     co_094 = []
