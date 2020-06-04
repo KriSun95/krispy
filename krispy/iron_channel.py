@@ -54,9 +54,9 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
 
     degs = [1, 1, 1]
     if tr_degradation_corr[0] is True:
-    	import warnings
+        import warnings
         warnings.simplefilter('ignore')
-    	from aiapy.calibrate import degradation
+        from aiapy.calibrate import degradation
         from aiapy.calibrate.util import get_correction_table
         import astropy.units as u
         
