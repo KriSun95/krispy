@@ -59,6 +59,7 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
         from aiapy.calibrate import degradation
         from aiapy.calibrate.util import get_correction_table
         import astropy.units as u
+        from astropy import time
         
         correction_table = get_correction_table()
         time_obs = time.Time(tr_degradation_corr[1], scale='utc')
