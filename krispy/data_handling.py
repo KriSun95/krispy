@@ -252,7 +252,7 @@ def draw_mask(array, save_mask=None):
 
 # a function to try and guess what time format you give it
 def getTimeFromFormat(timeString, **kwargs):
-    """Give it a string of a dat, it will return the time.
+    """Give it a string of a date, it will return the UTC datetime object for it.
     
     Parameters
     ----------
@@ -264,18 +264,21 @@ def getTimeFromFormat(timeString, **kwargs):
             
     Returns
     -------
-    A datetime object (hopefully) of the string you gave it.
+    A datetime object in UTC (hopefully) of the string you gave it.
     """
     date_format_defualts = {"fmt0":'%Y-%m-%dT%H:%M:%S.%fZ', "fmt1":'%Y-%m-%dT%H:%M:%S.%f', 
                             "fmt2":'%Y/%m/%dT%H:%M:%S.%f', "fmt3":'%Y/%m/%dT%H:%M:%S.%fZ', 
                             "fmt4":'%Y/%m/%d %H:%M:%S.%f', "fmt5":'%Y/%m/%d, %H:%M:%S.%f', 
-                            "fmt6":'%Y/%m/%d %H:%M:%S', "fmt7":'%Y/%m/%d, %H:%M:%S'}
+                            "fmt6":'%Y/%m/%d %H:%M:%S', "fmt7":'%Y/%m/%d, %H:%M:%S', 
+                            "fmt8":'%Y-%m-%d, %H:%M:%S', "fmt9":'%Y-%m-%d %H:%M:%S'}
     date_formats = {**date_format_defualts, **kwargs}
 
     for f in date_formats.keys():
         # run through formats
         try:
             time = datetime.datetime.strptime(timeString, date_formats[f]) 
+            # turn time into an "aware" object, don't keep as a "naive" one
+            time = time.replace(tzinfo=datetime.timezone.utc)
         except ValueError:
             continue
 
