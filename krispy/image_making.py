@@ -131,7 +131,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
             Default: True
 
     time_filter : list, 2 strings
-            If you provide a directory but only want a lightcurve made from a certain time range, e.g. 
+            If you provide a directory but only want maps made from a certain time range, e.g. 
             ["%Y/%m/%d, %H:%M:%S", "%Y/%m/%d, %H:%M:%S"].
             Defualt: None
 
@@ -1275,7 +1275,7 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=300, cmlims = [
 
 #make composite images from the aia fits files
 def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cmlims = None,cmlims2=[], rectangle=None, rectangle_colour=None, save_inc=True, iron='',
-                    cm_scale='Normalize', res=None, in_order=True, alphas=[0.5,0.5], lvls=None, dpi=300):      
+                    cm_scale='Normalize', res=None, in_order=True, alphas=[0.5,0.5], lvls=None, dpi=300, time_filter=None):      
     """Takes a directory with fits files, constructs a map or submap of the full observation with/without a rectangle and
     saves the image in the requested directory.
     
@@ -1348,6 +1348,11 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
             Express the dots per inch that the images produced should have.
             Default: 300
 
+    time_filter : list, 2 strings
+            If you provide a directory but only want maps made from a certain time range, e.g. 
+            ["%Y/%m/%d, %H:%M:%S", "%Y/%m/%d, %H:%M:%S"].
+            Defualt: None
+
     Returns
     -------
     AIA maps saved to the requested directory (so doesn't really return anythin).
@@ -1398,6 +1403,17 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
             _directory_with_files = [_d+f for f in _aia_files]
             second_files = _aia_files
             second_directory_with_files += _directory_with_files
+
+    if time_filter is not None:
+        _q = contour.Contours()
+
+        _file_times = _q.aia_file_times(aia_file_dir="", aia_file_list=directory_with_files)
+        _in_time = _q.useful_time_inds(times_list=_file_times, time_interval=time_filter)
+        directory_with_files = directory_with_files[_in_time]
+
+        _file_times = _q.aia_file_times(aia_file_dir="", aia_file_list=second_directory_with_files)
+        _in_time = _q.useful_time_inds(times_list=_file_times, time_interval=time_filter)
+        second_directory_with_files = second_directory_with_files[_in_time]
 
     no_of_files = len(directory_with_files)
 
