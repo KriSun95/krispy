@@ -78,7 +78,7 @@ def make_lightcurve(directory, bottom_left, top_right, time_filter=None, mask=No
         _q = contour.Contours()
         _file_times = _q.aia_file_times(aia_file_dir="", aia_file_list=directory_with_files)
         _in_time = _q.useful_time_inds(times_list=_file_times, time_interval=time_filter)
-        directory_with_files = directory_with_files[_in_time]
+        directory_with_files = np.array(directory_with_files)[_in_time]
 
     no_of_files = len(directory_with_files)
 
