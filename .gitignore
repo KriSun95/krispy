@@ -1,6 +1,7 @@
 ideas.txt
 .ipynb_checkpoints/
 *.pyc
+krispy/__pycache__/*.pyc
 *.py~
 krispy_with_python_packages.txt
-__pycache__
+krispy/__pycache__
