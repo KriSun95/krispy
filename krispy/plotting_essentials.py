@@ -208,10 +208,10 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
     else:
         n = len(data_list) if samePlot is False else 1
         ps = range(len(data_list))
-
+    
     fig, axs = plt.subplots(n,1,figsize=(16, 1.5*n+4), sharex=True)
     # make sure axs can still be indexed
-    axs = axs if samePlot is False else [axs]
+    axs = axs if n>1 else [axs] #"samePlot is False" was the old statement
     fig.subplots_adjust(hspace=0.)
 
     for plot in ps:
