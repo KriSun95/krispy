@@ -414,7 +414,7 @@ class Contours:
     def create_contours(self, nusun_objects=None, nu_objects=None, aia_object=None, 
                         iron='', contours=None, submap=None, annotate=True, 
                         background_contours=False, bg_limits=None, plot=True, 
-                        background_cmap=None, usr_title=None):
+                        background_cmap=None, usr_title=None, save_name=''):
 
         print("cc1")
 
@@ -591,6 +591,9 @@ class Contours:
         print("cc5")
         del nusun_objects
         
+        if save_name != '':
+            plt.figure()
+
         if type(bg_limits) != type(None):
             if bg_limits[0] <= 0: #vmin > 0 or error
                 bg_limits[0] = 0.1
@@ -604,6 +607,9 @@ class Contours:
             plt.title(f'{map_title} at {time_range[0]} to {time_range[1][-8:]}')
         else:
             plt.title(usr_title)
+
+        if save_name != '':
+            plt.savefig(save_name, dpi=300, bbox_inches='tight')
 
         plt.rcParams['figure.frameon']=True
         print("cc6")
@@ -666,10 +672,9 @@ class Contours:
         ax = self.create_contours(nusun_objects=self.nu_final_maps, nu_objects=self.nu_final_objects, 
                                   aia_object=self.background_frame, iron=iron, contours=self.colour_and_contours, 
                                   submap=self.submap, annotate=annotate, background_contours=background_contours, 
-                                  bg_limits=background_limits, plot=plot, background_cmap=background_cmap, usr_title=usr_title)
+                                  bg_limits=background_limits, plot=plot, background_cmap=background_cmap, usr_title=usr_title, save_name=save_name)
         print("cc7")
-        if save_name != '':
-            plt.savefig(save_name, dpi=300, bbox_inches='tight')
+        
         print("cc8")
         return ax
     
