@@ -693,6 +693,9 @@ class Contours:
         new_object.colour_dict = {**self.colour_dict, **other.colour_dict}
         
         # the submap/background/time range of the first object is used, self.submap remains unchanged
+        new_object.time_range = self.time_range
+        new_object.submap = self.submap
+        new_object.background_frame = self.background_frame
         ## this should mean it matters on the order of adding
         new_object.time_ranges = [self.time_range, other.time_range]
         new_object.submaps = [self.submap, other.submap]
