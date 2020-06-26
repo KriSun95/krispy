@@ -416,6 +416,8 @@ class Contours:
                         background_contours=False, bg_limits=None, plot=True, 
                         background_cmap=None, usr_title=None):
 
+        print("cc1")
+
         if plot == False:
             plt.rcParams['figure.frameon'] = False
         
@@ -445,6 +447,8 @@ class Contours:
         else:
             scale = 1
         
+        print("cc2")
+
         # all annotation spacing
         size = np.shape(aia_object.data) #should the font, etc be dependent on the array size?
         # spacing probably should but charactersize should be constant...probably
@@ -489,6 +493,8 @@ class Contours:
                     y += yspacing
                 x += xspacing
         
+        print("cc3")
+
         del aia_object
         meta_info = {}
         len_contour_lists = []
@@ -541,7 +547,7 @@ class Contours:
                     plt.annotate(clabel ,(x,y), ha='left', size=char_to_arcsec, color=key) #+0.6*xspacing
                     y += yspacing
                 x += xspacing
-
+        print("cc4")
         y = y_reset+tot_num_of_levels*(yspacing)
 
         e_unique, fpm_unique, chu_unique = self.unique_entries(meta_info)
@@ -582,7 +588,7 @@ class Contours:
             if type(background_contours) == dict:
                 x_subtitle -= xspacing
             plt.annotate(complete_legend ,(x_subtitle,y), ha='left', size=char_to_arcsec)
-        
+        print("cc5")
         del nusun_objects
         
         if type(bg_limits) != type(None):
