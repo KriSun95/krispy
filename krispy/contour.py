@@ -420,6 +420,8 @@ class Contours:
 
         if plot == False:
             plt.rcParams['figure.frameon'] = False
+        if save_name != '':
+            plt.figure()
         
         if contours == None:
             contours=self.colour_and_contours
@@ -590,9 +592,6 @@ class Contours:
             plt.annotate(complete_legend ,(x_subtitle,y), ha='left', size=char_to_arcsec)
         print("cc5")
         del nusun_objects
-        
-        if save_name != '':
-            plt.figure()
 
         if type(bg_limits) != type(None):
             if bg_limits[0] <= 0: #vmin > 0 or error
