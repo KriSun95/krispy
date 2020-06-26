@@ -670,7 +670,7 @@ class Contours:
     def __add__(self, other):
         # magic method:
         ## what do I do if I sort out the NuSTAR stuff first then want to combine them? Do this!
-        plt.get_fignums()
+        print("figs: ", plt.get_fignums())
         new_object = deepcopy(self)
         
         att_self = getattr(self, 'nu_final_maps', 'DoesNotExist') # if attribute is there then att get that value, 
