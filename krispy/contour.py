@@ -416,8 +416,6 @@ class Contours:
                         background_contours=False, bg_limits=None, plot=True, 
                         background_cmap=None, usr_title=None, save_name=''):
 
-        print("cc1")
-
         if plot == False:
             plt.rcParams['figure.frameon'] = False
         if save_name != '':
@@ -448,8 +446,6 @@ class Contours:
             scale = 4 / ( preconts + len(nusun_objects) )
         else:
             scale = 1
-        
-        print("cc2")
 
         # all annotation spacing
         size = np.shape(aia_object.data) #should the font, etc be dependent on the array size?
@@ -494,8 +490,6 @@ class Contours:
                     plt.annotate(clabel ,(x,y), ha='left', size=char_to_arcsec, color=key) #+0.6*xspacing
                     y += yspacing
                 x += xspacing
-        
-        print("cc3")
 
         del aia_object
         meta_info = {}
@@ -549,8 +543,8 @@ class Contours:
                     plt.annotate(clabel ,(x,y), ha='left', size=char_to_arcsec, color=key) #+0.6*xspacing
                     y += yspacing
                 x += xspacing
-        print("cc4")
-        y = y_reset+tot_num_of_levels*(yspacing)
+
+        #y = y_reset+tot_num_of_levels*(yspacing)
 
         e_unique, fpm_unique, chu_unique = self.unique_entries(meta_info)
         
@@ -590,7 +584,7 @@ class Contours:
             if type(background_contours) == dict:
                 x_subtitle -= xspacing
             plt.annotate(complete_legend ,(x_subtitle,y), ha='left', size=char_to_arcsec)
-        print("cc5")
+
         del nusun_objects
 
         if type(bg_limits) != type(None):
@@ -611,7 +605,7 @@ class Contours:
             plt.savefig(save_name, dpi=300, bbox_inches='tight')
 
         plt.rcParams['figure.frameon']=True
-        print("cc6")
+
         return compmap
     
     
@@ -672,9 +666,7 @@ class Contours:
                                   aia_object=self.background_frame, iron=iron, contours=self.colour_and_contours, 
                                   submap=self.submap, annotate=annotate, background_contours=background_contours, 
                                   bg_limits=background_limits, plot=plot, background_cmap=background_cmap, usr_title=usr_title, save_name=save_name)
-        print("cc7")
-        
-        print("cc8")
+
         return ax
     
     
