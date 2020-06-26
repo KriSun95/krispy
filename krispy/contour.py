@@ -606,6 +606,7 @@ class Contours:
             plt.title(usr_title)
 
         plt.rcParams['figure.frameon']=True
+        print("cc6")
         return compmap
     
     
@@ -666,10 +667,10 @@ class Contours:
                                   aia_object=self.background_frame, iron=iron, contours=self.colour_and_contours, 
                                   submap=self.submap, annotate=annotate, background_contours=background_contours, 
                                   bg_limits=background_limits, plot=plot, background_cmap=background_cmap, usr_title=usr_title)
-        
+        print("cc7")
         if save_name != '':
             plt.savefig(save_name, dpi=300, bbox_inches='tight')
-        
+        print("cc8")
         return ax
     
     
