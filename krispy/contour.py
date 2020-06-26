@@ -196,6 +196,7 @@ class Contours:
             else:
                 # just to provide an entry so indices can match up
                 time = datetime.datetime.strptime('1979-01-01T00:00:00.000000Z', '%Y-%m-%dT%H:%M:%S.%fZ')
+                time = time.replace(tzinfo=datetime.timezone.utc)
                 times.append(time)
 
         return times
