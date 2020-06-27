@@ -119,7 +119,7 @@ class Contours:
             nu2 = krispy.nustardo.NustarDo(nu_file, energy_range=[colour_and_energy[key][0], colour_and_energy[key][1]], time_range=time_interval)
             nu2.deconvolve['apply'] = False
             nu2.sub_lt_zero = 0
-            nustar_maps_corr[key] = nu2.nustar_setmap(submap = [submap[0]-100, submap[1]-100, submap[2]+100, submap[3]+100])
+            nustar_maps_corr[key] = nu2.nustar_setmap(submap = [submap[0]-90, submap[1]-90, submap[2]+90, submap[3]+90])
             del nu2
 
         return nustar_obj, nustar_maps_corr
@@ -170,7 +170,9 @@ class Contours:
             # use deconvolved map as own map, avoid time norm a second time, and only submap the region
             # if own_map isn't set then the map is created from scratch again and so isn't deconvolved
             nu2.own_map = nu2.rsn_map
-            nustar_maps_corr[key] = nu2.nustar_setmap(submap = self.nuFoV, time_norm=False)
+            #nustar_maps_corr[key] = nu2.nustar_setmap(submap = self.nuFoV, time_norm=False)
+            nustar_maps_corr[key] = nu2.nustar_setmap(submap = [self.nuFoV[0]-90, self.nuFoV[1]-90, self.nuFoV[2]+90, self.nuFoV[3]+90], 
+                                                      time_norm=False) # aia & nustar must be same size, 90 border around fov
             # [submap[0]-100, submap[1]-100, submap[2]+100, submap[3]+100]
             nu2.deconvolve['apply'] = False
             del nu2
@@ -303,8 +305,8 @@ class Contours:
         self.corr_ar = data_for_corr, nu_arr
 
         # need the number of NuSTAR pixels is needed for the shift
-        x_pix_shift = -(np.shape(data_for_corr)[1]/2 - x) #negative because the positive number means shift to the left/down
-        y_pix_shift = -(np.shape(data_for_corr)[0]/2 - y)
+        x_pix_shift = x - np.shape(data_for_corr)[1]/2  
+        y_pix_shift = y - np.shape(data_for_corr)[0]/2
         shift = np.array([x_pix_shift, y_pix_shift])
 
         return shift
