@@ -369,7 +369,7 @@ class NustarDo:
         
         self.time_norm = time_norm
         if self.time_norm == True:
-            self.livetime(hk_filename=house_keeping_file, show_fig=False)
+            self.livetime(hk_filename=house_keeping_file, set_up_plot=False, show_fig=False)
             #livetime correction
             time_range = [(datetime.datetime.strptime(tm, '%Y/%m/%d, %H:%M:%S') - self.rel_t).total_seconds() for tm in self.time_range]
             indices = ((self.hk_times>=time_range[0]) & (self.hk_times<time_range[1]))
