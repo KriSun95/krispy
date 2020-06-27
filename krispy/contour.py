@@ -297,7 +297,7 @@ class Contours:
         
 
         data_for_corr = resize(aia_array, np.shape(nu_arr))
-        self.corr_data = signal.correlate2d(data_for_corr, nu_arr, boundary='symm', mode='same')
+        self.corr_data = signal.correlate2d(data_for_corr, nu_arr, boundary='fill', mode='same')
         y, x = np.unravel_index(np.argmax(self.corr_data), self.corr_data.shape)  # find the match
 
         self.corr_ar = data_for_corr, nu_arr
