@@ -170,9 +170,9 @@ class Contours:
             # use deconvolved map as own map, avoid time norm a second time, and only submap the region
             # if own_map isn't set then the map is created from scratch again and so isn't deconvolved
             nu2.own_map = nu2.rsn_map
-            #nustar_maps_corr[key] = nu2.nustar_setmap(submap = self.nuFoV, time_norm=False)
-            nustar_maps_corr[key] = nu2.nustar_setmap(submap = [self.nuFoV[0]-90, self.nuFoV[1]-90, self.nuFoV[2]+90, self.nuFoV[3]+90], 
-                                                      time_norm=False) # aia & nustar must be same size, 90 border around fov
+            nustar_maps_corr[key] = nu2.nustar_setmap(submap = self.nuFoV, time_norm=False)
+            # nustar_maps_corr[key] = nu2.nustar_setmap(submap = [self.nuFoV[0]-90, self.nuFoV[1]-90, self.nuFoV[2]+90, self.nuFoV[3]+90], 
+            #                                           time_norm=False) # aia & nustar must be same size, 90 border around fov
             # [submap[0]-100, submap[1]-100, submap[2]+100, submap[3]+100]
             nu2.deconvolve['apply'] = False
             del nu2
@@ -282,8 +282,10 @@ class Contours:
             self.nuFoV = [submap[0], submap[1], submap[2], submap[3]]
 
         # 90 arcsec buffer because of 1'.5 NuSTAR pointing uncertainty
-        bl_corr = SkyCoord((self.nuFoV[0]-90)*u.arcsec, (self.nuFoV[1]-90)*u.arcsec, frame=aia_map.coordinate_frame)
-        tr_corr = SkyCoord((self.nuFoV[2]+90)*u.arcsec, (self.nuFoV[3]+90)*u.arcsec, frame=aia_map.coordinate_frame)
+        # bl_corr = SkyCoord((self.nuFoV[0]-90)*u.arcsec, (self.nuFoV[1]-90)*u.arcsec, frame=aia_map.coordinate_frame)
+        # tr_corr = SkyCoord((self.nuFoV[2]+90)*u.arcsec, (self.nuFoV[3]+90)*u.arcsec, frame=aia_map.coordinate_frame)
+        bl_corr = SkyCoord((self.nuFoV[0])*u.arcsec, (self.nuFoV[1])*u.arcsec, frame=aia_map.coordinate_frame)
+        tr_corr = SkyCoord((self.nuFoV[2])*u.arcsec, (self.nuFoV[3])*u.arcsec, frame=aia_map.coordinate_frame)
         aia_corr_data = aia_map_for_corr.submap(bl_corr, tr_corr).data
 
         return aia_data, aia_corr_data
