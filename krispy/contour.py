@@ -617,7 +617,7 @@ class Contours:
     
     def setup_deconvolved_contours(self, nu_file=None, colour_and_energy=None, 
                                    time_range=None, submap=None, iterations=None, 
-                                   aia_dir=None, deconvolve=True):
+                                   aia_dir=None, deconvolve=True, bg_time_pos='average'):
         
         # set defualt values is inputs are None
         nu_file = self.file_given if nu_file == None else nu_file
@@ -645,7 +645,7 @@ class Contours:
 
         files_in_trange = aia_file_list[good_indices]
 
-        background_map = self.which_background(aia_dir, files_in_trange)
+        background_map = self.which_background(aia_dir, files_in_trange, where=bg_time_pos)
 
         background_frame, background_corr = self.aia_frame(background_map, submap=submap)
         
