@@ -7,6 +7,7 @@ from os.path import *
 import os
 import numpy as np
 from astropy.io import fits
+from scipy.special import beta
 
 def read_xspec_txt(f):
     ''' Takes a the output .txt file from XSPEC and extracts useful information from it.
@@ -51,7 +52,7 @@ def read_xspec_txt(f):
     return _file
 
 
-def seperate(read_xspec_data, fitting_mode='1apec1fpm'):
+def seperate(read_xspec_data, fitting_mode='1apec'):
     ''' Takes a the output from read_xspec_txt() function and splits the output into data, model, erros, energies, etc.
     
     Parameters
@@ -60,19 +61,29 @@ def seperate(read_xspec_data, fitting_mode='1apec1fpm'):
             Dictionary output from read_xspec_txt().
 
     fitting_mode : Str
-            Information about the fit in XSPEC, e.g. 1apec model fit with on focal plane modules data: '1apec1fpm'.
-            Default: '1apec1fpm'
+            Information about the fit in XSPEC, e.g. 1apec model fit with on focal plane modules data: '1apec'.
+            Default: '1apec'
             
     Returns
     -------
     The counts, photons, and ratios from the XSPEC output. 
     '''
-    if fitting_mode == '1apec1fpm' or fitting_mode == '1apec2fpm':
+    if fitting_mode == '1apec':
         seperated = {'energy':read_xspec_data['counts'][:,0], 
                      'e_energy':read_xspec_data['counts'][:,1], 
-                     'data1':read_xspec_data['counts'][:,2], 
-                     'edata1':read_xspec_data['counts'][:,3], 
-                     'model':read_xspec_data['counts'][:,4]}
+                     'data':read_xspec_data['counts'][:,2], 
+                     'e_data':read_xspec_data['counts'][:,3], 
+                     'model_apec':read_xspec_data['counts'][:,4]}
+    elif fitting_mode == '1apec1bknpower':
+        seperated = {'energy':read_xspec_data['counts'][:,0], 
+                     'e_energy':read_xspec_data['counts'][:,1], 
+                     'data':read_xspec_data['counts'][:,2], 
+                     'e_data':read_xspec_data['counts'][:,3], 
+                     'model_total':read_xspec_data['counts'][:,4], 
+                     'model_apec':read_xspec_data['counts'][:,5], 
+                     'model_bknpower':read_xspec_data['counts'][:,6]}
+    else:
+        seperated = None
         
     return seperated
 
@@ -372,7 +383,7 @@ def make_nusrm(rmf_matrix=(), arf_array=()):
 
 
 def make_model(energies=None, photon_model=None, parameters=None, srm=None):
-    ''' Takes a photon model array ( or function if you provide the pinputs with parameters), the spectral response matrix and returns a model count spectrum.
+    ''' Takes a photon model array (or function if you provide the pinputs with parameters), the spectral response matrix and returns a model count spectrum.
     
     Parameters
     ----------
@@ -407,3 +418,56 @@ def make_model(energies=None, photon_model=None, parameters=None, srm=None):
     model_cts_spectrum = model_cts_matrix.sum(axis=0) # sum the rows together
     
     return model_cts_spectrum
+
+
+def bknpowerlaw_power(norm1=None, norm2=None, e_break=None, gamma1=None, gamma2=None):
+    ''' Calculates the energy rate from a fitted broken power-law photon model that was produced by deposited electrons in the chromosphere 
+        (power from the power-law above the break is calculated even when norm1 is given).
+    
+    Parameters
+    ----------
+    norm1 : float [units: ph keV^-1 cm^-2 s^-1]
+            Normalisation factor of the power-law model below the break (will be used to find the normalisation constant for the power-law 
+            above the break when calculating the power). [This is here as the norm factor from XSPEC if the norm @ 1keV and so, most likely, 
+            the nromalisation factor fot the power-law below the break.]
+            Default : None
+
+    norm2 : float [units: ph keV^-1 cm^-2 s^-1]
+            Normalisation factor of the power-law model above the break. If norm2 is set then norm1 and gamma1 are not used.
+            Default : None
+
+    e_break : float [units: keV]
+            The energy at which the two power-laws intersect, the break energy.
+            Default : None
+            
+    gamma1 : float [units: dimensionless]
+            The spectral index of the power-law model below the break energy (will be used to find the normalisation constant for the power-law 
+            above the break when calculating the power). [This is here as the norm factor from XSPEC if the norm @ 1keV and so, most likely, 
+            the nromalisation factor fot the power-law below the break.].
+            Default : None
+
+    gamma2 : float [units: dimensionless]
+            The spectral index of the power-law model above the break energy.
+            Default : None
+            
+    Returns
+    -------
+    The energy rate from the given power-law fit [units: erg s^-1].
+    '''
+
+    ## check if required inputs are their
+    if (norm1 is None or e_break is None  or gamma1 is None or gamma2 is None) and (norm2 is None or e_break is None or gamma2 is None):
+    	print("Please give all the values of either: \n[norm1, e_break, gamma1, gamma2] or [norm2, e_break, gamma2].")
+    	return
+
+    ## if norm2 is given, no need to calculate anything, else calculate norm2 from norm1 
+    ## (see XSPEC docs on bknpower model: https://heasarc.gsfc.nasa.gov/xanadu/xspec/manual/node143.html)
+    Normalisation = norm2 if norm2 is not None else norm1*e_break**(gamma2-gamma1)
+
+    ## calculate the cut-off energy from gamma2 and the break energy
+    ## (see Hannah+ 2008, Eq. 6, DOI:10.1086/529012)
+    E_c = 0.15*gamma2 + (1.86-0.04*gamma2)*e_break - 3.39
+
+    ## now calculate/return power (>=E_c)
+    ## (see Hannah+ 2008, Eq. 4, DOI:10.1086/529012)
+    return 9.5e24 * gamma2**(2) * (gamma2 - 1) * beta(gamma2-0.5, 1.5) * Normalisation * E_c**(1-gamma2)
