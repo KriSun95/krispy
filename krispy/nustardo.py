@@ -1382,13 +1382,13 @@ def shift(evt_data, pix_xshift=None, pix_yshift=None):
 
 def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_area, errors=None, Tresp_syserror=0, log_data=False):
     """Takes data for a channel's temperature response, plasma temperature and emission measure and area of source and 
-    returns the expected count rate per pixel.
+    returns the expected DN/s per pixel.
     *** Check output and make sure your units  work ***
     
     Parameters
     ----------
     temp_response_dataxy : dict
-            The x and y data for the temperature response of the chennel of interest, e.g. {'x':[...], 'y':[...]}.
+            The x and y data for the temperature response of the channel of interest, e.g. {'x':[...], 'y':[...]}.
     
     plasma_temp : float
             Temperature of the response you want in MK.
@@ -1414,7 +1414,7 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
             
     Returns
     -------
-    A dictionary of floats that is the synthetic count rate per pixel for the data given, temperature response, 
+    A dictionary of floats that is the synthetic DN/s per pixel for the data given, temperature response, 
     temperature, and emission measure with units and errors.
     """
     if log_data == True:

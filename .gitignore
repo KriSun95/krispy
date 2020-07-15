@@ -4,4 +4,4 @@ ideas.txt
 ./krispy/__pycache__/*.pyc
 *.py~
 krispy_with_python_packages.txt
-krispy/__pycache__
+krispy/__pycache__/
