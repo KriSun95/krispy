@@ -242,6 +242,10 @@ def draw_mask(array, save_mask=None):
     -------
     An array with 1s enclosed within the region you specified and 0s everywhere else.
     """
+
+    # avoid maps being plotted upside down
+    matplotlib.pyplot.rcParams["image.origin"] = "lower"
+
     mask = future.manual_lasso_segmentation(array)
 
     if type(save_mask) != type(None):
