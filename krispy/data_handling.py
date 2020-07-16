@@ -245,7 +245,7 @@ def draw_mask(array, save_mask=None):
     mask = future.manual_lasso_segmentation(array)
 
     if type(save_mask) != type(None):
-        np.save(save_mask)
+        np.save(save_mask, mask)
 
     return mask
 
