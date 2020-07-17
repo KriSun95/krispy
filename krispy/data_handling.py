@@ -254,6 +254,55 @@ def draw_mask(array, save_mask=None):
     return mask
 
 
+## get boundaries for lasso region
+def draw_region_boundaries(region):
+    """Given an array/mask, this will produce the x,y lists to plot the boundary of the one region given in the mask.
+    
+    Parameters
+    ----------
+    region : np.array
+        The array/mask where the selected region is all 1s and 0s everywhere else (can only manage one region at the moment).
+            
+    Returns
+    -------
+    The x-position (columns) and y-position (rows) lists for the boundary for the given region.
+    """
+
+    # rows (y) and columns (x) for all mask entries that are 1
+    allOnes = np.where(region==1)
+
+    ## inColumns = [ [column, [rows in this column]], ... ] (this will have duplicate entries though)
+    inColumns = [[col , allOnes[0][np.where(allOnes[1]==col)]] for col in allOnes[1]] # rows in column
+
+    # remove duplicates, and find min/max row for the edge
+    removedCols=[]
+    bot_cont = []
+    top_cont = []
+    for c in inColumns:
+        ## if we haven't come across the column before, register it and continue
+        if c[0] not in removedCols:
+            removedCols.append(c[0])
+            if np.min(c[1]) == np.max(c[1]):
+                ## if the column only has one row then just add it to the bottom 
+                bot_cont.append([c[0], np.max(c[1])])
+            else:
+                ## else add the bottom and top boundary entries into the correct list
+                bot_cont.append([c[0], np.min(c[1])])
+                top_cont.append([c[0], np.max(c[1])])
+
+    colsb, rowsb = np.array(bot_cont)[:, 0], np.array(bot_cont)[:, 1] # rows and columns for bottom boundary line
+    ## order columns and rows in the order of increasing column
+    bot_ordered = [[c,r] for c,r in sorted(zip(colsb,rowsb))] 
+
+    colst, rowst = np.array(top_cont)[:, 0], np.array(top_cont)[:, 1]
+    ## bottom goes left-to-right so top needs to be ordered from right-to-left
+    top_ordered = [[c,r] for c,r in sorted(zip(colst,rowst),  reverse = True)] 
+
+    allIn = np.array([*bot_ordered, *top_ordered]) # combine bottom and top boundary lines
+    ## seperate columns and rows, and add first entry to the end (so it loops back to the start)
+    return [*allIn[:, 0], allIn[:, 0][0]], [*allIn[:, 1], allIn[:, 1][0]] 
+
+
 # a function to try and guess what time format you give it
 def getTimeFromFormat(timeString, **kwargs):
     """Give it a string of a date, it will return the UTC datetime object for it.
