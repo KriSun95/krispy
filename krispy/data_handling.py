@@ -18,6 +18,7 @@ import sunpy.visualization.colormaps
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 from skimage import future
+from scipy.ndimage import convolve
 
 #make a light curve
 def make_lightcurve(directory, bottom_left, top_right, time_filter=None, mask=None, isHMI=None):
@@ -255,52 +256,33 @@ def draw_mask(array, save_mask=None):
 
 
 ## get boundaries for lasso region
-def draw_region_boundaries(region):
-    """Given an array/mask, this will produce the x,y lists to plot the boundary of the one region given in the mask.
+def get_region_boundaries(region):
+    """Given an array/mask, this will produce the x,y lists to plot the boundary of the regions given in the mask.
     
     Parameters
     ----------
     region : np.array
-        The array/mask where the selected region is all 1s and 0s everywhere else (can only manage one region at the moment).
+        The array/mask where the selected region is all 1s and 0s everywhere else.
             
     Returns
     -------
-    The x-position (columns) and y-position (rows) lists for the boundary for the given region.
+    The x-position (columns) and y-position (rows) lists for the boundary for the given region. 
+    This output will not be ordered to plot as a line/loop
     """
 
-    # rows (y) and columns (x) for all mask entries that are 1
-    allOnes = np.where(region==1)
-
-    ## inColumns = [ [column, [rows in this column]], ... ] (this will have duplicate entries though)
-    inColumns = [[col , allOnes[0][np.where(allOnes[1]==col)]] for col in allOnes[1]] # rows in column
-
-    # remove duplicates, and find min/max row for the edge
-    removedCols=[]
-    bot_cont = []
-    top_cont = []
-    for c in inColumns:
-        ## if we haven't come across the column before, register it and continue
-        if c[0] not in removedCols:
-            removedCols.append(c[0])
-            if np.min(c[1]) == np.max(c[1]):
-                ## if the column only has one row then just add it to the bottom 
-                bot_cont.append([c[0], np.max(c[1])])
-            else:
-                ## else add the bottom and top boundary entries into the correct list
-                bot_cont.append([c[0], np.min(c[1])])
-                top_cont.append([c[0], np.max(c[1])])
-
-    colsb, rowsb = np.array(bot_cont)[:, 0], np.array(bot_cont)[:, 1] # rows and columns for bottom boundary line
-    ## order columns and rows in the order of increasing column
-    bot_ordered = [[c,r] for c,r in sorted(zip(colsb,rowsb))] 
-
-    colst, rowst = np.array(top_cont)[:, 0], np.array(top_cont)[:, 1]
-    ## bottom goes left-to-right so top needs to be ordered from right-to-left
-    top_ordered = [[c,r] for c,r in sorted(zip(colst,rowst),  reverse = True)] 
-
-    allIn = np.array([*bot_ordered, *top_ordered]) # combine bottom and top boundary lines
-    ## seperate columns and rows, and add first entry to the end (so it loops back to the start)
-    return [*allIn[:, 0], allIn[:, 0][0]], [*allIn[:, 1], allIn[:, 1][0]] 
+    ## find the sum of the 8 neighbouring pixels 
+    ## middle is 10 instead of 0 as I want the middle value to be >0 to start with 
+    kernel = np.array([[1, 1,  1],
+                       [1, 10, 1],
+                       [1, 1,  1]])
+    
+    ## find sum of neightbour pixels plus 10x of pixel's value
+    c = convolve(region, kernel, mode='constant')
+    
+    ## c[i]>10 means that pixel has a 1 (not a 0), c[i]<18 means not all of its neightbours have a 1 in them
+    boundary = np.array([list(i) for i,n in np.ndenumerate(c) if c[i]>10 and c[i]<18])
+    
+    return boundary[:,1], boundary[:,0]
 
 
 # a function to try and guess what time format you give it
