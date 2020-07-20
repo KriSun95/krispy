@@ -59,7 +59,7 @@ Alterations:
 
 #make images from the aia fits files
 def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None, rectangle_colour=None, save_inc=True, iron='',
-           cm_scale='Normalize', diff_image=None, res=None, save_smap=None, colourbar=True, time_filter=None):      
+           cm_scale='Normalize', diff_image=None, res=None, save_smap=None, colourbar=True, time_filter=None, mask_region=None):      
     """Takes a directory with fits files, constructs a map or submap of the full observation with/without a rectangle and
     saves the image in the requested directory.
     
@@ -135,9 +135,15 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
             ["%Y/%m/%d, %H:%M:%S", "%Y/%m/%d, %H:%M:%S"].
             Defualt: None
 
+    mask_region : 2d array(s)
+            A 2D array of the same size/shape as the final map you're creating where the region you want is all 1s with 0s elsewhere, e.g. 
+            mask=[[..., 0, 0, 0, 0, ...], [..., 1, 1, 1, 0, ...], [..., 0, 1, 1, 0, ...], [..., 0, 0, 1, 0, ...]]. 
+            Can use the colours from rectangle_colour. Make sure to input as a list, e.g. 'mask_region=[mask]' or 'mask_region=[mask1, mask2, ...]'.
+            Defualt: None
+
     Returns
     -------
-    AIA maps saved to the requested directory (so doesn't really return anythin).
+    AIA maps saved to the requested directory (so doesn't really return anything).
     """
     
     rectangle_colour = ["black"] if rectangle_colour is None else rectangle_colour
@@ -333,6 +339,31 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
                     rcol = "white" if len(rectangle_colour)==1 else rcol
                     plt.gca().add_patch(patches.Rectangle(bl_rect, length, height, facecolor="none", linewidth=2, edgecolor=rcol))
                     #smap.draw_rectangle(bl_rect, length*u.arcsec, height*u.arcsec, color = rcol, axes=plt.gca())
+
+                # if there are multiple boxes then label them with the colour, tough if you're using the same colour the now
+                if len(rectangle_colour) > 1:
+                    # lazy check for no repeats
+                    if rectangle_colour[0] not in rectangle_colour[1:]:
+                        plt.text(x, y-counter*0.06*(submap[3]-submap[1]), "Box "+str(counter+1), 
+                            verticalalignment="top", horizontalalignment="right",
+                            color=rcol)
+                        counter += 1
+
+        ## if a mask, or masks, are provided draw them
+        if mask_region is not None:
+
+            assert len(rectangle_colour)==len(mask_region) or len(mask_region)==1, "Check you have either given 1 colour in the \'rectangle_colour\' list or the same number of colours as mask_region!"
+            rectangle_colour = rectangle_colour if len(rectangle_colour)==len(mask_region) else rectangle_colour*len(mask_region)
+            x, y, counter = submap[2], submap[3], 0 # x and y for box titles if needed, plus a counter for the "for" loop
+
+            for mask, rcol in zip(mask_region, rectangle_colour):
+                # find the mask boundaries
+                cols, rows = data_handling.get_region_boundaries(mask)
+                if (iron != '') or (diff_image != None): #if iron or a diff map is needed then make the rectangles black
+                    rcol = "black" if len(rectangle_colour)==1 else rcol
+                else:
+                    rcol = "white" if len(rectangle_colour)==1 else rcol
+                plt.plot(cols, rows, color=rcol, alpha=0.4, markersize=1, linestyle="", marker="s")
 
                 # if there are multiple boxes then label them with the colour, tough if you're using the same colour the now
                 if len(rectangle_colour) > 1:
