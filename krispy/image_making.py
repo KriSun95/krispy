@@ -363,13 +363,13 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
                     rcol = "black" if len(rectangle_colour)==1 else rcol
                 else:
                     rcol = "white" if len(rectangle_colour)==1 else rcol
-                plt.plot(submap[0]+cols*smap.meta['cdelt1'], submap[1]+rows*smap.meta['cdelt1'], color=rcol, alpha=0.4, markersize=1, linestyle="", marker="s")
+                plt.plot(submap[0]+cols*smap.meta['cdelt1'], submap[1]+rows*smap.meta['cdelt2'], color=rcol, alpha=0.4, markersize=1, linestyle="", marker="s")
 
                 # if there are multiple boxes then label them with the colour, tough if you're using the same colour the now
                 if len(rectangle_colour) > 1:
                     # lazy check for no repeats
                     if rectangle_colour[0] not in rectangle_colour[1:]:
-                        plt.text(x, y-counter*0.06*(submap[3]-submap[1]), "Box "+str(counter+1), 
+                        plt.text(x, y-counter*0.06*(submap[3]-submap[1]), "Reg. "+str(counter+1), 
                             verticalalignment="top", horizontalalignment="right",
                             color=rcol)
                         counter += 1
