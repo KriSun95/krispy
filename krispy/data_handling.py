@@ -168,8 +168,9 @@ def make_lightcurve(directory, bottom_left, top_right, time_filter=None, mask=No
         return lc_times_xrt, lc_values_xrt
 
 
-def getTime(name=None, time_ranges=None, lightcurve_data=None, get='average'):
-    """Given a list of datetime times then the average, sum, or values value of lightcurve_data will be found between those times.
+def getBetweenTime(name=None, time_ranges=None, lightcurve_data=None, get='average'):
+    """Given a list of datetime times and values (i.e. {'times': [...] ,'data': [...]}) then the average, sum, or 
+    values of lightcurve_data will be found between those times.
     
     Parameters
     ----------
@@ -206,7 +207,7 @@ def getTime(name=None, time_ranges=None, lightcurve_data=None, get='average'):
         print('Need the lightcurve data as a dictionary, e.g. {\'times\':[dt_obj], \'data\':[...]}.')
         return
     
-    # find average values in the time periods indicated
+    # find average values, sum values, or values in the time periods indicated
     ave = []
     for tr in range(len(time_ranges)-1): 
         vals = []
@@ -222,7 +223,7 @@ def getTime(name=None, time_ranges=None, lightcurve_data=None, get='average'):
         elif get == 'values':
             ave.append(vals)
     
-    # return the average lightcurve value between the time range values
+    # e.g. return the average lightcurve value between the time range values
     # so len(averages) = len(time_ranges)-1
     return ave
 
