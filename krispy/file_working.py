@@ -332,7 +332,7 @@ def directory_structure(parent_dir=None):
     Parameters
     ----------
     parent_dir : Str
-    A string of the path to the directory to be checked.
+               A string of the path to the directory to be checked.
     
     Returns
     -------

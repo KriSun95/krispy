@@ -35,7 +35,8 @@ import pickle
 import subprocess
 import pytz
 from skimage import restoration
-from . import interp
+# from . import interp
+from scipy import interpolate
 
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters() # was told to do this by the machine
@@ -1394,10 +1395,11 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
             Temperature of the response you want in MK.
             
     plasma_em : float
-            Emission measure of the plasma in cm^-3.
+            Volumetric emission measure of the plasma in cm^-3. 
+            (If you have column emission measure, i.e. cm^-5, then set source_area=1.)
     
     source_area : float
-            Area of the source.
+            Area of the source in cm^2.
             
     errors : dict
             A dictionary of dictionaries containing the errors on T and EM, e.g. {'T':{'+':a, '-':b}, 
@@ -1417,11 +1419,9 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
     A dictionary of floats that is the synthetic DN/s per pixel for the data given, temperature response, 
     temperature, and emission measure with units and errors.
     """
-    if log_data == True:
-        temp_response = interp.find_my_y(np.log10(plasma_temp), np.log10(temp_response_dataxy['x']), np.log10(temp_response_dataxy['y']), logged_data=True)
-    else:
-        #find temperature response at the given plasma temperature in DN cm^5 pix^-1 s^-1
-        temp_response = interp.find_my_y(plasma_temp, temp_response_dataxy['x'], temp_response_dataxy['y'])
+    # find temperature response at the given plasma temperature in DN cm^5 pix^-1 s^-1
+    f = interpolate.interp1d(temp_response_dataxy['x'], temp_response_dataxy['y'])
+    temp_response = [f(plasma_temp)]
         
     syn_flux = [tr * plasma_em * (1 / source_area) for tr in temp_response]
     
@@ -1432,11 +1432,8 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
         
         e_response = []
         for Ts in [min_T, max_T]:
-            if log_data == True:
-                r = interp.find_my_y(np.log10(Ts), np.log10(temp_response_dataxy['x']), np.log10(temp_response_dataxy['y']), logged_data=True)
-            else:
-                #find temperature response at the given plasma temperature in DN cm^5 pix^-1 s^-1
-                r = interp.find_my_y(Ts, temp_response_dataxy['x'], temp_response_dataxy['y'])
+            # find temperature response at the given plasma temperature in DN cm^5 pix^-1 s^-1
+            r = [f(Ts)]
             e_response.append(r[0])
         
         temp_max_response = temp_response_dataxy['x'][np.argmax(temp_response_dataxy['y'])]

@@ -19,6 +19,7 @@ from astropy.coordinates import SkyCoord
 import astropy.units as u
 from skimage import future
 from scipy.ndimage import convolve
+import csv
 
 #make a light curve
 def make_lightcurve(directory, bottom_left, top_right, time_filter=None, mask=None, isHMI=None):
@@ -179,7 +180,7 @@ def getBetweenTime(name=None, time_ranges=None, lightcurve_data=None, get='avera
         Defualt: None
 
     time_ranges : list of datetimes
-        The times that you want the average value in between.
+        The times that you want the average value in between, e.g. [dt1, dt2, dt3, ...].
         Defualt: None
 
     lightcurve_data : dict
@@ -187,7 +188,7 @@ def getBetweenTime(name=None, time_ranges=None, lightcurve_data=None, get='avera
         Defualt: None
 
     get : Str
-        Decide whether you want the 'average', 'sum', 'values' back over the time range.
+        Decide whether you want the 'average', 'sum', 'values' back in between the times given.
         Defualt: 'average'
             
     Returns
@@ -213,7 +214,7 @@ def getBetweenTime(name=None, time_ranges=None, lightcurve_data=None, get='avera
         vals = []
         for c,t in enumerate(lightcurve_data['times']):
             
-            # the times within the time range, add corresponding values into the vals list to be averaged
+            # the times within the time range, add corresponding values into the vals list to be averaged, summed, or just returned
             if time_ranges[tr] < t <= time_ranges[tr+1]:
                 vals.append(lightcurve_data['data'][c])
         if get == 'average':
@@ -293,7 +294,7 @@ def getTimeFromFormat(timeString, **kwargs):
     Parameters
     ----------
     timeString : str
-        The date as a string. Format must be in the date_format_defualts
+        The date as a string. Format must be in the date_format_defualts.
 
     **kwargs : name=datetime format
         Your own datetime formats.
@@ -319,3 +320,31 @@ def getTimeFromFormat(timeString, **kwargs):
             continue
 
         return time
+
+
+def readAIAresponse(csvFile):
+    """Obtains the SDO/AIA responses from a .csv file.
+    
+    Parameters
+    ----------
+    csvFile : str
+        The .csv file with the SDO/AIA responses in it. First line should be labels for each 
+        column as a comma seperated string, e.g. row1=['logt, A94, A171'].
+            
+    Returns
+    -------
+    A dictionary with the responses where the keys are determined by the labels for each column.
+    """
+    
+    with open(csvFile) as csvfile:
+        readCSV = csv.reader(csvfile, delimiter=',')
+        resp = {}
+        for c,row in enumerate(readCSV):
+            if c == 0:
+                for t in row[0].split(sep=", "):
+                    resp[t]=[] # find and make the keys from the first row of the .csv file
+            else:
+                for a, key in enumerate(resp.keys()):
+                    resp[key].append(float(row[a])) # match each key to its index in the row
+        
+    return resp
