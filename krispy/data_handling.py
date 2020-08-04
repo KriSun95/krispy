@@ -33,10 +33,12 @@ def make_lightcurve(directory, bottom_left, top_right, time_filter=None, mask=No
             just make sure they are in order, e.g. [dir1,dir2,...]. The data must be prepped.
     
     bottom_left : 1-d array
-            The bottom left coordinates, [x,y] (as floats), for the light curve region in arcseconds.
+            The bottom left coordinates, [x,y] (as floats), for the light curve region in arcseconds. 
+            **If a mask is given then this is the bottom left [x,y] of the field-of-view for the mask.
             
     top_right : 1-d array
             The top right coordinates, [x,y] (as floats), for the light curve region in arcseconds.
+            **If a mask is given then this is the bottom left [x,y] of the field-of-view for the mask.
 
     time_filter : list, 2 strings
             If you provide a directory but only want a lightcurve made from a certain time range, e.g. 
@@ -141,6 +143,10 @@ def make_lightcurve(directory, bottom_left, top_right, time_filter=None, mask=No
                 ave_value = np.sum(np.array(t_norm_data)) / ((np.shape(np.array(t_norm_data))[0] * \
                                               np.shape(np.array(t_norm_data))[1]))
         elif (map_type == 'HMI') and (type(isHMI) != type(None)) and (type(isHMI)==type(1) or type(isHMI)==type(1.0)):
+            if type(mask) != type(None):
+                # only want values in the mask, everything else is 0
+                t_norm_data = np.array(t_norm_data) * np.array(mask)
+
             if isHMI >= 0:
                 t_norm_data[t_norm_data < isHMI] = 0 # set everything less than this value to zero
             elif isHMI < 0:
@@ -281,7 +287,7 @@ def get_region_boundaries(region):
     ## find sum of neightbour pixels plus 10x of pixel's value
     c = convolve(region, kernel, mode='constant')
     
-    ## c[i]>10 means that pixel has a 1 (not a 0), c[i]<18 means not all of its neightbours have a 1 in them
+    ## c[i]>10 means that pixel has a 1 (not a 0), c[i]<18 means not all of its neighbours have a 1 in them
     boundary = np.array([list(i) for i,n in np.ndenumerate(c) if c[i]>10 and c[i]<18])
     
     return boundary[:,1], boundary[:,0]

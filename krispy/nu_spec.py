@@ -378,6 +378,7 @@ def make_nusrm(rmf_matrix=(), arf_array=()):
         print('Need both RMF and ARF information to proceed.')
         return
     
+    ## try np.multiply(photon_spec, srm.T) then sum columns, or np.multiply(photon_spec, srm.T).T and still sum rows?
     srm = np.array([rmf_matrix[r, :] * arf_array[r] for r in range(len(arf_array))]) # each energy bin row in the rmf is multiplied the arf value for the same energy bin
     return srm
 
@@ -396,7 +397,7 @@ def make_model(energies=None, photon_model=None, parameters=None, srm=None):
             Default : None
             
     parameters : list
-            List representing the inputs a photon model function, if a function is provided, excludeing the energies the spectrum is over.
+            List representing the inputs of the photon model function, if a function is provided, excluding the energies the spectrum is over.
             Default : None
 
     srm : matrix/array
@@ -414,6 +415,7 @@ def make_model(energies=None, photon_model=None, parameters=None, srm=None):
     else:
         photon_spec = photon_model(energies, *parameters)
     
+    ## try photon_spec@srm for matrix multiplication?
     model_cts_matrix = np.array([srm[r, :] * photon_spec[r] for r in range(len(photon_spec))])
     model_cts_spectrum = model_cts_matrix.sum(axis=0) # sum the rows together
     
