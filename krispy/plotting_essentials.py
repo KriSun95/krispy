@@ -161,7 +161,7 @@ def cmap_midcolours(**kwargs):
     return cmap_dict #a dictionary with key names and the corresponding rgba values  
 
 
-def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, title="Lightcurves", nustardo_obj=None, samePlot=False):
+def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, title="Lightcurves", nustardo_obj=None, samePlot=False, other_data=None):
     """Takes a directory and a list of (pickle) files of lightcurves and produces a plot with all the lightcurves plotted.
     
     Parameters
@@ -192,6 +192,11 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
     samePlot : Bool
             Set to True if you want all the curves to be plotted on the same axis.
             Default: False
+
+    other_data : dictionary of length 2 dictionaries
+            If you have your own lightcurves that you want tagged on at the end of the plot/included, 
+            e.g. {"name":{"times":[dt_times], "units":[data]}} where "name" will label the axis and "units" provides y-axis label.
+            Default: None
             
     Returns
     -------
@@ -201,12 +206,17 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
     # use the function above to use the colours for AIA
     cmap_dict = cmap_midcolours()
 
+    if other_data is not None:
+        extra_plots = len(other_data)
+    else:
+        extra_plots = 0
+
     # manually set the number of plots to 1 if they are to all be plotted on the same axis
     if files is not None:
-        n = len(files) if samePlot is False else 1
+        n = len(files) + extra_plots if samePlot is False else 1
         ps = range(len(files))
     else:
-        n = len(data_list) if samePlot is False else 1
+        n = len(data_list) + extra_plots if samePlot is False else 1
         ps = range(len(data_list))
     
     fig, axs = plt.subplots(n,1,figsize=(16, 1.5*n+4), sharex=True)
@@ -278,6 +288,27 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
             nustardo_obj.plotChuTimes(axis=axs[plot])
             # avoid plotting the chu changes over and over all on the same plot
             n = n if samePlot is False else -1
+
+    if other_data is not None:
+        for c, custom_name in enumerate(other_data.keys()):
+            if samePlot is True:
+                pass
+                #axs[0].plot(dt_to_md(other_data[name]["times"]), data[name]['DN_per_sec_per_pixel']/np.max(data[name]['DN_per_sec_per_pixel']), label=name)
+            else:
+                plot = plot+c+1
+                units = [unts for unts in other_data[custom_name].keys() if unts is not "times"]
+                axs[plot].plot(other_data[custom_name]["times"], other_data[custom_name][units[0]], color="red", label=custom_name)
+                axs[plot].set_ylabel(units[0])
+                axs[plot].tick_params(axis='y')
+
+                # set up twin axis to label each subplot
+                twinx_ax = axs[plot].twinx()
+                twinx_ax.set_ylabel(custom_name)
+                twinx_ax.yaxis.label.set_color("red")
+                twinx_ax.set_yticks([])
+                twinx_ax.xaxis.set_major_formatter(fmt)
+                twinx_ax.xaxis.set_major_locator(tickTime)
+
 
     axs[0].set_title(title)
     # set x limits
