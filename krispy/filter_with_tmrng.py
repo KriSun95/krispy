@@ -1,5 +1,6 @@
 import numpy as np
 import datetime # edited by Kris ~16/10/2018
+from . import data_handling # edited by Kris ~18/08/2020
 
 
 def bad_pix(evtdata, fpm='A'):
@@ -119,9 +120,10 @@ def time_range(evtdata, tmrng):
 	if tmrng is None:
 		tmrng = [evtdata['TIME'][0], evtdata['TIME'][-1]]
 	elif tmrng is not None:
-		tstart = datetime.datetime.strptime(tmrng[0], '%Y/%m/%d, %H:%M:%S') #date must be in this format 'yyyy/mm/dd, HH:MM:SS'
-		tend = datetime.datetime.strptime(tmrng[1], '%Y/%m/%d, %H:%M:%S')
-		rel_t = datetime.datetime(2010,1 ,1 ,0 ,0 ,0) #the date NuSTAR times are defined from
+		#datetime.datetime.strptime(tmrng[0], '%Y/%m/%d, %H:%M:%S') #date must be in this format 'yyyy/mm/dd, HH:MM:SS'
+		tstart = data_handling.getTimeFromFormat(tmrng[0]) 
+		tend = data_handling.getTimeFromFormat(tmrng[1]) 
+		rel_t = data_handling.getTimeFromFormat("2010/01/01, 00:00:00") #the date NuSTAR times are defined from
 		tstart_s = (tstart - rel_t).total_seconds() #both dates are converted to number of seconds from 2010-Jan-1  
 		tend_s = (tend - rel_t).total_seconds()
 		tmrng = [tstart_s, tend_s] 

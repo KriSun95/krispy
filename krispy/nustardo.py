@@ -6,6 +6,8 @@ Functions to go in here (I think!?):
     ~NuSTAR class
 '''
 
+from . import data_handling
+
 import sys
 #from os.path import *
 import os
@@ -107,7 +109,7 @@ class NustarDo:
         # for plot title
         self.e_range_str = str(self.energy_range[0])+'-'+str(self.energy_range[1]) if self.energy_range[1]<79 else ">"+str(self.energy_range[0])
 
-        self.rel_t = datetime.datetime(2010,1 ,1 ,0 ,0 ,0) # nustar times are measured in seconds from this date
+        self.rel_t = data_handling.getTimeFromFormat("2010/01/01, 00:00:00") # nustar times are measured in seconds from this date
         
         #extract the data within the provided parameters
         hdulist = fits.open(evt_filename) #not self.evt_filename as fits.open needs to know the full path to the file
@@ -124,12 +126,10 @@ class NustarDo:
             self.cleanevt = filter_with_tmrng.event_filter(self.evt_data, fpm=focal_plane_module, 
                                                            energy_low=self.energy_range[0], 
                                                            energy_high=self.energy_range[1])
-            #NuSTAR time is the number of seconds from 1/1/2010
-            nustar_measured_from = datetime.datetime(2010,1 ,1 ,0 ,0 ,0)
             
             #start and end time of the NuSTAR observation as datetime objects
-            self.time_range = [(nustar_measured_from + timedelta(seconds=np.min(self.cleanevt['TIME']))).strftime('%Y/%m/%d, %H:%M:%S'),
-                              (nustar_measured_from + timedelta(seconds=np.max(self.cleanevt['TIME']))).strftime('%Y/%m/%d, %H:%M:%S')]
+            self.time_range = [(self.rel_t+ timedelta(seconds=np.min(self.cleanevt['TIME']))).strftime('%Y/%m/%d, %H:%M:%S'),
+                              (self.rel_t + timedelta(seconds=np.max(self.cleanevt['TIME']))).strftime('%Y/%m/%d, %H:%M:%S')]
         elif len(self.time_range) == 2:
             try:
                 self.cleanevt = filter_with_tmrng.event_filter(self.evt_data, fpm=focal_plane_module, 
@@ -154,8 +154,10 @@ class NustarDo:
         	self.xlocator = mdates.MinuteLocator(byminute=[0, 10, 20, 30, 40, 50], interval = 1)
         elif 600 < clevt_duration <= 3600*0.5:
         	self.xlocator = mdates.MinuteLocator(byminute=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55], interval = 1)
-        else:
+        elif 240 < clevt_duration <= 600:
         	self.xlocator = mdates.MinuteLocator(interval = 2)
+        else: 
+            self.xlocator = mdates.MinuteLocator(interval = 1)
         
 
 
@@ -372,7 +374,7 @@ class NustarDo:
         if self.time_norm == True:
             self.livetime(hk_filename=house_keeping_file, set_up_plot=False, show_fig=False)
             #livetime correction
-            time_range = [(datetime.datetime.strptime(tm, '%Y/%m/%d, %H:%M:%S') - self.rel_t).total_seconds() for tm in self.time_range]
+            time_range = [(data_handling.getTimeFromFormat(tm) - self.rel_t).total_seconds() for tm in self.time_range]
             indices = ((self.hk_times>=time_range[0]) & (self.hk_times<time_range[1]))
             ltimes_in_range = self.hk_livetimes[indices]
             livetime = np.average(ltimes_in_range)
@@ -675,9 +677,9 @@ class NustarDo:
         if tmrng is None:
             tmrng = [evtdata['TIME'][0], evtdata['TIME'][-1]]
         elif tmrng is not None:
-            tstart = datetime.datetime.strptime(tmrng[0], '%Y/%m/%d, %H:%M:%S') #date must be in this format 'yyyy/mm/dd, HH:MM:SS'
-            tend = datetime.datetime.strptime(tmrng[1], '%Y/%m/%d, %H:%M:%S')
-            rel_t = datetime.datetime(2010,1 ,1 ,0 ,0 ,0) #the date NuSTAR times are defined from
+            tstart = data_handling.getTimeFromFormat(tmrng[0]) #date must be in this format 'yyyy/mm/dd, HH:MM:SS'
+            tend = data_handling.getTimeFromFormat(tmrng[1])
+            rel_t = data_handling.getTimeFromFormat("2010/01/01, 00:00:00") #the date NuSTAR times are defined from
             tstart_s = (tstart - rel_t).total_seconds() #both dates are converted to number of seconds from 2010-Jan-1  
             tend_s = (tend - rel_t).total_seconds()
             tmrng = [tstart_s, tend_s] 
@@ -756,19 +758,20 @@ class NustarDo:
         assert self.hk_header['INSTRUME'][-1] == hk_fpm, 'The FPM from the .hk header and the .hk filename are different, i.e. {} =/= {}'.format(self.hk_header['INSTRUME'][-1], hk_fpm)
 
         self.hk_times = self.hk_data['time']
+        self.lvt_times = [(self.rel_t + timedelta(seconds=t)) for t in self.hk_times]
         self.hk_livetimes = self.hk_data['livetime']
         
         if set_up_plot:
             hktime = self.hk_times - self.hk_times[0]
-            dt_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in self.hk_times]
-            lt_start_hhmmss = str((datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=np.min(self.hk_times))).strftime('%Y/%m/%d, %H:%M:%S'))
+            dt_times = self.lvt_times
+            lt_start_hhmmss = str((self.rel_t + timedelta(seconds=np.min(self.hk_times))).strftime('%Y/%m/%d, %H:%M:%S'))
             fig = plt.figure()
             ax = plt.axes()
             plt.semilogy(self.dt_to_md(dt_times), self.hk_livetimes, drawstyle='steps-mid')
             plt.title('Livetime - '+lt_start_hhmmss[:10]) #get the date in the title
             plt.xlabel('Start Time - '+lt_start_hhmmss[12:])
             plt.ylabel('Livetime Fraction')
-            plt.xlim([dt_times[0], dt_times[-1]])
+            plt.xlim([data_handling.getTimeFromFormat(t) for t in self.time_range])#[dt_times[0], dt_times[-1]])
             plt.ylim([0,1])
             fmt = mdates.DateFormatter('%H:%M')
             ax.xaxis.set_major_formatter(fmt)
@@ -798,22 +801,19 @@ class NustarDo:
             sub_reg = self.rectangles
             self.sub_reg_lc = sub_reg
         single_lc = True # just start by assuming one light curve, don't worry, this only gets set to False if not
-            
-        #tz_correction = datetime.datetime.now() - datetime.datetime.utcnow() - timedelta(seconds=3599) # GMT=UTC+1 in the summer, GMT=UTC in winter
-        tz_correction = float(datetime.datetime.now().strftime('%s')) - float(datetime.datetime.now(pytz.timezone('Europe/London')).strftime('%s')) # GMT=UTC+1 in the summer, GMT=UTC in winter
-        tz_correction = timedelta(seconds=tz_correction)
+
         if tstart == None:
             tstart = np.min(cleanevt['TIME'])
             self.rel_tstart = tstart #already relative to 1/1/2010 and in seconds
         else:
-            tstart = datetime.datetime.strptime(tstart, '%Y/%m/%d, %H:%M:%S') #date must be in this format 
+            tstart = data_handling.getTimeFromFormat(tstart) 
             self.rel_tstart = (tstart - self.rel_t).total_seconds()
 
         if tend == None:
             tend = np.max(cleanevt['TIME'])
             self.rel_tend = tend #already relative to 1/1/2010 and in seconds
         else:
-            tend = datetime.datetime.strptime(tend, '%Y/%m/%d, %H:%M:%S')
+            tend = data_handling.getTimeFromFormat(tend)
             self.rel_tend = (tend - self.rel_t).total_seconds() 
             
         if count_rate == True:
@@ -839,8 +839,8 @@ class NustarDo:
                 times = counts[1][:-1]
                 self.t_bin_edges = counts[1]
                 
-                start_hhmmss = str((datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=np.min(times))).strftime('%H:%M:%S'))
-                start_yyyymmdd = str((datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=np.min(times))).strftime('%Y/%m/%d'))
+                start_hhmmss = str((self.rel_t + timedelta(seconds=np.min(times))).strftime('%H:%M:%S'))
+                start_yyyymmdd = str((self.rel_t + timedelta(seconds=np.min(times))).strftime('%Y/%m/%d'))
                 
             elif (type(cleanevt) == astropy.io.fits.fitsrec.FITS_rec) and (sub_reg != None):
                 #this is to plot the light curve of a sub-region.
@@ -863,8 +863,8 @@ class NustarDo:
                 edge += self.t_bin['seconds_per_bin']
             times = self.t_bin_edges[:-1]
             
-            start_hhmmss = str((datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=np.min(times))).strftime('%H:%M:%S'))
-            start_yyyymmdd = str((datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=np.min(times))).strftime('%Y/%m/%d'))
+            start_hhmmss = str((self.rel_t + timedelta(seconds=np.min(times))).strftime('%H:%M:%S'))
+            start_yyyymmdd = str((self.rel_t + timedelta(seconds=np.min(times))).strftime('%Y/%m/%d'))
             
             if (type(cleanevt) == astropy.io.fits.fitsrec.FITS_rec) and (sub_reg == None): #data form of NuSTAR
 
@@ -877,8 +877,10 @@ class NustarDo:
                     pixels = self.arcsec_to_pixel([sub_reg[0],sub_reg[1]], [sub_reg[2],sub_reg[3]])
                     spatial_evtdata = self.spatial_filter(self.cleanevt, pixels)
                     for t in range(len(self.t_bin_edges)-1):
-                        ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+self.t_bin_edges[t])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
-                        te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+self.t_bin_edges[t+1])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
+                        # ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+self.t_bin_edges[t]))).strftime('%Y/%m/%d, %H:%M:%S')
+                        # te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+self.t_bin_edges[t+1]))).strftime('%Y/%m/%d, %H:%M:%S')
+                        ts = (self.rel_t + timedelta(seconds=self.t_bin_edges[t])).strftime('%Y/%m/%d, %H:%M:%S')
+                        te = (self.rel_t + timedelta(seconds=self.t_bin_edges[t+1])).strftime('%Y/%m/%d, %H:%M:%S')
       
                         sub_cleanevt = self.time_filter(spatial_evtdata, tmrng=[ts, te])
                         counts.append(len(sub_cleanevt['TIME']))
@@ -895,8 +897,8 @@ class NustarDo:
                         spatial_evtdata = self.spatial_filter(self.cleanevt, pixels)
                         
                         for t in range(len(self.t_bin_edges)-1):
-                            ts = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+self.t_bin_edges[t])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
-                            te = (datetime.datetime(1970, 1, 1) + timedelta(seconds=(float(self.rel_t.strftime("%s"))+self.t_bin_edges[t+1])) + tz_correction).strftime('%Y/%m/%d, %H:%M:%S')
+                            ts = (self.rel_t + timedelta(seconds=self.t_bin_edges[t])).strftime('%Y/%m/%d, %H:%M:%S')
+                            te = (self.rel_t + timedelta(seconds=self.t_bin_edges[t+1])).strftime('%Y/%m/%d, %H:%M:%S')
                   
                             sub_cleanevt = self.time_filter(spatial_evtdata, tmrng=[ts, te])
                             counts.append(len(sub_cleanevt['TIME']))
@@ -920,12 +922,12 @@ class NustarDo:
                                 
                                 fig = plt.figure()
                                 ax = plt.axes()
-                                dt_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in times]
+                                dt_times = [(self.rel_t + timedelta(seconds=t)) for t in times]
 
                                 plt.plot(*self.stepped_lc_from_hist(self.dt_to_md(dt_times), counts_per_second))
                                 plt.title('NuSTAR FPM'+self.fpm+' '+self.e_range_str+' keV Light Curve - '+start_yyyymmdd + box)
 
-                                plt.xlim([dt_times[0] - timedelta(seconds=60), dt_times[-1] + timedelta(seconds=60)])
+                                plt.xlim([data_handling.getTimeFromFormat(t) for t in self.time_range])
                                 plt.xlabel('Start Time - '+start_hhmmss)
                                 
                                 plt.ylim([0, np.max(counts_per_second[np.isfinite(counts_per_second)])*1.05])
@@ -940,12 +942,12 @@ class NustarDo:
                         else:
                                 fig = plt.figure()
                                 ax = plt.axes()
-                                dt_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in times]
+                                dt_times = [(self.rel_t + timedelta(seconds=t)) for t in times]
 
                                 plt.plot(*self.stepped_lc_from_hist(self.dt_to_md(dt_times), counts))
                                 plt.title('NuSTAR FPM'+self.fpm+' '+self.e_range_str+' keV Light Curve - '+start_yyyymmdd + box)
 
-                                plt.xlim([dt_times[0] - timedelta(seconds=60), dt_times[-1] + timedelta(seconds=60)])
+                                plt.xlim([data_handling.getTimeFromFormat(t) for t in self.time_range])
                                 plt.xlabel('Start Time - '+start_hhmmss)
                                 
                                 plt.ylim([0, np.max(counts[np.isfinite(counts)])*1.05])
@@ -992,12 +994,12 @@ class NustarDo:
                 fig = plt.figure()
                 ax = plt.axes()
                 
-                dt_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in times]
+                dt_times = [(self.rel_t + timedelta(seconds=t)) for t in times]
 
                 plt.plot(*self.stepped_lc_from_hist(self.dt_to_md(dt_times), counts_per_second))
                 plt.title('NuSTAR FPM'+self.fpm+' '+self.e_range_str+' keV Light Curve - '+start_yyyymmdd)
 
-                plt.xlim([dt_times[0] - timedelta(seconds=60), dt_times[-1] + timedelta(seconds=60)])
+                plt.xlim([data_handling.getTimeFromFormat(t) for t in self.time_range])
                 plt.xlabel('Start Time - '+start_hhmmss)
                 
                 plt.ylim([0, np.max(counts_per_second[np.isfinite(counts_per_second)])*1.05])
@@ -1014,12 +1016,12 @@ class NustarDo:
             else:
                 fig = plt.figure()
                 ax = plt.axes()
-                dt_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in times]
+                dt_times = [(self.rel_t + timedelta(seconds=t)) for t in times]
 
                 plt.plot(*self.stepped_lc_from_hist(self.dt_to_md(dt_times), self.lc_counts))
                 plt.title('NuSTAR FPM'+self.fpm+' '+self.e_range_str+' keV Light Curve - '+start_yyyymmdd)
                 
-                plt.xlim([dt_times[0] - timedelta(seconds=60), dt_times[-1] + timedelta(seconds=60)])
+                plt.xlim([data_handling.getTimeFromFormat(t) for t in self.time_range])
                 plt.xlabel('Start Time - '+start_hhmmss)
                 
                 plt.ylim([0, np.max(self.lc_counts[np.isfinite(self.lc_counts)])*1.05])
@@ -1100,7 +1102,7 @@ class NustarDo:
 
         tick_labels = ['','1', '2', '12', '3', '13', '23', '123'] 
 
-        self.chu_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + datetime.timedelta(seconds=t)) for t in chu_time]
+        self.chu_times = [(self.rel_t + datetime.timedelta(seconds=t)) for t in chu_time]
 
         
         dt_times = self.chu_times
@@ -1110,9 +1112,10 @@ class NustarDo:
         plt.title('CHU States of NuSTAR on ' + dt_times[0].strftime('%Y/%m/%d')) #get the date in the title
         plt.xlabel('Start Time - ' + dt_times[0].strftime('%H:%M:%S'))
         plt.ylabel('NuSTAR CHUs')
-        plt.xlim([dt_times[0], dt_times[-1]])
+        plt.xlim([data_handling.getTimeFromFormat(t) for t in self.time_range])
         fmt = mdates.DateFormatter('%H:%M')
         ax.xaxis.set_major_formatter(fmt)
+        ax.xaxis.set_major_locator(self.xlocator)
         ax.axes.set_yticklabels(tick_labels)
         plt.xticks(rotation=30)
         if show_fig == True:
@@ -1172,7 +1175,7 @@ class NustarDo:
             self.all_detectors['det'+str(d)+'%'] = len(self.all_detectors['det'+str(d)]) / len(self.cleanevt['TIME']) * 100
 
             dets = np.histogram(self.all_detectors['det'+str(d)], self.t_bin_edges) #gives out bin values and bin edges
-            dt_times = [(datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=t)) for t in dets[1]]
+            dt_times = [(self.rel_t + timedelta(seconds=t)) for t in dets[1]]
             
             plt.plot(*self.stepped_lc_from_hist(self.dt_to_md(dt_times), dets[0]), label='det'+str(d)+': '+'{:.1f}'.format(self.all_detectors['det'+str(d)+'%'])+'%')
         plt.legend()
@@ -1212,8 +1215,8 @@ class NustarDo:
             evt_data = hdulist[1].data
             hdulist.close()
 
-            chuChanges[chu] = [datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=min(evt_data['time'])), 
-                               datetime.datetime(2010,1 ,1 ,0 ,0 ,0) + timedelta(seconds=max(evt_data['time']))]
+            chuChanges[chu] = [self.rel_t + timedelta(seconds=min(evt_data['time'])), 
+                               self.rel_t + timedelta(seconds=max(evt_data['time']))]
 
             # plot a shaded region or just the time boundaries for the chu changes
             if span:

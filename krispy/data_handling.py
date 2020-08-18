@@ -313,7 +313,8 @@ def getTimeFromFormat(timeString, **kwargs):
                             "fmt2":'%Y/%m/%dT%H:%M:%S.%f', "fmt3":'%Y/%m/%dT%H:%M:%S.%fZ', 
                             "fmt4":'%Y/%m/%d %H:%M:%S.%f', "fmt5":'%Y/%m/%d, %H:%M:%S.%f', 
                             "fmt6":'%Y/%m/%d %H:%M:%S', "fmt7":'%Y/%m/%d, %H:%M:%S', 
-                            "fmt8":'%Y-%m-%d, %H:%M:%S', "fmt9":'%Y-%m-%d %H:%M:%S'}
+                            "fmt8":'%Y-%m-%d, %H:%M:%S', "fmt9":'%Y-%m-%d %H:%M:%S', 
+                            "fmt10":'%Y%m%d_%H%M%S'}
     date_formats = {**date_format_defualts, **kwargs}
 
     for f in date_formats.keys():
