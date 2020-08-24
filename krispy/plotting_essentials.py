@@ -136,7 +136,7 @@ def cmap_midcolours(**kwargs):
         cmap_dict.update({n:colorval}) 
         
     #standard colourmaps given custom names to be used for plotting etc.
-    custom_cmaps = {'sdoaiaFeXVIII':'Blues', 'sdoaiaFeXVI':'Purples'} #custom names for standard colourmaps
+    custom_cmaps = {'sdoaiaFeXVIII':'GnBu', 'sdoaiaFeXVI':'Purples'} #custom names for standard colourmaps
     
     for c_cmap_name, std_cmap in custom_cmaps.items():
         cmap = matplotlib.cm.get_cmap(std_cmap)

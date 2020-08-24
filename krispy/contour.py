@@ -196,9 +196,10 @@ class Contours:
                 time = data_handling.getTimeFromFormat(header['date-obs']) #datetime.datetime.strptime(header['date-obs'], '%Y-%m-%dT%H:%M:%S.%fZ')
                 times.append(time)
             else:
-                # just to provide an entry so indices can match up
-                time = datetime.datetime.strptime('1979-01-01T00:00:00.000000Z', '%Y-%m-%dT%H:%M:%S.%fZ')
-                time = time.replace(tzinfo=datetime.timezone.utc)
+                ## just to provide an entry so indices can match up
+                # time = datetime.datetime.strptime('1979-01-01T00:00:00.000000Z', '%Y-%m-%dT%H:%M:%S.%fZ')
+                # time = time.replace(tzinfo=datetime.timezone.utc)
+                time = data_handling.getTimeFromFormat('1979-01-01T00:00:00.000000Z')
                 times.append(time)
 
         return times

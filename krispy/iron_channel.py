@@ -9,6 +9,7 @@ Functions to go in here (I think!?):
 from . import data_handling
 
 import os
+import sys
 import sunpy
 import sunpy.map
 import datetime
@@ -95,6 +96,8 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
     files_171 = co_171
     files_211 = co_211
     
+    d = 1
+    d_total = len(files_094)
     for f094, f171, f211 in zip(files_094, files_171, files_211):
         aia_map_094 = sunpy.map.Map(dir_094+f094)
         data_094 = aia_map_094.data / aia_map_094.meta['exptime']
@@ -136,4 +139,7 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
             fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'temp_resp_info', value='atLaunch')
 
         output.append(f094[:18] + '_FeXVIII.fits')
+
+        print(f'\r[function: {sys._getframe().f_code.co_name}] Saved {d} submap(s) of {d_total}.        ', end='') 
+        d += 1
     return output
