@@ -356,7 +356,14 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
             rectangle_colour = rectangle_colour if len(rectangle_colour)==len(mask_region) else rectangle_colour*len(mask_region)
             x, y, counter = submap[2], submap[3], 0 # x and y for box titles if needed, plus a counter for the "for" loop
 
+            # check mask size. This shouldn't be any more out than 1 pixel in x and/or y from the mask being from different Sunpy v or something
+            # or the mask could be from one instrument and you want the mask applied to another instrument with a different res.
+            for m_no, mask in enumerate(mask_region):
+                if not n.array_equal(np.shape(smap.data), np.shape(mask)) and d==0:
+                    mask_region[m_no] = data_handling.maskFill(mask, np.shape(smap.data))
+
             for mask, rcol in zip(mask_region, rectangle_colour):
+
                 # find the mask boundaries
                 cols, rows = data_handling.get_region_boundaries(mask)
                 if (iron != '') or (diff_image != None): #if iron or a diff map is needed then make the rectangles black

@@ -18,6 +18,7 @@ import sunpy.visualization.colormaps
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 from skimage import future
+from skimage.transform import resize
 from scipy.ndimage import convolve
 import csv
 
@@ -134,6 +135,12 @@ def make_lightcurve(directory, bottom_left, top_right, time_filter=None, mask=No
             return
 
         del aia_submap_lc
+
+        # check mask size. This shouldn't be any more out than 1 pixel in x and/or y from the mask being from different Sunpy v or something
+        # or the mask could be from one instrument and you want the mask applied to another instrument with a different res.
+        if type(mask) != type(None):
+            if not n.array_equal(np.shape(t_norm_data), np.shape(mask)) and d==0:
+                mask = maskFill(mask, np.shape(t_norm_data))
 
         # if a mask is provided of the region with 1 in the desired pixels and 0s everywhere else
         if (type(isHMI) == type(None)) and (map_type != 'HMI'):
@@ -291,6 +298,92 @@ def get_region_boundaries(region):
     boundary = np.array([list(i) for i,n in np.ndenumerate(c) if c[i]>10 and c[i]<18])
     
     return boundary[:,1], boundary[:,0]
+
+
+## if the mask is at a different resolution than the map. Is this because:
+# 1. The map and mask have given slightly different shapes of matrices? Different versions of Sunpy for example?
+def maskFill(mask, shape):
+    """Given an array/mask, this will try to pad it with zeros sensibly (or remove rows/columns) to reach the given shape.
+    
+    Parameters
+    ----------
+    mask : np.array or list
+        The array/mask where the selected region is all 1s and 0s everywhere else but is a different shape to the map to which it is being applied.
+
+    shape: tuple, len=2
+        The shape of the map to which the mask is being applied, e.g. (rows, columns).
+            
+    Returns
+    -------
+    The new, padded (or reduced) mask as a numpy array (right and top of the image is padded first then alternate, 
+    important for odd number of pixel difference).
+    """
+
+    # find difference in mask and shape
+    mask_size, mask = np.shape(mask), np.array(mask)
+    delta_row, delta_col = shape[0]-mask_size[0], shape[1]-mask_size[1]
+
+    # pad top row and right column first
+    # fix rows
+    if delta_row>0:
+        # if more rows are needed
+        for dr in range(delta_row):
+            if dr%2==0:
+                mask = np.concatenate((mask, np.array([0]*mask_size[1]).reshape(1,mask_size[1])), axis=0)
+            else:
+                mask = np.concatenate((np.array([0]*mask_size[1]).reshape(1,mask_size[1]), mask), axis=0)
+    elif delta_row<0:
+        for dr in range(abs(delta_row)):
+            if dr%2==0:
+                mask = mask[:-1, :]
+            else:
+                mask = mask[1:, :]
+            
+    # fix columns
+    shifted_rowcol = np.shape(mask) # new rows has been added, this changed the padding for the columns/rows
+    if delta_col>0:
+        # if more columns are needed
+        for dc in range(delta_col):
+            if dc%2==0:
+                mask = np.concatenate((mask, np.array([0]*shifted_rowcol[0]).reshape(shifted_rowcol[0], 1)), axis=1)
+            else:
+                mask = np.concatenate((np.array([0]*shifted_rowcol[0]).reshape(shifted_rowcol[0], 1), mask), axis=1)
+    elif delta_col<0:
+        for dc in range(abs(delta_col)):
+            if dc%2==0:
+                mask = mask[:, :-1]
+            else:
+                mask = mask[:, 1:]
+
+    return mask
+
+# 2. different instruments and so different resolutions
+def maskResize(mask, shape):
+    """Given an array/mask, this will try to resize it sensibly to the given shape.
+
+    ******** This is not getting used at the moment but a function *like* this may be needed soon. ********
+    
+    Parameters
+    ----------
+    mask : np.array
+        The array/mask where the selected region is all 1s and 0s everywhere else but is a different shape to the map to which it is being applied.
+
+    shape: tuple, len=2
+        The shape of the map to which the mask is being applied, e.g. (rows, columns).
+            
+    Returns
+    -------
+    The new, resized mask as a numpy array.
+    """
+
+    # make it very obvious the the mask is mathematically
+    mask[mask==0] = -1
+
+    # now resize the mask to the correct shape and convert back to 1s and 0s
+    mask_resized = resize(mask, (shape[0], shape[1]))
+    mask_resized[mask_resized > 0.5*mask_resized.max()] = 1
+    mask_resized[mask_resized <= 0.5*mask_resized.max()] = 0
+    return mask_resized
 
 
 # a function to try and guess what time format you give it
