@@ -359,7 +359,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
             # check mask size. This shouldn't be any more out than 1 pixel in x and/or y from the mask being from different Sunpy v or something
             # or the mask could be from one instrument and you want the mask applied to another instrument with a different res.
             for m_no, mask in enumerate(mask_region):
-                if not n.array_equal(np.shape(smap.data), np.shape(mask)) and d==0:
+                if not np.array_equal(np.shape(smap.data), np.shape(mask)) and d==0:
                     mask_region[m_no] = data_handling.maskFill(mask, np.shape(smap.data))
 
             for mask, rcol in zip(mask_region, rectangle_colour):

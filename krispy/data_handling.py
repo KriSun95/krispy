@@ -139,7 +139,7 @@ def make_lightcurve(directory, bottom_left, top_right, time_filter=None, mask=No
         # check mask size. This shouldn't be any more out than 1 pixel in x and/or y from the mask being from different Sunpy v or something
         # or the mask could be from one instrument and you want the mask applied to another instrument with a different res.
         if type(mask) != type(None):
-            if not n.array_equal(np.shape(t_norm_data), np.shape(mask)) and d==0:
+            if not np.array_equal(np.shape(t_norm_data), np.shape(mask)) and d==0:
                 mask = maskFill(mask, np.shape(t_norm_data))
 
         # if a mask is provided of the region with 1 in the desired pixels and 0s everywhere else
