@@ -385,14 +385,14 @@ class NustarDo:
             #fix really large plot, instead of going from -3600 to 3600 in x and y
             bl = SkyCoord(-1200*u.arcsec, -1200*u.arcsec, frame=self.nustar_map.coordinate_frame)
             tr = SkyCoord(1200*u.arcsec, 1200*u.arcsec, frame=self.nustar_map.coordinate_frame)
-            self.nustar_map = self.nustar_map.submap(bl,tr)
+            self.nustar_map = self.nustar_map.submap(bl,top_right=tr)
         elif len(submap) == 4: #Submap to plot?
             bottom_left = {'x':submap[0], 'y':submap[1]}
             top_right = {'x':submap[2], 'y':submap[3]}
             
             bl = SkyCoord(bottom_left['x']*u.arcsec, bottom_left['y']*u.arcsec, frame=self.nustar_map.coordinate_frame)
             tr = SkyCoord(top_right['x']*u.arcsec, top_right['y']*u.arcsec, frame=self.nustar_map.coordinate_frame)
-            self.nustar_map = self.nustar_map.submap(bl,tr)
+            self.nustar_map = self.nustar_map.submap(bl,top_right=tr)
         else:
             raise TypeError('\nCheck the submap coordinates that were given please. It should be a list with four '
                             'float/int entries in arcseconds in the form [bottom left x, bottom left y, top right x, '

@@ -136,7 +136,7 @@ def cmap_midcolours(**kwargs):
         cmap_dict.update({n:colorval}) 
         
     #standard colourmaps given custom names to be used for plotting etc.
-    custom_cmaps = {'sdoaiaFeXVIII':'GnBu', 'sdoaiaFeXVI':'Purples'} #custom names for standard colourmaps
+    custom_cmaps = {'sdoaiaFeXVIII':'Blues', 'sdoaiaFeXVI':'Purples'} #custom names for standard colourmaps
     
     for c_cmap_name, std_cmap in custom_cmaps.items():
         cmap = matplotlib.cm.get_cmap(std_cmap)
@@ -161,7 +161,8 @@ def cmap_midcolours(**kwargs):
     return cmap_dict #a dictionary with key names and the corresponding rgba values  
 
 
-def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, title="Lightcurves", nustardo_obj=None, samePlot=False, other_data=None):
+def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, title="Lightcurves", nustardo_obj=None, samePlot=False, 
+                       other_data=None, **kwargs):
     """Takes a directory and a list of (pickle) files of lightcurves and produces a plot with all the lightcurves plotted.
     
     Parameters
@@ -197,11 +198,15 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
             If you have your own lightcurves that you want tagged on at the end of the plot/included, 
             e.g. {"name":{"times":[dt_times], "units":[data]}} where "name" will label the axis and "units" provides y-axis label.
             Default: None
+
+    kwargs : e.g. nustar_other_data = True -> to step the lightcurve is the other_data is NuSTAR data.
             
     Returns
     -------
     Displays a figure comprised of lightcurve subplots.
     """
+
+    defaults = {"nustar_other_data":False, **kwargs}
 
     # use the function above to use the colours for AIA
     cmap_dict = cmap_midcolours()
@@ -297,7 +302,10 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
             else:
                 plot = plot+c+1
                 units = [unts for unts in other_data[custom_name].keys() if unts is not "times"]
-                axs[plot].plot(other_data[custom_name]["times"], other_data[custom_name][units[0]], color="red", label=custom_name)
+                if defaults["nustar_other_data"]:
+                    axs[plot].plot(other_data[custom_name]["times"], other_data[custom_name][units[0]], color="red", label=custom_name, drawstyle='steps-post')
+                else:
+                    axs[plot].plot(other_data[custom_name]["times"], other_data[custom_name][units[0]], color="red", label=custom_name)
                 axs[plot].set_ylabel(units[0])
                 axs[plot].tick_params(axis='y')
 

@@ -32,7 +32,7 @@ def make_sunpy(evtdata, hdr, norm_map=False):
     
     """
 
-    from sunpy.coordinates import get_sunearth_distance, get_sun_B0
+    #from sunpy.coordinates import get_sunearth_distance, get_sun_B0
 
     # Parse Header keywords
     for field in hdr.keys():

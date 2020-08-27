@@ -243,7 +243,7 @@ def aiamaps(directory, save_directory, submap=None, cmlims=None, rectangle=None,
             bl_fi = SkyCoord(submap[0]*u.arcsec, submap[1]*u.arcsec, frame=aia_map.coordinate_frame)
             tr_fi = SkyCoord(submap[2]*u.arcsec, submap[3]*u.arcsec, frame=aia_map.coordinate_frame)
         
-            smap = aia_map.submap(bl_fi,tr_fi) 
+            smap = aia_map.submap(bl_fi,top_right=tr_fi) 
             del aia_map
         else:
             smap = aia_map
@@ -1232,7 +1232,7 @@ def aiamaps_from_dir(fits_dir, out_dir, savefile_fmt='.png', dpi=300, cmlims = [
         if submap != []: #creates a submap
             bottom_left = SkyCoord(submap[0]*u.arcsec, submap[1]*u.arcsec, frame=aia_map.coordinate_frame)
             top_right = SkyCoord(submap[2]*u.arcsec, submap[3]*u.arcsec, frame=aia_map.coordinate_frame)
-            aia_submap = aia_map.submap(bottom_left, top_right)
+            aia_submap = aia_map.submap(bottom_left, top_right=top_right)
             
             if fexviii == True: #set colourmap and title for Iron 18
                 aia_submap.plot_settings['cmap'] = plt.cm.GnBu
@@ -1479,8 +1479,8 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
             bl_fi = SkyCoord(submap[0]*u.arcsec, submap[1]*u.arcsec, frame=aia_map.coordinate_frame)
             tr_fi = SkyCoord(submap[2]*u.arcsec, submap[3]*u.arcsec, frame=aia_map.coordinate_frame)
         
-            smap = aia_map.submap(bl_fi,tr_fi) 
-            second_smap = second_aia_map.submap(bl_fi,tr_fi)
+            smap = aia_map.submap(bl_fi,top_right=tr_fi) 
+            second_smap = second_aia_map.submap(bl_fi,top_right=tr_fi)
             del aia_map
             del second_aia_map
         else:

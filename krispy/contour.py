@@ -273,7 +273,7 @@ class Contours:
     
         bl = SkyCoord((submap[0])*u.arcsec, (submap[1])*u.arcsec, frame=aia_map.coordinate_frame)
         tr = SkyCoord((submap[2])*u.arcsec, (submap[3])*u.arcsec, frame=aia_map.coordinate_frame)
-        aia_data = aia_map.submap(bl,tr)
+        aia_data = aia_map.submap(bl,top_right=tr)
 
 
         if print_max == True:
@@ -287,7 +287,7 @@ class Contours:
         # tr_corr = SkyCoord((self.nuFoV[2]+90)*u.arcsec, (self.nuFoV[3]+90)*u.arcsec, frame=aia_map.coordinate_frame)
         bl_corr = SkyCoord((self.nuFoV[0])*u.arcsec, (self.nuFoV[1])*u.arcsec, frame=aia_map.coordinate_frame)
         tr_corr = SkyCoord((self.nuFoV[2])*u.arcsec, (self.nuFoV[3])*u.arcsec, frame=aia_map.coordinate_frame)
-        aia_corr_data = aia_map_for_corr.submap(bl_corr, tr_corr).data
+        aia_corr_data = aia_map_for_corr.submap(bl_corr, top_right=tr_corr).data
 
         return aia_data, aia_corr_data
     
