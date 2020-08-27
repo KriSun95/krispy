@@ -110,7 +110,7 @@ def make_lightcurve(directory, bottom_left, top_right, time_filter=None, mask=No
         bl = SkyCoord(bottom_left[0]*u.arcsec, bottom_left[1]*u.arcsec, frame=aia_map.coordinate_frame)
         tr = SkyCoord(top_right[0]*u.arcsec, top_right[1]*u.arcsec, frame=aia_map.coordinate_frame)
         
-        aia_submap_lc = aia_map.submap(bl,tr)
+        aia_submap_lc = aia_map.submap(bl,top_right=tr)
 
         del aia_map
 
