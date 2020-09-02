@@ -19,6 +19,7 @@ from skimage.transform import resize
 from scipy import signal
 from astropy.io import fits
 import matplotlib.colors as mc
+from matplotlib.patches import Circle
 from copy import deepcopy
 import re #for regular expressions
 import time
@@ -419,7 +420,7 @@ class Contours:
     def create_contours(self, nusun_objects=None, nu_objects=None, aia_object=None, 
                         iron='', contours=None, submap=None, annotate=True, 
                         background_contours=False, bg_limits=None, plot=True, 
-                        background_cmap=None, usr_title=None, save_name=''):
+                        background_cmap=None, usr_title=None, psf_radii=None, save_name=''):
 
         if plot == False:
             plt.rcParams['figure.frameon'] = False
@@ -430,6 +431,21 @@ class Contours:
             contours=self.colour_and_contours
         if submap == None:
             submap=self.submap
+        if psf_radii is not None:
+            if psf_radius == "top_left":
+                circx = submap[0] + 61 # 61, instead of 60, to leave a border around the circle
+                circy = submap[3] - 61
+            elif psf_radius == "bottom_right":
+                circx = submap[2] - 61
+                circy = submap[1] + 61
+            else:
+                # default is top right
+                circx = submap[2] - 61
+                circy = submap[3] - 61 
+            circle_FWHM = Circle((circx, circy), 18, facecolor='none', edgecolor='k', linewidth=2) # 18 arcsec
+            tpos_FWHM = [circx, circy-18]
+            circle_HPD = Circle((circx, circy), 60, facecolor='none', edgecolor='k', linewidth=2) # 60 arcsec
+            tpos_HPD = [circx, circy-60]
 
         plt.rcParams['font.size'] = 14
 
@@ -601,6 +617,12 @@ class Contours:
         elif bg_limits == None:
             compmap.plot()
 
+        if psf_radii is not None:
+            plt.add_patch(circle_FWHM)
+            plt.text(*tpos_FWHM, "FWHM", horizontalalignment="center", verticalalignment="top")
+            plt.add_patch(circle_HPD)
+            plt.text(*tpos_FWHM, "HPD", horizontalalignment="center", verticalalignment="top")
+
         if type(usr_title) == type(None):
             plt.title(f'{map_title} at {time_range[0]} to {time_range[1][-8:]}')
         else:
@@ -665,12 +687,12 @@ class Contours:
         self.background_frame = background_frame
     
     
-    def plot_contours(self, iron='', background_limits=None, background_contours=False, background_cmap=None, save_name='', annotate=True, plot=True, usr_title=None):
+    def plot_contours(self, iron='', background_limits=None, background_contours=False, background_cmap=None, save_name='', annotate=True, plot=True, usr_title=None, psf_radii=None):
         
         ax = self.create_contours(nusun_objects=self.nu_final_maps, nu_objects=self.nu_final_objects, 
                                   aia_object=self.background_frame, iron=iron, contours=self.colour_and_contours, 
                                   submap=self.submap, annotate=annotate, background_contours=background_contours, 
-                                  bg_limits=background_limits, plot=plot, background_cmap=background_cmap, usr_title=usr_title, save_name=save_name)
+                                  bg_limits=background_limits, plot=plot, background_cmap=background_cmap, usr_title=usr_title, psf_radii=psf_radii, save_name=save_name)
 
         return ax
     
