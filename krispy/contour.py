@@ -432,20 +432,22 @@ class Contours:
         if submap == None:
             submap=self.submap
         if psf_radii is not None:
+            psf_FWHM = 18
+            psf_HPD = 60
             if psf_radii == "top_left":
-                circx = submap[0] + 61 # 61, instead of 60, to leave a border around the circle
-                circy = submap[3] - 61
+                circx = submap[0] + psf_HPD/2 + 1 # +/-1 to leave a border around the circle
+                circy = submap[3] - psf_HPD/2 - 1
             elif psf_radii == "bottom_right":
-                circx = submap[2] - 61
-                circy = submap[1] + 61
+                circx = submap[2] - psf_HPD/2 - 1
+                circy = submap[1] + psf_HPD/2 + 5 # 5 here for the text
             else:
                 # default is top right
-                circx = submap[2] - 61
-                circy = submap[3] - 61 
-            circle_FWHM = Circle((circx, circy), 18, facecolor='none', edgecolor='k', linewidth=2) # 18 arcsec
-            tpos_FWHM = [circx, circy-18]
-            circle_HPD = Circle((circx, circy), 60, facecolor='none', edgecolor='k', linewidth=2) # 60 arcsec
-            tpos_HPD = [circx, circy-60]
+                circx = submap[2] - psf_HPD/2 - 1
+                circy = submap[3] - psf_HPD/2 - 1
+            circle_FWHM = Circle((circx, circy), psf_FWHM/2, facecolor='none', edgecolor='k', linewidth=2) # 18 arcsec
+            tpos_FWHM = [circx, circy-psf_FWHM/2]
+            circle_HPD = Circle((circx, circy), psf_HPD/2, facecolor='none', edgecolor='k', linewidth=2) # 60 arcsec
+            tpos_HPD = [circx, circy-psf_HPD/2]
 
         plt.rcParams['font.size'] = 14
 
