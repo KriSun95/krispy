@@ -623,7 +623,7 @@ class Contours:
             plt.gca().add_patch(circle_FWHM)
             plt.text(*tpos_FWHM, "FWHM", horizontalalignment="center", verticalalignment="top")
             plt.gca().add_patch(circle_HPD)
-            plt.text(*tpos_FWHM, "HPD", horizontalalignment="center", verticalalignment="top")
+            plt.text(*tpos_HPD, "HPD", horizontalalignment="center", verticalalignment="top")
 
         if type(usr_title) == type(None):
             plt.title(f'{map_title} at {time_range[0]} to {time_range[1][-8:]}')
