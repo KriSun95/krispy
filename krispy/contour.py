@@ -618,9 +618,9 @@ class Contours:
             compmap.plot()
 
         if psf_radii is not None:
-            plt.add_patch(circle_FWHM)
+            plt.gca().add_patch(circle_FWHM)
             plt.text(*tpos_FWHM, "FWHM", horizontalalignment="center", verticalalignment="top")
-            plt.add_patch(circle_HPD)
+            plt.gca().add_patch(circle_HPD)
             plt.text(*tpos_FWHM, "HPD", horizontalalignment="center", verticalalignment="top")
 
         if type(usr_title) == type(None):
