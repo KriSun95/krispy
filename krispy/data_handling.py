@@ -17,6 +17,7 @@ import matplotlib
 import sunpy.visualization.colormaps
 from astropy.coordinates import SkyCoord
 import astropy.units as u
+from astropy.io import fits
 from skimage import future
 from skimage.transform import resize
 from scipy.ndimage import convolve
@@ -451,7 +452,7 @@ def readAIAresponse(csvFile):
 
 
 # a function to extract keywords from the output XSPEC files
-def xpsecParams(xspec_fits, *args):
+def xspecParams(xspec_fits, *args):
     """Takes an XSPEC fits file and your guess at some keywords and returns those parameters 
     with some other (hopefully) useful information.
     
@@ -501,6 +502,6 @@ def xpsecParams(xspec_fits, *args):
     # now find the values of the keywords found, include the conversion factors for the EM and T
     output = {"emfact":3.5557e-42, "kev2mk":0.0861733}
     for f in findings:
-        output[f[0]] = [values[f[0]], f[1]]
+        output[f[0]] = [values[f[0]][0], f[1]]
     
     return output
