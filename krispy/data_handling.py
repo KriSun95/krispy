@@ -448,3 +448,59 @@ def readAIAresponse(csvFile):
                     resp[key].append(float(row[a])) # match each key to its index in the row
         
     return resp
+
+
+# a function to extract keywords from the output XSPEC files
+def xpsecParams(xspec_fits, *args):
+    """Takes an XSPEC fits file and your guess at some keywords and returns those parameters 
+    with some other (hopefully) useful information.
+    
+    Parameters
+    ----------
+    xspec_fits : str
+        The fits file in question.
+        
+    *args : str
+        The keywords (or general guess) at the parameters you want from the fits file. 
+        E.g. "temp" will give temperature ("kt#" in the file) but if you want a specific 
+        parameter/temperature then can have "kt1".
+            
+    Returns
+    -------
+    A dictionary with the keyword from the fits file as the keys, each with a list of 
+    the values obtained from that keyword and the arg you provided which got that keyword.
+    """
+    
+    # map easy to search for terms to the terms used in the xspec files
+    xspec_words = []
+    for a in args:
+        if a.lower() in ["t", "temp", "temperature"] and "kt" not in xspec_words:
+            xspec_words.append("kt")
+        elif a.lower() in ["em", "emissionmeasure", "norm", "normalisation"] and "norm" not in xspec_words:
+            xspec_words.append("norm")
+        elif a.lower() in ["break", "ebreak", "e_break"] and "break" not in xspec_words:
+            xspec_words.append("break")
+        elif a.lower() in ["photonindex", "phoindx", "index"] and "phoindx" not in xspec_words:
+            xspec_words.append("phoindx")
+        else:
+            xspec_words.append(a.lower())
+    
+    # what keywords are in the fits file
+    hdul = fits.open(xspec_fits)
+    keys = list(dict(hdul[1].header).values())
+    values = hdul[1].data
+    hdul.close()
+    
+    # find the keywords your words refer to
+    findings = []
+    for w in xspec_words:
+        for x in keys:
+            if w in str(x).lower():
+                findings.append([x, w])
+    
+    # now find the values of the keywords found, include the conversion factors for the EM and T
+    output = {"emfact":3.5557e-42, "kev2mk":0.0861733}
+    for f in findings:
+        output[f[0]] = [values[f[0]], f[1]]
+    
+    return output
