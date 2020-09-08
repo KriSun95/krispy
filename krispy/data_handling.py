@@ -476,7 +476,7 @@ def xpsecParams(xspec_fits, *args):
     for a in args:
         if a.lower() in ["t", "temp", "temperature"] and "kt" not in xspec_words:
             xspec_words.append("kt")
-        elif a.lower() in ["em", "emissionmeasure", "norm", "normalisation"] and "norm" not in xspec_words:
+        elif a.lower() in ["norm", "normalisation"] and "norm" not in xspec_words:
             xspec_words.append("norm")
         elif a.lower() in ["break", "ebreak", "e_break"] and "break" not in xspec_words:
             xspec_words.append("break")
