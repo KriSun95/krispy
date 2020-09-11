@@ -199,14 +199,14 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
             e.g. {"name":{"times":[dt_times], "units":[data]}} where "name" will label the axis and "units" provides y-axis label.
             Default: None
 
-    kwargs : e.g. nustar_other_data = True -> to step the lightcurve is the other_data is NuSTAR data.
+    kwargs : e.g. nustar_is_other_data = True -> to step the lightcurve is the other_data is NuSTAR data.
             
     Returns
     -------
     Displays a figure comprised of lightcurve subplots.
     """
 
-    defaults = {"nustar_other_data":False, **kwargs}
+    defaults = {"nustar_is_other_data":False, **kwargs}
 
     # use the function above to use the colours for AIA
     cmap_dict = cmap_midcolours()
@@ -302,7 +302,7 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
             else:
                 plot = plot+c+1
                 units = [unts for unts in other_data[custom_name].keys() if unts is not "times"]
-                if defaults["nustar_other_data"]:
+                if defaults["nustar_is_other_data"]:
                     axs[plot].plot(other_data[custom_name]["times"], other_data[custom_name][units[0]], color="red", label=custom_name, drawstyle='steps-post')
                 else:
                     axs[plot].plot(other_data[custom_name]["times"], other_data[custom_name][units[0]], color="red", label=custom_name)
