@@ -263,9 +263,9 @@ class Contours:
             try:
                 where_time = data_handling.getTimeFromFormat(where)
                 delta_times = [abs((data_handling.getTimeFromFormat(header['date-obs'])-where_time).total_seconds()) for header in bgs_header]
-                if np.min(delta_times) > 12:
-                    print(f"Closest time to {where} was >12s away. Please check this.")
                 index = np.argmin(np.array(delta_times))
+                if np.min(delta_times) > 12:
+                    print(f"Closest time to {where} was {data_handling.getTimeFromFormat(bgs_header[index]['date-obs'])} (>12s away). Please check this.")
                 bg = bgs[index]
                 hdr = bgs_header[index]
             except:
