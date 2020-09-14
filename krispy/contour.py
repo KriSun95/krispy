@@ -260,8 +260,17 @@ class Contours:
             bg = np.sum(bgs, axis=0)
             hdr = bgs_header[0]
         else:
-            print('Need a valid \'where\' input (start, middle, end, average, sum): ', sys._getframe().f_code.co_name)
-            return None
+            try:
+                where_time = data_handling.getTimeFromFormat(where)
+                delta_times = [abs((data_handling.getTimeFromFormat(header['date-obs'])-where_time).total_seconds()) for header in bgs_header]
+                if np.min(delta_times) > 12:
+                    print(f"Closest time to {where} was >12s away. Please check this.")
+                index = np.argmin(np.array(delta_times))
+                bg = bgs[index]
+                hdr = bgs_header[index]
+            except:
+                print('Need a valid \'where\' input (start, middle, end, average, sum, or time string): ', sys._getframe().f_code.co_name)
+                return None
         return sunpy.map.Map(bg, hdr)
         
     
