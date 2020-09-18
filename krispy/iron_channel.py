@@ -135,6 +135,10 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
         fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'exptime', value=1)
         #add in info that this is iron 18 apart from just the filename
         fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'iron_channel', value='iron18')
+        fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'file094', value=f094)
+        fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'file171', value=f171)
+        fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'file211', value=f211)
+        
         if tr_degradation_corr[0] is True:
             fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'temp_resp_info', value='atLaunch')
             deg_94_str, deg_171_str, deg_211_str = str(degs[0]), str(degs[1]), str(degs[2])

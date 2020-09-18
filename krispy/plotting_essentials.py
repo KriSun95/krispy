@@ -229,6 +229,8 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
     axs = axs if n>1 else [axs] #"samePlot is False" was the old statement
     fig.subplots_adjust(hspace=0.)
 
+    tickTime = None
+
     for plot in ps:
 
         # load in each lightcurve and plot
@@ -244,7 +246,14 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
 
         # set time labels for x-axis
         fmt = mdates.DateFormatter('%H:%M')
-        tickTime = mdates.MinuteLocator(byminute=[0, 10, 20, 30, 40, 50], interval = 1)
+        if type(tickTime) == type(None):
+            tmin_length  = (data[name]['times'][-1] - data[name]['times'][0]).total_seconds()/60
+            if 20 < tmin_length:
+                tickTime = mdates.MinuteLocator(byminute=[0, 10, 20, 30, 40, 50], interval = 1)
+            elif 10 < tmin_length <= 20:
+                tickTime = mdates.MinuteLocator(byminute=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55], interval = 1)
+            elif 0 < tmin_length <= 10:
+                tickTime = mdates.MinuteLocator(interval = 1)
         axs[plot].xaxis.set_major_formatter(fmt)
         axs[plot].xaxis.set_major_locator(tickTime)
         

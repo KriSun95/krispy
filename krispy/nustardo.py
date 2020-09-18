@@ -1423,8 +1423,12 @@ def nustars_synth_count(temp_response_dataxy, plasma_temp, plasma_em, source_are
     temperature, and emission measure with units and errors.
     """
     # find temperature response at the given plasma temperature in DN cm^5 pix^-1 s^-1
-    f = interpolate.interp1d(temp_response_dataxy['x'], temp_response_dataxy['y'])
-    temp_response = [f(plasma_temp)]
+    if log_data:
+        f = interpolate.interp1d(np.log10(temp_response_dataxy['x']), np.log10(temp_response_dataxy['y']))
+        temp_response = [10**f(np.log10(plasma_temp))]
+    else:
+        f = interpolate.interp1d(temp_response_dataxy['x'], temp_response_dataxy['y'])
+        temp_response = [f(plasma_temp)]
         
     syn_flux = [tr * plasma_em * (1 / source_area) for tr in temp_response]
     
