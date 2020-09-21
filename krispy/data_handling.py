@@ -141,15 +141,18 @@ def make_lightcurve(directory, bottom_left, top_right, time_filter=None, mask=No
         # or the mask could be from one instrument and you want the mask applied to another instrument with a different res.
         if type(mask) != type(None):
             if not np.array_equal(np.shape(t_norm_data), np.shape(mask)) and d==0:
+                print('Needing to re-shape the mask to the map size. Re-shaping ', np.shape(mask), ' to ', np.shape(t_norm_data), '.')
                 mask = maskFill(mask, np.shape(t_norm_data))
 
         # if a mask is provided of the region with 1 in the desired pixels and 0s everywhere else
         if (type(isHMI) == type(None)) and (map_type != 'HMI'):
             if type(mask) != type(None):
-                ave_value = np.sum( np.array(t_norm_data) * np.array(mask) ) / np.sum(np.array(mask))
+                emiss = np.array(t_norm_data) * np.array(mask)
+                # np.sum( np.array(t_norm_data) * np.array(mask) ) / np.sum(np.array(mask))
             else:
-                ave_value = np.sum(np.array(t_norm_data)) / ((np.shape(np.array(t_norm_data))[0] * \
-                                              np.shape(np.array(t_norm_data))[1]))
+                emiss = np.array(t_norm_data)
+                # np.sum(np.array(t_norm_data)) / ((np.shape(np.array(t_norm_data))[0] * np.shape(np.array(t_norm_data))[1]))
+            ave_value = np.mean(emiss[emiss>0])
         elif (map_type == 'HMI') and (type(isHMI) != type(None)) and (type(isHMI)==type(1) or type(isHMI)==type(1.0)):
             if type(mask) != type(None):
                 # only want values in the mask, everything else is 0
