@@ -60,7 +60,7 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
         import warnings
         warnings.simplefilter('ignore')
         from aiapy.calibrate import degradation
-        from aiapy.calibrate.util import get_correction_table
+        from aiapy.calibrate.util import get_correction_table, CALIBRATION_VERSION
         import astropy.units as u
         from astropy import time
         
@@ -141,7 +141,8 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
         
         if tr_degradation_corr[0] is True:
             fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'temp_resp_info', value='atLaunch')
-            deg_94_str, deg_171_str, deg_211_str = str(degs[0]), str(degs[1]), str(degs[2])
+            deg_94_str, deg_171_str, deg_211_str, cal_ver_str = str(degs[0]), str(degs[1]), str(degs[2]), str(CALIBRATION_VERSION)
+            fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'cal_ver', value=cal_ver_str)
             fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'deg_94', value=deg_94_str)
             fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'deg_171', value=deg_171_str)
             fits.setval(outdir + f094[:18] + '_FeXVIII.fits', 'deg_211', value=deg_211_str)

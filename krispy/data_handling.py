@@ -390,6 +390,42 @@ def maskResize(mask, shape):
     return mask_resized
 
 
+# function to increase the area slection from the draw_mask function
+def maskPadOnes(maskToIncrease, pixelPad=1):
+    """Increases the size of the region of ones in the mask by padding around the already existing ones by the pixelPad amount.
+    
+    Parameters
+    ----------
+    mask : np.array
+        The array/mask where the selected region is all 1s and 0s everywhere else but is a different shape to the map to which it is being applied.
+
+    pixelPad: int
+        The number of pixels to pad the already existing ones with.
+            
+    Returns
+    -------
+    Array with the regions of ones increased.
+    """
+
+    mask = np.copy(maskToIncrease)
+
+    kernel = np.array([[1, 1,  1],
+                       [1, 10, 1],
+                       [1, 1,  1]])
+    
+    for r in range(pixelPad):
+        ## find sum of neightbour pixels plus 10x of pixel's value
+        c = convolve(mask, kernel, mode='constant')
+    
+        ## 0<c[i]<10 means that pixel has a 0 but has a 1 in at least one contigous pixel
+        boundary = np.array([list(i) for i,n in np.ndenumerate(c) if c[i]<10 and c[i]>0])
+
+        for br, bc in zip(boundary[:,0], boundary[:,1]):
+            mask[br, bc] = 1
+
+    return mask
+
+
 # a function to try and guess what time format you give it
 def getTimeFromFormat(timeString, **kwargs):
     """Give it a string of a date, it will return the UTC datetime object for it.

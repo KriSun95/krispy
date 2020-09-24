@@ -273,16 +273,19 @@ class NustarDo:
             
             if os.path.exists(try_1):
                 psfhdu = fits.open(try_1)
+                psf_h = psfhdu[1].header['CDELT1'] # increment in degrees/pix
                 psf_array = psfhdu[1].data
                 psfhdu.close()
                 psf_used = try_1,
             elif os.path.exists(try_2):
                 psfhdu = fits.open(try_2)
+                psf_h = psfhdu[1].header['CDELT1'] # increment in degrees/pix
                 psf_array = psfhdu[1].data
                 psfhdu.close()
                 psf_used = try_2
             elif os.path.exists(try_3):
                 psfhdu = fits.open(try_3)
+                psf_h = psfhdu[1].header['CDELT1'] # increment in degrees/pix
                 psf_array = psfhdu[1].data
                 psfhdu.close()
                 psf_used = try_3
@@ -292,12 +295,19 @@ class NustarDo:
                 self.deconvolve['apply'] = False
                 deconv_settings_info = {'map':None, 'psf_file':None, 'psf_array':None, 'iterations':None}
                 return map_array
+                
+            # check same res, at least in 1-D
+            assert psf_h['CDELT1']*3600 == nuB.nustar_map.meta['CDELT1'], "The resolution in the PSF and the current map are different."
 
         elif type(psf_array) == str:
             psf_used = psf_array
             psfhdu = fits.open(psf_array)
+            psf_h = psfhdu[1].header['CDELT1'] # increment in degrees/pix
             psf_array = psfhdu[1].data
             psfhdu.close()
+
+            # check same res, at least in 1-D
+            assert psf_h['CDELT1']*3600 == nuB.nustar_map.meta['CDELT1'], "The resolution in the PSF and the current map are different."
             
         else:
             psf_used = 'Custom Array.'
