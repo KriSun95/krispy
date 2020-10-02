@@ -671,7 +671,9 @@ class Contours:
                                                                       colour_and_energy=colour_and_energy, 
                                                                       time_interval=time_range, submap=submap)
 
-        aia_file_list = np.array(os.listdir(aia_dir))
+        aia_file_list = os.listdir(aia_dir)
+
+        aia_file_list = np.array(sorted(aia_file_list))
         
         times_list = self.aia_file_times(aia_dir, aia_file_list=aia_file_list)
 
