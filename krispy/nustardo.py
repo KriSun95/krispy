@@ -297,7 +297,7 @@ class NustarDo:
                 return map_array
                 
             # check same res, at least in 1-D
-            assert psf_h['CDELT1']*3600 == nuB.nustar_map.meta['CDELT1'], "The resolution in the PSF and the current map are different."
+            assert psf_h*3600 == self.nustar_map.meta['CDELT1'], "The resolution in the PSF and the current map are different."
 
         elif type(psf_array) == str:
             psf_used = psf_array
