@@ -380,7 +380,7 @@ def maskResize(mask, shape):
     The new, resized mask as a numpy array.
     """
 
-    # make it very obvious the the mask is mathematically
+    # make it very obvious where the mask is mathematically
     mask[mask==0] = -1
 
     # now resize the mask to the correct shape and convert back to 1s and 0s
@@ -424,6 +424,34 @@ def maskPadOnes(maskToIncrease, pixelPad=1):
             mask[br, bc] = 1
 
     return mask
+
+
+# if you have multiple masks and want to combine them
+def combineMasks(*args):
+    """Combines the multiple masks you give it and gives back an array with them all combined.
+    
+    Parameters
+    ----------
+    *args : np.arrays
+        The masks, all need to be the same shape as least.
+            
+    Returns
+    -------
+    Array with the regions of ones.
+
+    Example
+    -------
+    mask1 = [[0,0,0],    mask2 = [[1,0,0] 
+             [0,1,1],             [0,1,0]
+             [0,1,0]]             [1,1,0]]
+    combineMasks(mask1, mask2)
+    >>> [[1,0,0],
+         [0,1,1],
+         [1,1,0]] 
+    """
+    added = sum(list(args))
+    added[added>0] = 1
+    return added
 
 
 # a function to try and guess what time format you give it
