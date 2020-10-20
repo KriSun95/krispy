@@ -262,34 +262,21 @@ class NustarDo:
             map_array = self.nustar_map.data
 
         if type(psf_array) == type(None):
-            if self.fpm == 'A':
-                try_1 = '/opt/caldb/data/nustar/fpm/bcf/psf/nuA2dpsfen1_20100101v001.fits'
-                try_2 = '/usr/local/caldb/data/nustar/fpm/bcf/psf/nuA2dpsfen1_20100101v001.fits'
-                try_3 = '/home/kris/Desktop/link_to_kris_ganymede/old_scratch_kris/data_and_coding_folder/nustar_psfs/nuA2dpsfen1_20100101v001.fits'
-            elif self.fpm == 'B':
-                try_1 = '/opt/caldb/data/nustar/fpm/bcf/psf/nuB2dpsfen1_20100101v001.fits'
-                try_2 = '/usr/local/caldb/data/nustar/fpm/bcf/psf/nuB2dpsfen1_20100101v001.fits'
-                try_3 = '/home/kris/Desktop/link_to_kris_ganymede/old_scratch_kris/data_and_coding_folder/nustar_psfs/nuB2dpsfen1_20100101v001.fits'
+            trials = ['/opt/caldb/data/nustar/fpm/bcf/psf/nu'+self.fpm+'2dpsfen1_20100101v001.fits', 
+                      '/usr/local/caldb/data/nustar/fpm/bcf/psf/nu'+self.fpm+'2dpsfen1_20100101v001.fits', 
+                      '/home/kris/Desktop/link_to_kris_ganymede/old_scratch_kris/data_and_coding_folder/nustar_psfs/nu'+self.fpm+'2dpsfen1_20100101v001.fits']
             
-            if os.path.exists(try_1):
-                psfhdu = fits.open(try_1)
-                psf_h = psfhdu[1].header['CDELT1'] # increment in degrees/pix
-                psf_array = psfhdu[1].data
-                psfhdu.close()
-                psf_used = try_1,
-            elif os.path.exists(try_2):
-                psfhdu = fits.open(try_2)
-                psf_h = psfhdu[1].header['CDELT1'] # increment in degrees/pix
-                psf_array = psfhdu[1].data
-                psfhdu.close()
-                psf_used = try_2
-            elif os.path.exists(try_3):
-                psfhdu = fits.open(try_3)
-                psf_h = psfhdu[1].header['CDELT1'] # increment in degrees/pix
-                psf_array = psfhdu[1].data
-                psfhdu.close()
-                psf_used = try_3
-            else:
+            found_psf = False
+            for t in trials:
+                if os.path.exists(t):
+                    psfhdu = fits.open(t)
+                    psf_h = psfhdu[1].header['CDELT1'] # increment in degrees/pix
+                    psf_array = psfhdu[1].data
+                    psfhdu.close()
+                    psf_used = t
+                    found_psf = True
+
+            if found_psf == False:
                 print('Could not find PSF file. Please provide the PSF filename or array.') 
                 print('Returning original map.')
                 self.deconvolve['apply'] = False
@@ -310,7 +297,7 @@ class NustarDo:
             assert psf_h['CDELT1']*3600 == nuB.nustar_map.meta['CDELT1'], "The resolution in the PSF and the current map are different."
             
         else:
-            psf_used = 'Custom Array.'
+            psf_used = 'Custom Array. Hopefully some numbers though.'
 
         deconvolved_RL = restoration.richardson_lucy(map_array, psf_array, iterations=it, clip=False)
         
@@ -342,7 +329,33 @@ class NustarDo:
         between_cols = [dataCols[0], dataCols[-1]]
 
         return {'rowIndices':between_rows, 'columnIndices':between_cols}
+
+
+    @staticmethod    
+    def create_submap(sunpy_map_obj, lose_off_limb, submap):
+        if (lose_off_limb == True) and (len(submap) == 0):
+            #fix really large plot, instead of going from -3600 to 3600 in x and y
+            bl = SkyCoord(-1200*u.arcsec, -1200*u.arcsec, frame=sunpy_map_obj.coordinate_frame)
+            tr = SkyCoord(1200*u.arcsec, 1200*u.arcsec, frame=sunpy_map_obj.coordinate_frame)
+            return sunpy_map_obj.submap(bl,top_right=tr)
+
+        elif len(submap) == 4: #Submap to plot?
+            bottom_left = {'x':submap[0], 'y':submap[1]}
+            top_right = {'x':submap[2], 'y':submap[3]}
             
+            bl = SkyCoord(bottom_left['x']*u.arcsec, bottom_left['y']*u.arcsec, frame=sunpy_map_obj.coordinate_frame)
+            tr = SkyCoord(top_right['x']*u.arcsec, top_right['y']*u.arcsec, frame=sunpy_map_obj.coordinate_frame)
+            return sunpy_map_obj.submap(bl,top_right=tr)
+
+        else:
+            raise TypeError('\nCheck the submap coordinates that were given please. It should be a list with four '
+                            'float/int entries in arcseconds in the form [bottom left x, bottom left y, top right x, '
+                            'top right y].')
+
+        if (self.deconvolve['apply'] == True) and (self.gaussian_filter['apply'] == True):
+            print('Caution! Did you mean to set deconvolve AND gaussian blurr to True? If so, then the'
+                  'deconvolution will happen first then the Gaussian filter is applied.')
+
 
 
     # might be best to only allow one of these at a time, either deconvolve OR gaussian filter
@@ -391,33 +404,18 @@ class NustarDo:
             lc_cor_nustar_map = self.nustar_map.data / (livetime * (time_range[1] - time_range[0]))
             self.nustar_map = sunpy.map.Map(lc_cor_nustar_map, self.nustar_map.meta)
             
-        if (lose_off_limb == True) and (len(submap) == 0):
-            #fix really large plot, instead of going from -3600 to 3600 in x and y
-            bl = SkyCoord(-1200*u.arcsec, -1200*u.arcsec, frame=self.nustar_map.coordinate_frame)
-            tr = SkyCoord(1200*u.arcsec, 1200*u.arcsec, frame=self.nustar_map.coordinate_frame)
-            self.nustar_map = self.nustar_map.submap(bl,top_right=tr)
-        elif len(submap) == 4: #Submap to plot?
-            bottom_left = {'x':submap[0], 'y':submap[1]}
-            top_right = {'x':submap[2], 'y':submap[3]}
-            
-            bl = SkyCoord(bottom_left['x']*u.arcsec, bottom_left['y']*u.arcsec, frame=self.nustar_map.coordinate_frame)
-            tr = SkyCoord(top_right['x']*u.arcsec, top_right['y']*u.arcsec, frame=self.nustar_map.coordinate_frame)
-            self.nustar_map = self.nustar_map.submap(bl,top_right=tr)
-        else:
-            raise TypeError('\nCheck the submap coordinates that were given please. It should be a list with four '
-                            'float/int entries in arcseconds in the form [bottom left x, bottom left y, top right x, '
-                            'top right y].')
-
-        if (self.deconvolve['apply'] == True) and (self.gaussian_filter['apply'] == True):
-            print('Caution! Did you mean to set deconvolve AND gaussian blurr to True? If so, then the'
-                  'deconvolution will happen first then the Gaussian filter is applied.')
-
-        if (self.deconvolve['apply'] == True):
-            if (submap is not self.FoV):
-                print('Deconvolvution will take place over the submap you have defined, but it should be FoV. This will be'
-                      ' updated to automatically deconvolve over the FoV.')
+        if (self.deconvolve['apply'] == False):
+            self.nustar_map = self.create_submap(self.nustar_map, lose_off_limb, self.submap)
+        
+        elif (self.deconvolve['apply'] == True):
+        	# make sure it's over the FoV
+            self.nustar_map = self.create_submap(self.nustar_map, lose_off_limb, self.FoV)
             dconv = self.nustar_deconv(it=self.deconvolve['iterations'], clip=self.deconvolve['clip'])
+            # make new map
             self.nustar_map = sunpy.map.Map(dconv, self.nustar_map.meta)
+            # now cut to the shape you want
+            self.nustar_map = self.create_submap(self.nustar_map, lose_off_limb, self.submap)
+
             
         if self.gaussian_filter['apply'] == True:
             gaussian_width = self.gaussian_filter['sigma']

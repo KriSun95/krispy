@@ -10,6 +10,8 @@ Functions to go in here (I think!?):
     ~aiamaps_from_dir() ****Use aiamaps instead right now, big memory leak****
     ~contourmaps_from_dir()
     ~iron18 cmap is now 'Blues' and the mid-colour can be found in plotting_essentials
+    KC:20/10/2020, added-
+    ~idl2map, function to plot idl map in python
 '''
 from . import file_working
 from . import contour
@@ -1632,3 +1634,67 @@ def overlay_aiamaps(directory, second_directory, save_directory, submap=None, cm
 
     print('\nLook everyone, it\'s finished!')
 
+
+
+def idl2map(map_object, **kwargs):
+    """Takes an IDL map object, reads in meta-data and array to use matplotlib.pyplot's imshow() to produce a 
+    figure with correct axes and units.
+    
+    Parameters
+    ----------
+    map_object : numpy.recarray
+            The IDL map object.
+    
+    **kwargs : various
+            submap=[bx, by, tx, ty]
+            axis = axis to plot on, e.g. axs[0], plt, etc.
+            vmin, vmax = minimum and maximum for the resulting plot respectively.
+            
+    Returns
+    -------
+    The axis object created from the IDL map data and meta-data.
+    """
+    
+    # but I want default key word arguments so I can change the axis if I want but still have a default
+    default_kwargs = {'axis':plt, 'vmin':None, 'vmax':None}
+    
+    # update default kwargs if needed
+    for key in kwargs:
+        default_kwargs[key] = kwargs[key]
+    axis = default_kwargs['axis']
+    
+    # non-plt axis has different syntax
+    if axis != plt:
+        xlm, ylm = axis.set_xlim, axis.set_ylim
+    else:
+        xlm, ylm = axis.xlim, axis.ylim
+    
+    for k in map_object.keys():
+        # only can do one map
+        key = k
+        break
+    
+    map_data = map_object[key][0][0] # [0][0] to strip away top array and 'header' info
+    
+    xcentre = map_object[key]['xc'][0] # coordinates of the centre of the map
+    ycentre = map_object[key]['yc'][0]
+    x_width = map_object[key]['dx'][0] # pixel width
+    y_width = map_object[key]['dy'][0] # pixel width
+    x_units = map_object[key]['xunits'][0].decode("utf-8") # units for the axes 
+    y_units = map_object[key]['yunits'][0].decode("utf-8") # byte strings so need decoded
+    
+    shape = np.shape(map_data)
+    x_length = x_width * shape[1] # pixel width * column number
+    y_height = y_width * shape[0] # pixel width * row number
+    
+    lx, rx = xcentre - (x_length)/2, xcentre + (x_length)/2 # left x and right x
+    by, ty = ycentre - (y_height)/2, ycentre + (y_height)/2 # bottom y and top y
+    Extent = [lx, rx, by, ty]
+    
+    axis.imshow(map_data, origin='lower', extent=Extent, vmin=default_kwargs['vmin'], vmax=default_kwargs['vmax'])
+
+    if 'submap' in kwargs:
+        xlm(kwargs['submap']['x']) # crop image with x and y limits
+        ylm(kwargs['submap']['y'])
+    
+    return plt.gca() # return current axis object
