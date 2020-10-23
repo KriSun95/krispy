@@ -1532,7 +1532,7 @@ def timefilter_evt(file, time_range=None, save_dir=None):
 
 
 
-def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange=None):
+def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange=None, printOut=False):
     """Takes a NuSTAR evt file and compares the grade 0 events to the events of all grades.
        Adapted from: https://github.com/ianan/ns_proc_test/blob/main/test_proc_jun20_002.ipynb
     
@@ -1543,7 +1543,7 @@ def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange
     
     wholeRangeToo : Bool
             If you want to plot the whole energy range in a second plot, next to the one ranging from 
-            1.6--10 keV, set the to True.
+            1.6--10 keV, set thi to True.
             Default: False
             
     saveFig : str
@@ -1554,6 +1554,10 @@ def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange
             If you only want a certain time range of the total file's spectrum to be plotted, e.g. 
             ["%Y/%m/%d, %H:%M:%S", "%Y/%m/%d, %H:%M:%S"].
             Defualt: None
+
+    printOut : Bool
+            If you want to print out the output nicely(-ish) set this to True.
+            Default: False
             
     Returns
     -------
@@ -1658,9 +1662,14 @@ def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange
 
     plt.show()
     
-    return {"file":evtFile,
-            "fileTimeRange":[file_start, file_end], 
-            "timeRangeGivenToPlot":timeRange,
-            "eff_exp":evt_header['livetime'], 
-            "ontime":evt_header['ontime'], 
-            "lvtime_percent":100*evt_header['livetime']/evt_header['ontime']}
+    output = {"file":evtFile,
+              "fileTimeRange":[file_start, file_end], 
+              "timeRangeGivenToPlot":timeRange,
+              "eff_exp":evt_header['livetime'], 
+              "ontime":evt_header['ontime'], 
+              "lvtime_percent":100*evt_header['livetime']/evt_header['ontime']}
+    if printOut:
+        for key in output.keys():
+            print(key, " : ", output[key])
+            
+    return output
