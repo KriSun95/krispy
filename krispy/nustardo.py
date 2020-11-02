@@ -1532,7 +1532,7 @@ def timefilter_evt(file, time_range=None, save_dir=None):
 
 
 
-def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange=None, printOut=False):
+def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange=None, printOut=False, shortTitle=""):
     """Takes a NuSTAR evt file and compares the grade 0 events to the events of all grades.
        Adapted from: https://github.com/ianan/ns_proc_test/blob/main/test_proc_jun20_002.ipynb
     
@@ -1558,6 +1558,10 @@ def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange
     printOut : Bool
             If you want to print out the output nicely(-ish) set this to True.
             Default: False
+
+    shortTitle : Str
+            Add a quick title to help keep track of the plots
+            Default: ""
             
     Returns
     -------
@@ -1615,7 +1619,7 @@ def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange
     plt.setp(ax1.get_xticklabels(), visible=False)
     ax1.set_xlim([1.6,10])
 
-    ax1.set_title("Grade 0 vs All Grades - Tiny Microflare")
+    ax1.set_title("Grade 0 vs All Grades - "+shortTitle)
     ax1.legend()
 
     # axis 2: the difference between all grades and grade 0
