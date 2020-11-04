@@ -1602,11 +1602,15 @@ def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange
     fintie_vals = np.isfinite(ratio)
     y_lims_ratio = [0.95, 1.05*np.max(ratio[fintie_vals])] if wholeRangeToo else [0.95, 1.05*np.max(ratio[fintie_vals][:int((10-1.6)/0.04)])]
 
+    axes_made = []
+
     plt.figure(figsize=(width,7))
     
     # define subplots for close look
     ax1 = plt.subplot2grid((4, columns), (0, 0), colspan=1, rowspan=3)
+    axes_made.append(ax1)
     ax2 = plt.subplot2grid((4, columns), (3, 0), colspan=1, rowspan=1)
+    axes_made.append(ax2)
     plt.tight_layout()
 
     # axis 1: the plots for all grades and grade 0
@@ -1636,7 +1640,9 @@ def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange
     if wholeRangeToo:
         # define subplots for close look
         ax3 = plt.subplot2grid((4, 2), (0, 1), colspan=1, rowspan=3)
+        axes_made.append(ax3)
         ax4 = plt.subplot2grid((4, 2), (3, 1), colspan=1, rowspan=1)
+        axes_made.append(ax4)
         plt.tight_layout()
 
         # axis 1: the plots for all grades and grade 0
@@ -1664,16 +1670,16 @@ def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange
     if type(saveFig) == str:
         plt.savefig(saveFig, bbox_inches="tight")
 
-    plt.show()
+    # plt.show()
     
-    output = {"file":evtFile,
+    inform = {"file":evtFile,
               "fileTimeRange":[file_start, file_end], 
               "timeRangeGivenToPlot":timeRange,
               "eff_exp":evt_header['livetime'], 
               "ontime":evt_header['ontime'], 
               "lvtime_percent":100*evt_header['livetime']/evt_header['ontime']}
     if printOut:
-        for key in output.keys():
-            print(key, " : ", output[key])
+        for key in inform.keys():
+            print(key, " : ", inform[key])
             
-    return output
+    return inform, axes_made
