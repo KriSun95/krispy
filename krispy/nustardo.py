@@ -264,7 +264,8 @@ class NustarDo:
         if type(psf_array) == type(None):
             trials = ['/opt/caldb/data/nustar/fpm/bcf/psf/nu'+self.fpm+'2dpsfen1_20100101v001.fits', 
                       '/usr/local/caldb/data/nustar/fpm/bcf/psf/nu'+self.fpm+'2dpsfen1_20100101v001.fits', 
-                      '/home/kris/Desktop/link_to_kris_ganymede/old_scratch_kris/data_and_coding_folder/nustar_psfs/nu'+self.fpm+'2dpsfen1_20100101v001.fits']
+                      '/home/kris/Desktop/link_to_kris_ganymede/old_scratch_kris/data_and_coding_folder/nustar_psfs/nu'+self.fpm+'2dpsfen1_20100101v001.fits',
+                      '/home/kris/Desktop/nustar_psfs/nu'+self.fpm+'2dpsfen1_20100101v001.fits']
             
             found_psf = False
             for t in trials:
