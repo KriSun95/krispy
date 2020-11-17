@@ -256,19 +256,73 @@ class NustarDo:
 
 
     def nustar_deconv(self, map_array=None, psf_array=None, it=10, clip=False):
+        """Class mathod to take a map (map_array) and a point spread function (psf_array) and deconvolve using 
+        the Richardson-Lucy method with a number of iterations (it). 
+    
+        Parameters
+        ----------
+        map_array : 2d array
+                The map of the data. Should be over the field of view. If "None" then the self.nustar_map class 
+                attribute is used.
+                Default: None
+
+        psf_array : file string or 2d array
+                The PSF you want to use. This can be a string of the fits file for the PSF or a 2d numpy array.
+                If "None" then several common paths for nu'+self.fpm+'2dpsfen1_20100101v001.fits' are check and 
+                if the file cannot be found the original map is returned. Currently this won't be rescaled if 
+                it is a different resolution to the map data, it will just crash insteadd.
+                Default: None
+
+        it : Int
+                Number of iterations for the deconvolution.
+                Default: 10
+
+        clip : Bool
+                Set values >1 and <-1 to 1 and -1 respectively after each iteration. Unless working with a 
+                normalised image this should be "False" otherwise it's a mess.
+                Default: False
+            
+        Returns
+        -------
+        A 2d numpy array of the deconvolved map.
+
+        Examples
+        --------
+        *Use within the class:
+            nu = NustarDo(nu_sunpos_file)
+            nu.deconvolve['apply'] = True
+            nu.deconvolve['iterations'] = iterations
+            nu.nustar_setmap(submap='FoV')
+            deconv_map = nu.nustar_map.data
+
+        *Use without class:
+            nu = NustarDo()
+            nu.fpm = "A" or "B"
+            nu.nustar_map = Sunpy NuSTAR map
+            deconv_map = nu.nustar_deconv(psf_array=STRING)
+
+            -or-
+
+            nu = NustarDo()
+            nu.fpm = "A" or "B"
+            deconv_map = nu.nustar_deconv(map_array=MAP, psf_array=ARRAY)
+        """
 
         ## for defaults
         if type(map_array) == type(None):
             map_array = self.nustar_map.data
 
         if type(psf_array) == type(None):
+            # defualt is to check for the nu'+self.fpm+'2dpsfen1_20100101v001.fits' PSF file (the one used in Glesener code)
             trials = ['/opt/caldb/data/nustar/fpm/bcf/psf/nu'+self.fpm+'2dpsfen1_20100101v001.fits', 
                       '/usr/local/caldb/data/nustar/fpm/bcf/psf/nu'+self.fpm+'2dpsfen1_20100101v001.fits', 
                       '/home/kris/Desktop/link_to_kris_ganymede/old_scratch_kris/data_and_coding_folder/nustar_psfs/nu'+self.fpm+'2dpsfen1_20100101v001.fits',
                       '/home/kris/Desktop/nustar_psfs/nu'+self.fpm+'2dpsfen1_20100101v001.fits']
-            
+
+            #assume we can't find the file
             found_psf = False
             for t in trials:
+                # try the files, if one exists use it
                 if os.path.exists(t):
                     psfhdu = fits.open(t)
                     psf_h = psfhdu[1].header['CDELT1'] # increment in degrees/pix
@@ -277,16 +331,18 @@ class NustarDo:
                     psf_used = t
                     found_psf = True
 
+            # if we still couldn't find a defualt PSF then print this, set self.deconvole to False, and just return the original map
             if found_psf == False:
                 print('Could not find PSF file. Please provide the PSF filename or array.') 
                 print('Returning original map.')
                 self.deconvolve['apply'] = False
-                deconv_settings_info = {'map':None, 'psf_file':None, 'psf_array':None, 'iterations':None}
+                self.deconv_settings_info = {'map':None, 'psf_file':None, 'psf_array':None, 'iterations':None}
                 return map_array
                 
             # check same res, at least in 1-D
             assert psf_h*3600 == self.nustar_map.meta['CDELT1'], "The resolution in the PSF and the current map are different."
 
+        # if you have provided your own psf file use that instead
         elif type(psf_array) == str:
             psf_used = psf_array
             psfhdu = fits.open(psf_array)
@@ -295,13 +351,15 @@ class NustarDo:
             psfhdu.close()
 
             # check same res, at least in 1-D
-            assert psf_h['CDELT1']*3600 == nuB.nustar_map.meta['CDELT1'], "The resolution in the PSF and the current map are different."
+            assert psf_h*3600 == self.nustar_map.meta['CDELT1'], "The resolution in the PSF and the current map are different."
             
         else:
             psf_used = 'Custom Array. Hopefully some numbers though.'
 
+        # deconvolve
         deconvolved_RL = restoration.richardson_lucy(map_array, psf_array, iterations=it, clip=False)
         
+        # deconvolution info for later use
         self.deconv_settings_info = {'map':map_array, 'psf_file':psf_used, 'psf_array':psf_array, 'iterations':it}
         return deconvolved_RL
 
