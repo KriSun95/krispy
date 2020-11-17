@@ -289,22 +289,24 @@ class NustarDo:
         Examples
         --------
         *Use within the class:
-            nu = NustarDo(nu_sunpos_file)
+            NU_SUNPOS_FILE, ITERATIONS = "nustar_filename", 10
+            nu = NustarDo(NU_SUNPOS_FILE)
             nu.deconvolve['apply'] = True
-            nu.deconvolve['iterations'] = iterations
+            nu.deconvolve['iterations'] = ITERATIONS
             nu.nustar_setmap(submap='FoV')
             deconv_map = nu.nustar_map.data
 
         *Use without class:
+            STRING, FPM = "psf_filename", "A" or "B"
             nu = NustarDo()
-            nu.fpm = "A" or "B"
+            nu.fpm = FPM
             nu.nustar_map = Sunpy NuSTAR map
             deconv_map = nu.nustar_deconv(psf_array=STRING)
 
             -or-
-
+            MAP, ARRAY, FPM = nustar data 2d numpy array, psf 2d numpy array, "A" or "B"
             nu = NustarDo()
-            nu.fpm = "A" or "B"
+            nu.fpm = FPM
             deconv_map = nu.nustar_deconv(map_array=MAP, psf_array=ARRAY)
         """
 
