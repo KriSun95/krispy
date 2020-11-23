@@ -27,6 +27,7 @@ from . import filter_with_tmrng ######Kris
 from . import custom_map ######Kris
 import sunpy.map
 from scipy import ndimage
+from scipy.optimize import curve_fit
 import re #for regular expressions
 import warnings #suppress astropy warnings
 import datetime
@@ -151,11 +152,11 @@ class NustarDo:
         # now for the time tick marks...
         clevt_duration = np.max(self.cleanevt['TIME'])-np.min(self.cleanevt['TIME'])
         if clevt_duration > 3600*0.5:
-        	self.xlocator = mdates.MinuteLocator(byminute=[0, 10, 20, 30, 40, 50], interval = 1)
+            self.xlocator = mdates.MinuteLocator(byminute=[0, 10, 20, 30, 40, 50], interval = 1)
         elif 600 < clevt_duration <= 3600*0.5:
-        	self.xlocator = mdates.MinuteLocator(byminute=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55], interval = 1)
+            self.xlocator = mdates.MinuteLocator(byminute=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55], interval = 1)
         elif 240 < clevt_duration <= 600:
-        	self.xlocator = mdates.MinuteLocator(interval = 2)
+            self.xlocator = mdates.MinuteLocator(interval = 2)
         else: 
             self.xlocator = mdates.MinuteLocator(interval = 1)
         
@@ -254,8 +255,90 @@ class NustarDo:
 
         self.cleanevt = shift_cleanevt
 
+    @staticmethod
+    def fov_rotation(evt_data):
+        """ Returns the average rotation of the NuSTAR FoV from the gradient of the edges between 
+        det0&3 and 1&2.
+        
+        Parameters
+        ----------
+        *args : list [rawx0, rawy0, solx0, soly0, int]
+            Each input should contain the raw X and Y coordinates from the (sunpos) evt file and the 
+            solar X and Y coordinates from the sunpos evt file as well as the detector these 
+            coordinates come from as an integer from 0 to 3.
+            
+        Returns
+        -------
+        A float of the average rotation from "North" in degrees where anticlockwise is positive.
+        This assumes the rotation is between 90 and -90 degrees.
+        
+        Examples
+        --------
+        getMeanAngle([rawx0, rawy0, solx0, soly0, 0], 
+                     [rawx1, rawy1, solx1, soly1, 1],
+                     [rawx2, rawy2, solx2, soly2, 2], 
+                     [rawx3, rawy3, solx3, soly3, 3])
+        >>> a number
+        """
 
-    def nustar_deconv(self, map_array=None, psf_array=None, it=10, clip=False):
+        ## split the detectors
+        d0_counts = evt_data[evt_data["det_id"]==0]
+        d1_counts = evt_data[evt_data["det_id"]==1]
+        d2_counts = evt_data[evt_data["det_id"]==2]
+        d3_counts = evt_data[evt_data["det_id"]==3]
+
+        ## now split up for the coordinates
+        rawx0, rawy0, solx0, soly0 = d0_counts["RAWX"], d0_counts["RAWY"], d0_counts["X"], d0_counts["Y"]
+        rawx1, rawy1, solx1, soly1 = d1_counts["RAWX"], d1_counts["RAWY"], d1_counts["X"], d1_counts["Y"]
+        rawx2, rawy2, solx2, soly2 = d2_counts["RAWX"], d2_counts["RAWY"], d2_counts["X"], d2_counts["Y"]
+        rawx3, rawy3, solx3, soly3 = d3_counts["RAWX"], d3_counts["RAWY"], d3_counts["X"], d3_counts["Y"]
+        args = [[rawx0, rawy0, solx0, soly0, 0], 
+                [rawx1, rawy1, solx1, soly1, 1],
+                [rawx2, rawy2, solx2, soly2, 2], 
+                [rawx3, rawy3, solx3, soly3, 3]]
+        
+        gradients = 0
+        for a in args:
+            rawx, rawy, solx, soly, det = a
+            
+            # use the pixel edges between det 0&3 and 1&2, use the raw pixel coordinates for this
+            # orientation from the nustar_swguide.pdf, Figure 3
+            if det==0:
+                cols = collectSameXs(rawy, rawx, solx, soly)
+                m_row_per_col = maxRowInCol(cols)
+            elif det==1:
+                cols = collectSameXs(rawx, rawy, solx, soly)
+                m_row_per_col = maxRowInCol(cols)
+            elif det==2:
+                cols = collectSameXs(rawy, rawx, solx, soly)
+                m_row_per_col = maxRowInCol(cols)
+            elif det==3:
+                cols = collectSameXs(rawx, rawy, solx, soly)
+                m_row_per_col = maxRowInCol(cols)
+
+            # working with rawx and y to make sure using correct edge then find the 
+            # corresponding entries in solar coords
+            aAndY = getXandY(m_row_per_col)
+            x, y = aAndY[0], aAndY[1]
+            
+            ## do I want to filter some out?
+            ## leave for now
+            #if det in [0, 1]:
+            #    x = x[y>np.median(y)]
+            #    y = y[y>np.median(y)]
+            #elif det in [2, 3]:
+            #    x = x[y<np.median(y)]
+            #    y = y[y<np.median(y)]
+            
+            # fit a straight line to the edge
+            popt, pcov = curve_fit(straightLine, x, y, p0=[0, np.mean(y)])
+            
+            gradients += getDegrees(popt[0])
+
+        return gradients/len(args)
+
+
+    def nustar_deconv(self, map_array=None, psf_array=None, it=10, OA2source_angle=None, clip=False):
         """Class mathod to take a map (map_array) and a point spread function (psf_array) and deconvolve using 
         the Richardson-Lucy method with a number of iterations (it). 
     
@@ -270,14 +353,18 @@ class NustarDo:
                 The PSF you want to use. This can be a string of the fits file for the PSF or a 2d numpy array.
                 If "None" then several common paths for nu'+self.fpm+'2dpsfen1_20100101v001.fits' are check and 
                 if the file cannot be found the original map is returned. Currently this won't be rescaled if 
-                it is a different resolution to the map data, it will just crash insteadd.
+                it is a different resolution to the map data, it will just crash instead.
                 Default: None
 
-        it : Int
+        it : int
                 Number of iterations for the deconvolution.
                 Default: 10
 
-        clip : Bool
+        OA2source_angle : float
+                Angle between the optical axis (OA) and the X-ray source in arcminutes (0<=OA2source_angle<8.5 arcminutes).
+                Default: None
+
+        clip : bool
                 Set values >1 and <-1 to 1 and -1 respectively after each iteration. Unless working with a 
                 normalised image this should be "False" otherwise it's a mess.
                 Default: False
@@ -321,14 +408,22 @@ class NustarDo:
                       '/home/kris/Desktop/link_to_kris_ganymede/old_scratch_kris/data_and_coding_folder/nustar_psfs/nu'+self.fpm+'2dpsfen1_20100101v001.fits',
                       '/home/kris/Desktop/nustar_psfs/nu'+self.fpm+'2dpsfen1_20100101v001.fits']
 
+            if type(OA2source_angle) != type(None):
+                psf_OA_angles = np.arange(0,9,0.5) # angles of 0 to 8.5 arcmin in 0.5 arcmin increments
+                index = np.argmin([abs(psfoaangles - OA2source_angle) for psfoaangles in psf_OA_angles]) # find the closest arcmin array
+                hdr_unit = index+1 # header units 1 to 18 (one for each of the arcmin entries) and 0 arcmin would be hdr_unit=1, hence the +1
+                print("using angle: ", hdr_unit)
+            else:
+                hdr_unit = 1
+
             #assume we can't find the file
             found_psf = False
             for t in trials:
                 # try the files, if one exists use it
                 if os.path.exists(t):
                     psfhdu = fits.open(t)
-                    psf_h = psfhdu[1].header['CDELT1'] # increment in degrees/pix
-                    psf_array = psfhdu[1].data
+                    psf_h = psfhdu[hdr_unit].header['CDELT1'] # increment in degrees/pix
+                    psf_array = psfhdu[hdr_unit].data
                     psfhdu.close()
                     psf_used = t
                     found_psf = True
@@ -420,7 +515,7 @@ class NustarDo:
 
 
     # might be best to only allow one of these at a time, either deconvolve OR gaussian filter
-    deconvolve = {'apply':False, 'iterations':10, 'clip':False} # set before nustar_setmap to run deconvolution on map
+    deconvolve = {'apply':False, 'iterations':10, 'OA2source_angle':None, 'clip':False} # set before nustar_setmap to run deconvolution on map
     gaussian_filter = {'apply':False, 'sigma':2, 'mode':'nearest'}
     sub_lt_zero = np.nan # replace less than zeroes with this value for plotting in a linear scale
     own_map = None # if you already have a map that you want a submap of then set this, be careful not to time normalize again though
@@ -469,9 +564,9 @@ class NustarDo:
             self.nustar_map = self.create_submap(self.nustar_map, lose_off_limb, self.submap)
         
         elif (self.deconvolve['apply'] == True):
-        	# make sure it's over the FoV
+            # make sure it's over the FoV
             self.nustar_map = self.create_submap(self.nustar_map, lose_off_limb, self.FoV)
-            dconv = self.nustar_deconv(it=self.deconvolve['iterations'], clip=self.deconvolve['clip'])
+            dconv = self.nustar_deconv(it=self.deconvolve['iterations'], OA2source_angle=self.deconvolve['OA2source_angle'], clip=self.deconvolve['clip'])
             # make new map
             self.nustar_map = sunpy.map.Map(dconv, self.nustar_map.meta)
             # now cut to the shape you want
@@ -1744,3 +1839,270 @@ def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange
             print(key, " : ", inform[key])
             
     return inform, axes_made
+
+
+
+## functions to help find the FoV rotation
+def collectSameXs(rawx, rawy, solx, soly):
+    """ Returns a dictionary where each column is given a unique entry with a list 
+    of the rows that correspond to that one column from the evt file. Also saves the 
+    solar coordinates for that raw coordinate column with the rawx column key+"map2sol".
+    
+    Parameters
+    ----------
+    rawx, rawy : lists
+        Raw coordinates of the evt counts.
+        
+    solx, soly : lists
+        Solar coordinates of the sunpos evt counts.
+        
+    Returns
+    -------
+    A dictionary.
+    
+    Examples
+    --------
+    rawx, rawy = [1,2,3,3], [7,8,4,9]
+    solx, soly = [101, 102, 103, 104], [250, 252, 254, 256]
+
+    collectSameXs(rawx, rawy, solx, soly)
+    >>> {"1":[7], "1map2sol":[101, 250], 
+         "2":[8], "2map2sol":[102, 252], 
+         "3":[4, 9], "3map2sol":[[103, 254], [104, 256]]}
+    """
+    output = {}
+    for c,xs in enumerate(rawx):
+        if str(xs) not in output:
+            output[str(xs)] = [rawy[c]]
+            output[str(xs)+"map2sol"] = [[solx[c], soly[c]]]
+        else:
+            output[str(xs)].append(rawy[c])
+            output[str(xs)+"map2sol"].append([solx[c], soly[c]])
+        assert len([solx[c], soly[c]])==2
+    return output
+
+def minRowInCol(columns):
+    """ Returns a dictionary where each key is the solar X position of each raw 
+    coordinate chosen (edges between det0&3 and 1&2) with its value being the 
+    solar Y coordinate.
+    
+    Parameters
+    ----------
+    columns : dictionary
+        Information of the raw and solar coordinates of the counts in order to 
+        each other.
+        
+        
+    Returns
+    -------
+    A dictionary.
+    
+    Examples
+    --------
+    cols = {"1":[7], "1map2sol":[101, 250], 
+            "2":[8], "2map2sol":[102, 252], 
+            "3":[4, 9], "3map2sol":[[103, 254], [104, 256]]}
+
+    minRowInCol(cols)
+    >>> {"101":250, "102":252, "103":254}
+    """
+    output_sol = {}
+    for key in columns.keys():
+        if "map2sol" not in key:
+            # find the corresponding solar coords to the minimum rawy
+            sol_coords = columns[key+"map2sol"][np.argmin(columns[key])]
+            # now have the solarX key with the solarY as its value
+            assert len(sol_coords)==2
+            output_sol[str(sol_coords[0])] = sol_coords[1]
+    return output_sol
+
+def maxRowInCol(columns):
+    """ Returns a dictionary where each key is the solar X position of each raw 
+    coordinate chosen (edges between det0&3 and 1&2) with its value being the 
+    solar Y coordinate.
+    
+    Parameters
+    ----------
+    columns : dictionary
+        Information of the raw and solar coordinates of the counts in order to 
+        each other.
+        
+        
+    Returns
+    -------
+    A dictionary.
+    
+    Examples
+    --------
+    cols = {"1":[7], "1map2sol":[101, 250], 
+            "2":[8], "2map2sol":[102, 252], 
+            "3":[4, 9], "3map2sol":[[103, 254], [104, 256]]}
+
+    minRowInCol(cols)
+    >>> {"101":250, "102":252, "104":256}
+    """
+    output_sol = {}
+    for key in columns.keys():
+        if "map2sol" not in key:
+            # find the corresponding solar coords to the maximum rawy
+            sol_coords = columns[key+"map2sol"][np.argmax(columns[key])]
+            # now have the solarX key with the solarY as its value
+            output_sol[str(sol_coords[0])] = sol_coords[1]
+    return output_sol
+
+def getXandY(colsAndRows):
+    """ Returns solar X and Y coordinates.
+    
+    Parameters
+    ----------
+    colsAndRows : dictionary
+        Keys as the solar X and values of solar Y coordinates.
+        
+    Returns
+    -------
+    Two numpy arrays.
+    
+    Examples
+    --------
+    colsAndRows = {"101":250, "102":252, "104":256}
+
+    getXandY(colsAndRows)
+    >>> [101, 102, 104], [250, 252, 256]
+    """
+    return np.array([int(c) for c in list(colsAndRows.keys())]), np.array(list(colsAndRows.values()))
+
+def getDegrees(grad):
+    """ Returns angle of rotation in degrees.
+    
+    Parameters
+    ----------
+    grad : float
+        Gradient.
+        
+    Returns
+    -------
+    Angle in degrees.
+    
+    Examples
+    --------
+    grad = 1
+
+    getDegrees(grad)
+    >>> 45
+    """
+    return np.arctan(grad)*(180/np.pi)
+
+def straightLine(x, m, c):
+    """ A straight line model.
+    
+    Parameters
+    ----------
+    x : numpy list
+        X positions.
+    
+    m : float
+        Gradient.
+    
+    c : float
+        Y-intercept.
+        
+    Returns
+    -------
+    Ys for a straight line.
+    
+    Examples
+    --------
+    x, m, c = [1, 2], 0.25, 1
+
+    straightLine(x, m, c)
+    >>> [1.25, 1.5]
+    """
+    return m*x + c
+
+def getAngle_plot(rawx, rawy, solx, soly, det, **kwargs):
+    """ Returns the rotation of the NuSTAR FoV from the gradient of the edges between 
+    det0&3 and 1&2 for whatever detector(s) you give it.
+    
+    Parameters
+    ----------
+    rawx, rawy : lists
+        Raw coordinates of the evt counts.
+        
+    solx, soly : lists
+        Solar coordinates of the sunpos evt counts.
+    
+    det : int
+        The detector for the counts (0--3).
+        
+    **kwargs : Can pass an axis to it.
+        
+    Returns
+    -------
+    A float of the rotation from "North" in degrees where anticlockwise is positive.
+    This assumes the rotation is between 90 and -90 degrees.
+    
+    Examples
+    --------
+    fig, axs = plt.subplots(2,2, figsize=(14,10))
+
+    # get orientation from the nustar_swguide.pdf, Figure 3
+
+    gradient0 = getAngle_plot(rawx0, rawy0, solx0, soly0, 0, axes=axs[0][0])
+    gradient1 = getAngle_plot(rawx1, rawy1, solx1, soly1, 1, axes=axs[0][1])
+    gradient2 = getAngle_plot(rawx2, rawy2, solx2, soly2, 2, axes=axs[1][1])
+    gradient3 = getAngle_plot(rawx3, rawy3, solx3, soly3, 3, axes=axs[1][0])
+
+    plt.show()
+    """
+    
+    k = {"axes":plt}
+    for kw in kwargs:
+        k[kw] = kwargs[kw]
+        
+    if det==0:
+        cols = collectSameXs(rawy, rawx, solx, soly)
+        m_row_per_col = maxRowInCol(cols)
+    elif det==1:
+        cols = collectSameXs(rawx, rawy, solx, soly)
+        m_row_per_col = maxRowInCol(cols)
+    elif det==2:
+        cols = collectSameXs(rawy, rawx, solx, soly)
+        m_row_per_col = maxRowInCol(cols)
+    elif det==3:
+        cols = collectSameXs(rawx, rawy, solx, soly)
+        m_row_per_col = maxRowInCol(cols)
+
+    # working with rawx and y to make sure using correct edge then find the 
+    # corresponding entries in solar coords
+    aAndY = getXandY(m_row_per_col)
+    x, y = aAndY[0], aAndY[1]
+    
+    xlim, ylim = [np.min(x)-5, np.max(x)+5], [np.min(y)-5, np.max(y)+5]
+    #if det in [0, 1]:
+    #    x = x[y>np.median(y)]
+    #    y = y[y>np.median(y)]
+    #elif det in [2, 3]:
+    #    x = x[y<np.median(y)]
+    #    y = y[y<np.median(y)]
+    
+    popt, pcov = curve_fit(straightLine, x, y, p0=[0, np.mean(y)])
+    
+    k["axes"].plot(x, y, '.')
+    k["axes"].plot(x, straightLine(x, *popt))
+    
+    if k["axes"] != plt:
+        k["axes"].set_ylim(ylim)
+        k["axes"].set_xlim(xlim)
+        k["axes"].set_ylabel("Solar-Y")
+        k["axes"].set_xlabel("Solar-X")
+    else:
+        k["axes"].ylim(ylim)
+        k["axes"].xlim(xlim)
+        k["axes"].ylabel("Solar-Y")
+        k["axes"].xlabel("Solar-X")
+    k["axes"].text(np.min(x), (ylim[0]+ylim[1])/2+5, "Grad: "+str(popt[0]))
+    k["axes"].text(np.min(x), (ylim[0]+ylim[1])/2, "Angle: "+str(np.arctan(popt[0]))+" rad")
+    k["axes"].text(np.min(x), (ylim[0]+ylim[1])/2-5, "Angle: "+str(np.arctan(popt[0])*(180/np.pi))+" deg")
+    k["axes"].text(np.max(x)*0.99, ylim[0]*1.001, "DET: "+str(det), fontweight="bold")
+    
+    return np.arctan(popt[0])*(180/np.pi)
