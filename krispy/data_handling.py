@@ -397,7 +397,7 @@ def maskPadOnes(maskToIncrease, pixelPad=1):
     Parameters
     ----------
     mask : np.array
-        The array/mask where the selected region is all 1s and 0s everywhere else but is a different shape to the map to which it is being applied.
+        The array/mask where the selected region is all 1s and 0s everywhere else.
 
     pixelPad: int
         The number of pixels to pad the already existing ones with.
@@ -405,6 +405,17 @@ def maskPadOnes(maskToIncrease, pixelPad=1):
     Returns
     -------
     Array with the regions of ones increased.
+
+    Example
+    -------
+    mask = [[0,0,0,0], 
+            [0,1,0,0], 
+            [0,0,0,0]]
+    maskPadOnes(mask, pixelPad=1)
+
+    >>> [[1,1,1,0], 
+         [1,1,1,0], 
+         [1,1,1,0]]
     """
 
     mask = np.copy(maskToIncrease)
@@ -424,6 +435,54 @@ def maskPadOnes(maskToIncrease, pixelPad=1):
             mask[br, bc] = 1
 
     return mask
+
+
+# function to increase the area slection from the draw_mask function
+def maskUnPadOnes(maskToIncrease, pixelUnPad=1):
+    """Decreases the size of the region of ones in the mask by setting the boundary pixels to 0 .
+    
+    Parameters
+    ----------
+    mask : np.array
+        The array/mask where the selected region is all 1s and 0s everywhere else.
+
+    pixelPad: int
+        The number of times to remove the boundary pixels.
+            
+    Returns
+    -------
+    Array with the regions of ones decreases.
+
+    Example
+    -------
+    mask = [[1,1,1,0], 
+            [1,1,1,0], 
+            [1,1,1,0]]
+    maskUnPadOnes(mask, pixelUnPad=1)
+
+    >>> [[0,0,0,0], 
+         [0,1,0,0], 
+         [0,0,0,0]]
+    """
+
+    mask = np.copy(maskToIncrease)
+
+    kernel = np.array([[1, 1,  1],
+                       [1, 10, 1],
+                       [1, 1,  1]])
+    
+    for r in range(pixelUnPad):
+        ## find sum of neightbour pixels plus 10x of pixel's value
+        c = convolve(mask, kernel, mode='constant')
+    
+        ## 10<c[i]<18 means that pixel has a 1 but has a 0 in at least one contigous pixel, i.e. it is a boundary pixel
+        boundary = np.array([list(i) for i,n in np.ndenumerate(c) if c[i]<18 and c[i]>10])
+
+        for br, bc in zip(boundary[:,0], boundary[:,1]):
+            mask[br, bc] = 0
+
+    return mask
+
 
 
 # if you have multiple masks and want to combine them
