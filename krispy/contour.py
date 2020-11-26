@@ -129,7 +129,8 @@ class Contours:
     iterations = 10 # set to change the number of iterations
     
     def nu_deconv(self, nu_file=None, colour_and_energy=None, 
-                       time_interval=None, submap=None, iterations=None):
+                       time_interval=None, submap=None, iterations=None, 
+                       OA2source_angle=None):
         
         if nu_file == None:
             nu_file=self.file_given
@@ -150,6 +151,7 @@ class Contours:
             nu1 = krispy.nustardo.NustarDo(nu_file, energy_range=[colour_and_energy[key][0], colour_and_energy[key][1]], time_range=time_interval)
             nu1.deconvolve['apply'] = True
             nu1.deconvolve['iterations'] = iterations
+            nu1.deconvolve['OA2source_angle'] = OA2source_angle
             # make sure to deconvolve over FoV
             nu1.nustar_setmap(submap='FoV')
             self.nuFoV = nu1.FoV
@@ -165,6 +167,7 @@ class Contours:
             nu2 = krispy.nustardo.NustarDo(nu_file, energy_range=[colour_and_energy[key][0], colour_and_energy[key][1]], time_range=time_interval)
             nu2.deconvolve['apply'] = True
             nu2.deconvolve['iterations'] = iterations
+            nu2.deconvolve['OA2source_angle'] = OA2source_angle
             # make sure to deconvolve over FoV
             nu2.nustar_setmap(submap='FoV')
             nu2.deconvolve['apply'] = False
@@ -328,7 +331,7 @@ class Contours:
     print_max_nu = False
 
     def apply_nu_shift_fpm(self, nu_file=None, nu_shift=None, colour_and_energy=None, 
-                           time_interval=None, submap=None, iterations=None):
+                           time_interval=None, submap=None, iterations=None, OA2source_angle=None):
         
         if type(nu_shift) == type(None):
             # sys._getframe().f_code.co_name give the funciton name
@@ -362,6 +365,7 @@ class Contours:
             if type(iterations) == int and iterations >= 1:
                 nu1.deconvolve['apply'] = True
                 nu1.deconvolve['iterations'] = iterations
+                nu1.deconvolve['OA2source_angle'] = OA2source_angle
 
                 # make sure to deconvolve over FoV
                 nu1.nustar_setmap(submap='FoV')
@@ -650,7 +654,7 @@ class Contours:
     nu_shift = None
     
     def setup_deconvolved_contours(self, nu_file=None, colour_and_energy=None, 
-                                   time_range=None, submap=None, iterations=None, 
+                                   time_range=None, submap=None, iterations=None, OA2source_angle=None, 
                                    aia_dir=None, deconvolve=True, bg_time_pos='average'):
         
         # set defualt values is inputs are None
@@ -663,7 +667,8 @@ class Contours:
         
         if deconvolve == True:
             nustar_obj, nustar_maps_corr = self.nu_deconv(nu_file=nu_file, colour_and_energy=colour_and_energy, 
-                                                     time_interval=time_range, submap=submap, iterations=iterations)
+                                                     time_interval=time_range, submap=submap, iterations=iterations, 
+                                                     OA2source_angle=OA2source_angle)
         else:
             self.iterations = 0
             iterations = 0
@@ -693,7 +698,7 @@ class Contours:
         nu_final, nu_objs = self.apply_nu_shift_fpm(nu_file=nu_file, nu_shift=self.nu_shift, 
                                                     colour_and_energy=colour_and_energy, 
                                                     time_interval=time_range, submap=submap, 
-                                                    iterations=iterations)
+                                                    iterations=iterations, OA2source_angle=OA2source_angle)
         # what do I need for plotting that isn't an attribute yet?
         self.nu_final_maps =  nu_final
         self.nu_final_objects = nu_objs
