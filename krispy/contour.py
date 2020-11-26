@@ -727,12 +727,12 @@ class Contours:
             other.setup_deconvolved_contours()
         
         # setup new attributes
-        new_object.files_given = [self.file_given, other.file_given]
+        new_object.file_given = [self.file_given, other.file_given]
         #directory of the files
-        new_object.nu_file_directorys = [self.nu_file_directory, other.nu_file_directory]
-        new_object.nu_filenames = [self.nu_filename, other.nu_filename]
+        new_object.nu_file_directory = [self.nu_file_directory, other.nu_file_directory]
+        new_object.nu_filename = [self.nu_filename, other.nu_filename]
         
-        new_object.aia_directorys = [self.aia_directory, other.aia_directory]
+        new_object.aia_directory = [self.aia_directory, other.aia_directory]
         new_object.colour_dict = {**self.colour_dict, **other.colour_dict}
         
         # the submap/background/time range of the first object is used, self.submap remains unchanged
