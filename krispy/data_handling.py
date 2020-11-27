@@ -631,3 +631,96 @@ def xspecParams(xspec_fits, *args):
         output[f[0]] = [values[f[0]][0], f[1]]
     
     return output
+
+
+
+# a function to read in frames already generated from a folder or create the frames
+def frames(fitsDirectory=None, time_range=None, where=None, submap=None, framesFolder=None, framesFile=None, overwrite=False):
+    """Reads or creates the frames you want from a directory. Reading takes priority over creating the files again unless 
+    overwrite=True.
+    
+    Parameters
+    ----------
+    fitsDirectory : list of str
+        Directory for the fits files from where the frames are to come from. E.g. fitsDirectory=["dir1", "dir2"]
+        
+    time_range : list of lists
+        For time filtering for the files in the fitsDirectory, e.g. time_range=[["yyyy/mm/dd, HH:MM:SS", "yyyy/mm/dd, HH:MM:SS"]].
+
+    where : str
+        Should the frame be the middle fram of the time range or the average etc. Options are "start", "middle", "end", "average", 
+        or a time string "yyyy/mm/dd, HH:MM:SS". Alternatively it could be a list of these for each resulting frame.
+
+    submap : list of lists
+        Take a submap of the files in the fitsDirectory, e.g. submap=[[bottomLeftX, bottomLeftY, topRightX, topRightY]].
+
+    framesFolder : str
+        If this has already been run then just want the directory they are in.
+
+    framesFile : 
+        If this has already been run then what is the name of the file.
+
+    overwrite : bool
+        Set to true if you want the frames to be calculated again regardless if they are there or not.
+            
+    Returns
+    -------
+    The frames, the frame's maxima and minima.
+
+    Example
+    -------
+    # read, if not there then create
+    frames(fitsDirectory=["dir1"], time_range=[["yyyy/mm/dd, HH:MM:SS", "yyyy/mm/dd, HH:MM:SS"]], where="average", submap=[[blx,bly,trx,try]], framesFolder="saveDir", framesFile="saveFile")
+
+    # read
+    frames(framesFolder="saveDir", framesFile="saveFile")
+
+    # create even if the file already exists
+    frames(fitsDirectory=["dir1"], time_range=[["yyyy/mm/dd, HH:MM:SS", "yyyy/mm/dd, HH:MM:SS"]], where="average", submap=[[blx,bly,trx,try]], framesFolder="saveDir", framesFile="saveFile", overwrite=True)
+    """
+    
+    # what do we need
+    create = ((type(fitsDirectory)!=type(None)) and (type(time_range)!=type(None)) and (type(where)!=type(None)) and (type(submap)!=type(None)) and (type(framesFolder)!=type(None)) and (type(framesFile)!=type(None)))
+    read = ((type(framesFolder)!=type(None)) and (type(framesFile)!=type(None)))
+    if create or read:
+        pass
+    else:
+        print("Need either fitsDirectory, time_range, and where OR framesFolder and framesFile.")
+        return
+
+    # map easy to search for terms to the terms used in the xspec files
+    if path.exists(folder+"/"+file) and overwrite==overwrite:
+        frames_and_max = np.load(folder+"/"+file, allow_pickle=True)
+        # need to index [inds] here when the whole list of possible events is being used
+        aia_frames, aia_maxima, aia_minima = frames_and_max[0], frames_and_max[1], frames_and_max[2]
+    else:
+        aia_frames =[]
+        aia_maxima = []
+        aia_minima = []
+         for d in range(len(fitsDirectory)):
+            aiamap = contour.Contours()
+
+            aia_file_list = np.array(os.listdir(fitsDirectory[d]))
+                      
+            times_list = aiamap.aia_file_times(fitsDirectory[d], aia_file_list=aia_file_list)
+
+            good_indices = aiamap.useful_time_inds(times_list, time_interval=time_range[d])
+
+            files_in_trange = aia_file_list[good_indices]
+
+
+            if type(where)==list:
+                background_map = aiamap.which_background(fitsDirectory[d], files_in_trange, where=where[d])
+            else:
+                background_map = aiamap.which_background(fitsDirectory[d], files_in_trange, where=where)
+
+            aia_frame, _ = aiamap.aia_frame(background_map, submap=submap[d])
+            aia_frames.append(aia_frame)
+            aia_maxima.append(np.max(aia_frame.data))
+            aia_minima.append(np.min(aia_frame.data))
+
+            print(f'\rDone {d+1} maps of {len(fitsDirectory)}.        ', end='')
+
+        np.save(folder+"/"+file, [aia_frames, aia_maxima, aia_minima])
+
+    return aia_frames, aia_maxima, aia_minima
