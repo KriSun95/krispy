@@ -697,7 +697,7 @@ def frames(fitsDirectory=None, time_range=None, where=None, submap=None, framesF
         aia_frames =[]
         aia_maxima = []
         aia_minima = []
-         for d in range(len(fitsDirectory)):
+        for d in range(len(fitsDirectory)):
             aiamap = contour.Contours()
 
             aia_file_list = np.array(os.listdir(fitsDirectory[d]))
