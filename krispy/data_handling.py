@@ -690,8 +690,8 @@ def frames(fitsDirectory=None, time_range=None, where=None, submap=None, framesF
         return
 
     # map easy to search for terms to the terms used in the xspec files
-    if path.exists(folder+"/"+file) and overwrite==overwrite:
-        frames_and_max = np.load(folder+"/"+file, allow_pickle=True)
+    if path.exists(framesFolder+"/"+framesFile) and overwrite==overwrite:
+        frames_and_max = np.load(framesFolder+"/"+framesFile, allow_pickle=True)
         # need to index [inds] here when the whole list of possible events is being used
         aia_frames, aia_maxima, aia_minima = frames_and_max[0], frames_and_max[1], frames_and_max[2]
     else:
@@ -722,6 +722,6 @@ def frames(fitsDirectory=None, time_range=None, where=None, submap=None, framesF
 
             print(f'\rDone {d+1} maps of {len(fitsDirectory)}.        ', end='')
 
-        np.save(folder+"/"+file, [aia_frames, aia_maxima, aia_minima])
+        np.save(framesFolder+"/"+framesFile, [aia_frames, aia_maxima, aia_minima])
 
     return aia_frames, aia_maxima, aia_minima
