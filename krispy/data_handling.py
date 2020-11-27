@@ -22,6 +22,7 @@ from skimage import future
 from skimage.transform import resize
 from scipy.ndimage import convolve
 import csv
+from os import path
 
 #make a light curve
 def make_lightcurve(directory, bottom_left, top_right, time_filter=None, mask=None, isHMI=None):
