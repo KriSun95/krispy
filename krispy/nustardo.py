@@ -527,7 +527,7 @@ class NustarDo:
 
 
     # might be best to only allow one of these at a time, either deconvolve OR gaussian filter
-    deconvolve = {'apply':False, 'iterations':10, 'OA2source_angle':None, 'hor2SourceAngle':None, 'clip':False} # set before nustar_setmap to run deconvolution on map
+    deconvolve = {'apply':False, 'iterations':10, 'OA2source_offset':None, 'hor2SourceAngle':None, 'clip':False} # set before nustar_setmap to run deconvolution on map
     gaussian_filter = {'apply':False, 'sigma':2, 'mode':'nearest'}
     sub_lt_zero = np.nan # replace less than zeroes with this value for plotting in a linear scale
     own_map = None # if you already have a map that you want a submap of then set this, be careful not to time normalize again though
@@ -578,7 +578,7 @@ class NustarDo:
         elif (self.deconvolve['apply'] == True):
             # make sure it's over the FoV
             self.nustar_map = self.create_submap(self.nustar_map, lose_off_limb, self.FoV)
-            dconv = self.nustar_deconv(it=self.deconvolve['iterations'], OA2source_angle=self.deconvolve['OA2source_angle'], 
+            dconv = self.nustar_deconv(it=self.deconvolve['iterations'], OA2source_angle=self.deconvolve['OA2source_offset'], 
             	                       hor2SourceAngle=self.deconvolve['hor2SourceAngle'], clip=self.deconvolve['clip'])
             # make new map
             self.nustar_map = sunpy.map.Map(dconv, self.nustar_map.meta)
