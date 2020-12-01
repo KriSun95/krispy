@@ -416,7 +416,7 @@ class NustarDo:
                       '/home/kris/Desktop/link_to_kris_ganymede/old_scratch_kris/data_and_coding_folder/nustar_psfs/nu'+self.fpm+'2dpsfen1_20100101v001.fits',
                       '/home/kris/Desktop/nustar_psfs/nu'+self.fpm+'2dpsfen1_20100101v001.fits']
 
-            if type(OA2source_angle) != type(None):
+            if type(OA2source_offset) != type(None):
                 psf_OA_angles = np.arange(0,9,0.5) # angles of 0 to 8.5 arcmin in 0.5 arcmin increments
                 index = np.argmin([abs(psfoaangles - OA2source_offset) for psfoaangles in psf_OA_angles]) # find the closest arcmin array
                 hdr_unit = index+1 # header units 1 to 18 (one for each of the arcmin entries) and 0 arcmin would be hdr_unit=1, hence the +1
