@@ -578,7 +578,7 @@ class NustarDo:
         elif (self.deconvolve['apply'] == True):
             # make sure it's over the FoV
             self.nustar_map = self.create_submap(self.nustar_map, lose_off_limb, self.FoV)
-            dconv = self.nustar_deconv(it=self.deconvolve['iterations'], OA2source_angle=self.deconvolve['OA2source_offset'], 
+            dconv = self.nustar_deconv(it=self.deconvolve['iterations'], OA2source_offset=self.deconvolve['OA2source_offset'], 
             	                       hor2SourceAngle=self.deconvolve['hor2SourceAngle'], clip=self.deconvolve['clip'])
             # make new map
             self.nustar_map = sunpy.map.Map(dconv, self.nustar_map.meta)
