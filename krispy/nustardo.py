@@ -338,7 +338,7 @@ class NustarDo:
         return gradients/len(args)
 
 
-    def nustar_deconv(self, map_array=None, psf_array=None, it=10, OA2source_angle=None, clip=False):
+    def nustar_deconv(self, map_array=None, psf_array=None, it=10, OA2source_offset=None, hor2SourceAngle=None, clip=False):
         """Class mathod to take a map (map_array) and a point spread function (psf_array) and deconvolve using 
         the Richardson-Lucy method with a number of iterations (it). 
     
@@ -360,8 +360,15 @@ class NustarDo:
                 Number of iterations for the deconvolution.
                 Default: 10
 
-        OA2source_angle : float
-                Angle between the optical axis (OA) and the X-ray source in arcminutes (0<=OA2source_angle<8.5 arcminutes).
+        OA2source_offset : float
+                Angle subtended between the optical axis (OA), observer, and the X-ray source in arcminutes 
+                (0<=OA2source_angle<8.5 arcminutes), i.e. radial distance to the source from the OA. Chooses 
+                the correct PSF data to use.
+                Default: None
+
+        hor2SourceAngle : float
+                Angle subtended between horizontal through the optical axis (OA), and the line through the X-ray source and OA in degrees.
+                Clockwise is positive and anticlockwise is negative. Symmetric reflected in the origin so -90<=hor2SourceAngle<=90.
                 Default: None
 
         clip : bool
@@ -391,6 +398,7 @@ class NustarDo:
             deconv_map = nu.nustar_deconv(psf_array=STRING)
 
             -or-
+
             MAP, ARRAY, FPM = nustar data 2d numpy array, psf 2d numpy array, "A" or "B"
             nu = NustarDo()
             nu.fpm = FPM
@@ -410,7 +418,7 @@ class NustarDo:
 
             if type(OA2source_angle) != type(None):
                 psf_OA_angles = np.arange(0,9,0.5) # angles of 0 to 8.5 arcmin in 0.5 arcmin increments
-                index = np.argmin([abs(psfoaangles - OA2source_angle) for psfoaangles in psf_OA_angles]) # find the closest arcmin array
+                index = np.argmin([abs(psfoaangles - OA2source_offset) for psfoaangles in psf_OA_angles]) # find the closest arcmin array
                 hdr_unit = index+1 # header units 1 to 18 (one for each of the arcmin entries) and 0 arcmin would be hdr_unit=1, hence the +1
                 # print("using angle: ", hdr_unit)
             else:
@@ -452,6 +460,10 @@ class NustarDo:
             
         else:
             psf_used = 'Custom Array. Hopefully some numbers though.'
+
+        if type(hor2SourceAngle)!=type(None):
+            assert -90<=hor2SourceAngle<=90, "Please give \"hor2SourceAngle\" as an angle from horzontal to the source -90<=hor2SourceAngle<=90 where clockwise is positive and anticlockwise is negative"
+            psf_array = rotate(psf_array, hor2SourceAngle, reshape=True)
 
         # deconvolve
         deconvolved_RL = restoration.richardson_lucy(map_array, psf_array, iterations=it, clip=False)
