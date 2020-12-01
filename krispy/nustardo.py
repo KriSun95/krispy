@@ -28,6 +28,7 @@ from . import custom_map ######Kris
 import sunpy.map
 from scipy import ndimage
 from scipy.optimize import curve_fit
+from scipy.ndimage import rotate
 import re #for regular expressions
 import warnings #suppress astropy warnings
 import datetime
