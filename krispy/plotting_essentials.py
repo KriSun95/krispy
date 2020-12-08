@@ -338,7 +338,7 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
     return fig, axs
 
 
-def plotMarkers(markers, span=True, axis=None):
+def plotMarkers(markers, span=True, axis=None, customColours=None):
     """Takes markers to be plotted on an axis as vertical lines or a spanned shaded region.
     
     Parameters
@@ -353,12 +353,18 @@ def plotMarkers(markers, span=True, axis=None):
     axis : Axis Object
             Axis to be plotted on. If None then "plt" is used.
             Default: None
+
+    customColours : list 
+            If you want ot provide your own colours for the markers. This list replaces the 
+            default colours used.
+            Default: None
             
     Returns
     -------
     The colour and marker range.
     """
-    colours = ['k', 'r', 'g', 'c', 'm', 'b', 'y']
+
+    colours = ['k', 'r', 'g', 'c', 'm', 'b', 'y'] if type(customColours)==type(None) else customColours
     markers_out = {}
     axis = {'ax':plt} if axis is None else {'ax':axis}
 
