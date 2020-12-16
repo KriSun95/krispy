@@ -441,8 +441,8 @@ def textBox(text, position, colour=None, **kwargs):
             Alter the position of where the middle height of the text gets aligned to within its axes. 
             Default: 0.45
             
-    letter_width_scale : float
-            Scale the width of the text characters incase they bunch up or spread out. 
+    word_width_scale : float
+            Scale the width of the text words (spaces are scaled too) incase they bunch up or spread out. 
             Default: 1.00
             
     Any other kwargs just get passed to matplotlib.pyplot.annotate()
@@ -491,8 +491,8 @@ def textBox(text, position, colour=None, **kwargs):
     kwargs.pop("leftx_text_point_scale", None)
     kwargs.pop("middley_text_point_scale", None)
     # incase the width of the letters need scaled
-    letter_width_scale = 1.00 if "letter_width_scale" not in kwargs else kwargs["letter_width_scale"]
-    kwargs.pop("letter_width_scale", None)
+    word_width_scale = 1.00 if "word_width_scale" not in kwargs else kwargs["word_width_scale"]
+    kwargs.pop("word_width_scale", None)
     
     # need to know text box dimensions
     text_extent = axes.annotate(text, 
@@ -551,7 +551,7 @@ def textBox(text, position, colour=None, **kwargs):
 
         canvas = tb_ax.figure.canvas
         text_draw.draw(canvas.get_renderer())
-        length += letter_width_scale * text_draw.get_window_extent().width
+        length += word_width_scale * text_draw.get_window_extent().width
         
         # add a space if it isn't the last word
         if w!=words[-1]:
@@ -562,7 +562,7 @@ def textBox(text, position, colour=None, **kwargs):
                                        **kwargs)
             canvas = tb_ax.figure.canvas
             text_draw.draw(canvas.get_renderer())
-            length += letter_width_scale * text_draw.get_window_extent().width
+            length += word_width_scale * text_draw.get_window_extent().width
             
     # return the text axes
     return tb_ax
