@@ -449,7 +449,7 @@ def textBox(text, position, colour=None, **kwargs):
             
     Returns
     -------
-    Nothing. This just plots the text.
+    Returns the text axes.
     
     Examples
     --------
@@ -564,5 +564,5 @@ def textBox(text, position, colour=None, **kwargs):
             text_draw.draw(canvas.get_renderer())
             length += letter_width_scale * text_draw.get_window_extent().width
             
-    # nothing to return
-    return 
+    # return the text axes
+    return tb_ax
