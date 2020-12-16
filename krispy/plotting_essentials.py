@@ -15,6 +15,9 @@ Functions to go in here (I think!?):
 
     KC: 19/12/2018, added-    
     ~cmap_midcolours()
+
+    KC: 16/12/2020, added-    
+    ~textBox()
 '''
 
 import numpy as np
@@ -381,3 +384,185 @@ def plotMarkers(markers, span=True, axis=None, customColours=None):
         markers_out[colours[c]] = markers[m]
 
     return markers_out
+
+
+def textBox(text, position, colour=None, **kwargs):
+    """Draws text on a plot for you like plt.annotate or plt.text; however, this allows multicoloured text easily.
+    
+    Parameters
+    ----------
+    text : str
+            The string you want printed.
+    
+    position : tuple, length 2
+            The left x and lower y value of the axis the text is to be printed into.
+            
+    colour : str -or- list
+            This is either one colour as a string or a list of colours with the same 
+            length as the space seperated text. 
+            Default: 'k'
+            
+    kwargs
+    ----------
+    axes : matplolitb axes object
+            The axes of the plot you want the text on.
+            Default: plt.gca()
+    
+    facecolour : str
+            The colour of the background for the text.
+            Default: 'white'
+            
+    axes_alpha : 0.0<=float<=1
+            The opacity of the background for the text. Set to 0 for 100% transparent 
+            and 1 for 100% opaque. 
+            Default: 0.5
+            
+    fontsize : float
+            Fontsize of the text. 
+            Default: 18
+            
+    fontweight : float -or- str
+            Fontweight of the text. 
+            Default: 'normal'
+            
+    text_ax_width_scale : float
+            Scale the background width for the text.
+            Default: 1.05
+    
+    text_ax_height_scale : float
+            Scale the background height for the text.
+            Default: 1.25
+            
+    leftx_text_point_scale : float
+            Alter the position of where the left of the text gets aligned to within its axes. 
+            Default: 1.00
+            
+    middley_text_point_scale : float
+            Alter the position of where the middle height of the text gets aligned to within its axes. 
+            Default: 0.45
+            
+    letter_width_scale : float
+            Scale the width of the text characters incase they bunch up or spread out. 
+            Default: 1.00
+            
+    Any other kwargs just get passed to matplotlib.pyplot.annotate()
+            
+    Returns
+    -------
+    Nothing. This just plots the text.
+    
+    Examples
+    --------
+    To draw the word 'Text.' in red with a green background
+    -> textBox('Text.', (0.5,0.5), colour='r', facecolour='g')
+    
+    To draw the words 'What about more text.' in red with a green background
+    -> textBox('What about more text.', (0.5,0.5), colour='r', facecolour='g')
+    
+    To draw the words 'What about more text.' in red, blue, and cyan with a green background
+    -> textBox('What about more text.', (0.5,0.5), colour=['r','r','b','c'], facecolour='g')
+    (Note: text will get broken up into ['What','about','more','text.'] and so each need a colour.)
+    """
+    
+    # sort out parameters I use here and the ones to pass onto annotate
+    axes = plt.gca() if "axes" not in kwargs else kwargs["axes"]
+    facecolour = 'white' if "facecolour" not in kwargs else kwargs["facecolour"]
+    axes_alpha = 0.5 if "axes_alpha" not in kwargs else kwargs["axes_alpha"]
+    fontsize = 18 if "fontsize" not in kwargs else kwargs["fontsize"]
+    fontweight = "normal" if "fontweight" not in kwargs else kwargs["fontweight"]
+    # now remove the ones I use directly so that kwargs can get passed to annotate
+    kwargs.pop("axes", None)
+    kwargs.pop("facecolour", None)
+    kwargs.pop("axes_alpha", None)
+    kwargs.pop('fontsize', None)
+    kwargs.pop("fontweight", None)
+    
+    ## ***** coded numbers to adjust text/text axes the way you want *****
+    # scaling factors to make the axes created for the text slightly larger than the text dimensions
+    text_ax_width_scale = 1.05 if "text_ax_width_scale" not in kwargs else kwargs["text_ax_width_scale"]
+    text_ax_height_scale = 1.25 if "text_ax_height_scale" not in kwargs else kwargs["text_ax_height_scale"]
+    kwargs.pop("text_ax_width_scale", None)
+    kwargs.pop("text_ax_height_scale", None)
+    # text is aligned vertically (VA) center and horizontally (HA) left 
+    # but 0.45 works better than 0.5 here for VA and HA is caluclated in a weird way, 
+    # change if you want/need to move the text about in the axes created for it
+    leftx_text_point_scale = 1.00 if "leftx_text_point_scale" not in kwargs else kwargs["leftx_text_point_scale"]
+    middley_text_point_scale = 0.45 if "middley_text_point_scale" not in kwargs else kwargs["middley_text_point_scale"]
+    kwargs.pop("leftx_text_point_scale", None)
+    kwargs.pop("middley_text_point_scale", None)
+    # incase the width of the letters need scaled
+    letter_width_scale = 1.00 if "letter_width_scale" not in kwargs else kwargs["letter_width_scale"]
+    kwargs.pop("letter_width_scale", None)
+    
+    # need to know text box dimensions
+    text_extent = axes.annotate(text, 
+                                (0, 0), 
+                                fontsize=fontsize, fontweight=fontweight,
+                                bbox=dict(boxstyle="square, pad=0"))
+    canvas = axes.figure.canvas
+    text_extent.draw(canvas.get_renderer())
+    # get the text box size
+    s = text_extent.get_window_extent()
+    # get the axes size (window) to be able to calculate the axis fraction for teh text box
+    window = axes.get_window_extent()
+    # done here so remove this text box
+    text_extent.remove()
+
+    # now make axes the correct size for the text with a little border (hence the 1.05 and 1.05)
+    tb_ax = axes.inset_axes([*position, 
+                             text_ax_width_scale*s.width/window.width, 
+                             text_ax_height_scale*s.height/window.height])# make axes for the text
+    
+    # colour and transparency of axis
+    tb_ax.patch.set_facecolor(facecolour)
+    tb_ax.patch.set_alpha(axes_alpha)
+    
+    # remove ticks
+    tb_ax.xaxis.set_visible(False)
+    tb_ax.yaxis.set_visible(False)
+    
+    # Hide the right and top spines
+    for w in ['right', 'left', 'top', 'bottom']:
+        tb_ax.spines[w].set_visible(False)
+        
+    # now to deal with the text
+    words = text.split() # split at spaces
+    # if there are no colour(s) given, make it all black
+    colours = ['black']*len(words) if type(colour)==type(None) else colour
+    # if there are colour(s) given, make it a list if it is a single colour or just keep as is
+    colours = [colours]*len(words) if type(colours)!=list else colours
+    
+    ## now let's draw the text
+    # work in axes pixels units
+    coords = 'axes pixels'
+    # define the x and y positions for text alignment in it axes
+    # can scale with 'leftx_text_point_scale' and 'middley_text_point_scale' if needed
+    x = leftx_text_point_scale * (tb_ax.get_window_extent().width-s.width)/(2)
+    y = middley_text_point_scale * tb_ax.get_window_extent().height
+    # length of total text already down
+    length=0
+    for c, w in zip(colours, words):
+        text_draw = tb_ax.annotate(w, (x+length, y), 
+                                   fontsize=fontsize, fontweight=fontweight, 
+                                   va='center', ha='left', 
+                                   color=c, 
+                                   xycoords=coords, 
+                                   **kwargs)
+
+        canvas = tb_ax.figure.canvas
+        text_draw.draw(canvas.get_renderer())
+        length += letter_width_scale * text_draw.get_window_extent().width
+        
+        # add a space if it isn't the last word
+        if w!=words[-1]:
+            text_draw = tb_ax.annotate(" ", (x+length, y), 
+                                       fontsize=fontsize, fontweight=fontweight,
+                                       va='center', ha='left', 
+                                       xycoords=coords, 
+                                       **kwargs)
+            canvas = tb_ax.figure.canvas
+            text_draw.draw(canvas.get_renderer())
+            length += letter_width_scale * text_draw.get_window_extent().width
+            
+    # nothing to return
+    return 
