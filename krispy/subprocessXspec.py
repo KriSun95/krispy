@@ -4,7 +4,7 @@ import os
 """ These functions/script is created to run an XSPEC session and pass certain XSPEC commands down the pipeline at certain times according to 
     the termal output during the XSPEC spectral fitting. I.e. trying to avoid having to manually input the final commands for the fitting.
 
-    Comments: *"gohea" (or whatever you type to get "xspec" to work in the terminal) must be run first.
+    Comments:*"gohea" (or whatever you type to get "xspec" to work in the terminal) must be run first.
              *"writefits" must be used in the XSPEC batch script.
              *Fits and text (and log) files created in the XSPEC process will have the same name based on the fits name from "writefits" above. 
              *The "error" command also needs to be present in the XSPEC batch script too (this should be there anyway).
@@ -93,7 +93,7 @@ def maybeRemoveFile(file, remove=False):
     assert keep_going, f"File {file} already exists and \'remove\' in CheckFitsAndTxtName() [or \'overwrite\' in runXSPEC()] is set to False. \nPlease remove to continue."
 
 
-def runXSPEC(xspecBatchFile=None, logFile=False, overwrite=False):
+def runXSPEC(xspecBatchFile, logFile=False, overwrite=False):
     """Runs an XSPEC .xcm batch file and then, in the same XSPEC program, run other manual commands to complete 
     the XSPEC fitting process. This is because some of the final commands needed to complete the fitting process 
     in XSPEC needs to be run manually.
@@ -102,7 +102,6 @@ def runXSPEC(xspecBatchFile=None, logFile=False, overwrite=False):
     ----------
     xspecBatchFile : str
         The batch XSPEC .xcm file. Must make use of the "writefits" command.
-        Default: None
 
     logFile : bool
         Set to True and this creates a .log file that captures all of the output from teh fitting processes.
@@ -178,7 +177,7 @@ def runXSPEC(xspecBatchFile=None, logFile=False, overwrite=False):
             # the other commands at the moment give out a predictable number of lines without any prompting. In order for them 
             # all to get logged in the .log file (and for the program to not hang) then we keep track of the lines to know when 
             # to move onto the next manual command.
-            lines4iplot = 0
+            outputLines = 0
             while True:
 
                 line = xspec.stdout.readline()
@@ -200,16 +199,15 @@ def runXSPEC(xspecBatchFile=None, logFile=False, overwrite=False):
                         xspec.stdin.write("y\n")
 
                 elif command=="iplot ldata ufspec rat\n":
-                    lines4iplot += 1
-                    if lines4iplot==2:
+                    outputLines += 1
+                    if outputLines==2:
                         add2log(logFile, f"\n***MANUAL COMMAND {cmds[number]} COMPLETE.***\n")
+                        outputLines = 0 # reset counter
                         break
 
                 elif command==commands[2]:
-                    lines4iplot += 1
-                    if lines4iplot==3:
-                        add2log(logFile, f"\n***MANUAL COMMAND {cmds[number]} COMPLETE.***\n")
-                        break
+                    add2log(logFile, f"\n***MANUAL COMMAND {cmds[number]} COMPLETE.***\n")
+                    break
 
                 elif command=="exit\n":
                     add2log(logFile, f"\n***MANUAL COMMAND {cmds[number]} COMPLETE.***\n")
@@ -217,6 +215,7 @@ def runXSPEC(xspecBatchFile=None, logFile=False, overwrite=False):
         add2log(logFile, f"\n***FINISHED COMMANDS {cmds}.***")
 
     print("XSPEC batch script and manual commands run. Please check log file to ensure expected behaviour.")
+
 
 
 def runXSPEC_customCommands(xspecBatchFile=None, logFile=False, overwrite=False, **kwargs):
@@ -228,5 +227,73 @@ def runXSPEC_customCommands(xspecBatchFile=None, logFile=False, overwrite=False,
     pass
 
 
+def XSPECfit(directory, xspecBatchFile, logFile=False, overwrite=False):
+    """Runs an XSPEC .xcm batch file(s) in the corresponding directory(s) and then, in the same XSPEC program, run other manual commands to complete 
+    the XSPEC fitting process. This is because some of the final commands needed to complete the fitting process 
+    in XSPEC needs to be run manually.
+
+    Parameters
+    ----------
+    directory : str
+        The the directory with the batch XSPEC .xcm file. Must make use of the "writefits" command. Could be a 
+        list of .xcm files. Could be a list of directories. Be explicit, i.e. if the xcm file is in your current 
+        directory use "./". The "directory" and "xspecBatchFile" parameters must have the same number of entries.
+
+    xspecBatchFile : str
+        The batch XSPEC .xcm file. Must make use of the "writefits" command. Could be a list of .xcm files. The 
+        "directory" and "xspecBatchFile" parameters must have the same number of entries.
+
+    logFile : bool
+        Set to True and this creates a .log file that captures all of the output from teh fitting processes.
+        The default is False but it is recommended to be set to True so that the resulting fit can be checked.
+        The file name will be the same as the .fits file from xspecBatchFile.
+        Default: False
+            
+    overwrite : bool
+        In order to avoid files being overwritten (or in the case of the .fits file appended to) during the 
+        fitting process. Setting this to True will check if a .fits, .txt. and .log file exist (using the 
+        name defined with "writefits" fromxspecBatchFile) and delete them. If False with those files being
+        present then an error will occur and the program will hault.
+        Default: False
+
+    Returns
+    -------
+    None
+
+    Example
+    -------
+    ## run a spectral fitting from the batch script "apec1fit_fpm1_cstat.xcm" while creating a .log file and 
+                ## deleting existing/conflicting files if they are there
+
+    XSPECfit(directory="./", xspecBatchFile="apec1fit_fpm1_cstat.xcm", logFile=True, overwrite=True)
+
+    # if "apec1fit_fpm1_cstat.xcm" has "writefits folder/specFit.fits" then by the end you should have 3 files:
+                # 1. folder/specFit.fits, 2. folder/specFit.txt, 3. folder/specFit.log
+
+    ## run for multiple .xcm in different directories
+
+    XSPECfit(directory=["dir1", "dir2"], xspecBatchFile=["f1.xcm", "f2.xcm"], logFile=True, overwrite=True)
+
+    ## run for multiple .xcm in the same directories
+
+    XSPECfit(directory=["dir1", "dir1"], xspecBatchFile=["f1.xcm", "f2.xcm"], logFile=True, overwrite=True)
+    """
+
+    # make them loops and so loop-able
+    directory = directory if type(directory)==list else[directory]
+    xspecBatchFile = xspecBatchFile if type(xspecBatchFile)==list else[xspecBatchFile]
+    startingDir = os.getcwd()
+
+    # change directory to each cxm file and run the fit then go back to the original directory to start again
+    for d,xcm in zip(directory, xspecBatchFile):
+        os.chdir(d)
+        runXSPEC(xspecBatchFile=xcm, logFile=logFile, overwrite=logFile)
+        os.chdir(startingDir)
+
+
 if __name__=="__main__":
-    runXSPEC(xspecBatchFile="fit_apecbkn_2fpm_cstat.xcm", logFile=True, overwrite=True)
+    test=False
+    if test:
+        runXSPEC(xspecBatchFile="fit_apecbkn_2fpm_cstat.xcm", logFile=True, overwrite=True)
+    # print(lastLineInLog("./xspec/mod_apecbknp_2fpmab_cstat.log"))
+    # print(lastLineInLog("./mylog"))
