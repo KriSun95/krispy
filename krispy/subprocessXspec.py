@@ -228,9 +228,9 @@ def runXSPEC_customCommands(xspecBatchFile=None, logFile=False, overwrite=False,
 
 
 def XSPECfit(directory, xspecBatchFile, logFile=False, overwrite=False):
-    """Runs an XSPEC .xcm batch file(s) in the corresponding directory(s) and then, in the same XSPEC program, run other manual commands to complete 
-    the XSPEC fitting process. This is because some of the final commands needed to complete the fitting process 
-    in XSPEC needs to be run manually.
+    """Runs an XSPEC .xcm batch file(s) in the corresponding directory(s) and then, in the same XSPEC program, 
+    run other manual commands to complete the XSPEC fitting process. This is because some of the final commands 
+    needed to complete the fitting process in XSPEC needs to be run manually.
 
     Parameters
     ----------
