@@ -4,7 +4,7 @@ import os
 """ These functions/script is created to run an XSPEC session and pass certain XSPEC commands down the pipeline at certain times according to 
     the termal output during the XSPEC spectral fitting. I.e. trying to avoid having to manually input the final commands for the fitting.
 
-    Comments:*"gohea" (or whatever you type to get "xspec" to work in the terminal) must be run first.
+    Comments:*source the HEA initialisation file ("gohea" for us (or whatever you type to get "xspec" to work in the terminal) must be run first).
              *"writefits" must be used in the XSPEC batch script.
              *Fits and text (and log) files created in the XSPEC process will have the same name based on the fits name from "writefits" above. 
              *The "error" command also needs to be present in the XSPEC batch script too (this should be there anyway).
