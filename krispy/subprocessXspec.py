@@ -31,7 +31,7 @@ def add2log(logFile, text):
     add2log("logFile.log", "Some text.")
     add2log("logFile.log", "Maybe some more text.")
     """
-    # if the file string is and emtpy string just return it
+    # if the file string is an emtpy string just return it
     if len(logFile)==0:
         return
 

@@ -61,27 +61,34 @@ def seperate(read_xspec_data, fitting_mode='1apec'):
             Dictionary output from read_xspec_txt().
 
     fitting_mode : Str
-            Information about the fit in XSPEC, e.g. 1apec model fit with on focal plane modules data: '1apec'.
+            Information about the fit in XSPEC, e.g. 1apec model fit with on focal plane modules data: '1apec'. 
+            Can set: '1apec', '1apec1bknpower', '3apec1bknpower', '4apec'
             Default: '1apec'
             
     Returns
     -------
     The counts, photons, and ratios from the XSPEC output. 
     '''
+    seperated = {'energy':read_xspec_data['counts'][:,0], 
+                  'e_energy':read_xspec_data['counts'][:,1], 
+                  'data':read_xspec_data['counts'][:,2], 
+                  'e_data':read_xspec_data['counts'][:,3], 
+                  'model_total':read_xspec_data['counts'][:,4]}
     if fitting_mode == '1apec':
-        seperated = {'energy':read_xspec_data['counts'][:,0], 
-                     'e_energy':read_xspec_data['counts'][:,1], 
-                     'data':read_xspec_data['counts'][:,2], 
-                     'e_data':read_xspec_data['counts'][:,3], 
-                     'model_apec':read_xspec_data['counts'][:,4]}
+        seperated.update(model_apec=read_xspec_data['counts'][:,4])
     elif fitting_mode == '1apec1bknpower':
-        seperated = {'energy':read_xspec_data['counts'][:,0], 
-                     'e_energy':read_xspec_data['counts'][:,1], 
-                     'data':read_xspec_data['counts'][:,2], 
-                     'e_data':read_xspec_data['counts'][:,3], 
-                     'model_total':read_xspec_data['counts'][:,4], 
-                     'model_apec':read_xspec_data['counts'][:,5], 
-                     'model_bknpower':read_xspec_data['counts'][:,6]}
+        seperated.update(model_apec=read_xspec_data['counts'][:,5], 
+                         model_bknpower=read_xspec_data['counts'][:,6])
+    elif fitting_mode == '3apec1bknpower':
+        seperated.update(model_apec1=read_xspec_data['counts'][:,5], 
+                         model_bknpower=read_xspec_data['counts'][:,6], 
+                         model_apec2=read_xspec_data['counts'][:,7], 
+                         model_apec3=read_xspec_data['counts'][:,8])
+    elif fitting_mode == '4apec':
+        seperated.update(model_apec1=read_xspec_data['counts'][:,5], 
+                         model_apec2=read_xspec_data['counts'][:,6], 
+                         model_apec3=read_xspec_data['counts'][:,7], 
+                         model_apec4=read_xspec_data['counts'][:,8])
     else:
         seperated = None
         
