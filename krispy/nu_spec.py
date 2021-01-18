@@ -76,6 +76,9 @@ def seperate(read_xspec_data, fitting_mode='1apec'):
                   'model_total':read_xspec_data['counts'][:,4]}
     if fitting_mode == '1apec':
         seperated.update(model_apec=read_xspec_data['counts'][:,4])
+    elif fitting_mode == '2apec':
+        seperated.update(model_apec1=read_xspec_data['counts'][:,5], 
+                         model_apec2=read_xspec_data['counts'][:,6])
     elif fitting_mode == '1apec1bknpower':
         seperated.update(model_apec=read_xspec_data['counts'][:,5], 
                          model_bknpower=read_xspec_data['counts'][:,6])
