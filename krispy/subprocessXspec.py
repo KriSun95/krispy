@@ -197,6 +197,11 @@ def runXSPEC(xspecBatchFile, logFile=False, overwrite=False):
                         # sometimes this prompt occurs because of poor model-to-data fit, not enough data in range, etc. to get 
                         # a good fit quickly. Choose to let it keep trying by answering "y" each time as default for now.
                         xspec.stdin.write("y\n")
+                    elif line.startswith("!XSPEC12>tclreadline::readline read {Number of trials exceeded: continue fitting? }\n"):
+                        # sometimes this prompt occurs because of really poor model-to-data fit, not enough data in range, etc. to get 
+                        # a good fit quickly. Choose to let it keep trying by answering "n" each time as default for now as it can run 
+                        # on for ages otherwise.
+                        xspec.stdin.write("n\n")
 
                 elif command=="iplot ldata ufspec rat\n":
                     outputLines += 1

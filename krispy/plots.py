@@ -361,6 +361,9 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
         res.set_ylim([-7,7])
         res.set_ylabel('(y$_{Data}$ - y$_{Model}$)/$\sigma_{Data}$')
         res.set_xlabel('Energy [keV]')
+
+        statistic = "C-stat: {0:.2f}".format(meta_data['STATISTIC'][0]) if type(meta_data)!=type(None) else ""
+        res.annotate(statistic, (0.98,0.95), color="k", xycoords='axes fraction', size=param_size, ha="right", va="top")
         
         axs.xaxis.set_tick_params(labelbottom=False)
         axs.get_xaxis().set_visible(False)
@@ -404,5 +407,5 @@ def plotXspec_allTogether(xspec_output, fitting_mode, **kwargs):
     matched_submodels = matchSubModels2Meta(subMods, fitting_values, fpmFromFilename(xspec_output))
     
     # now pass everything on to be plotted and return the axes object(s) created
-    return plotXspec(xspec_output, counts_data, matched_submodels, **kwargs)
+    return plotXspec(xspec_output, counts_data, matched_submodels, meta_data=plotting_values, **kwargs)
 
