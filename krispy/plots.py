@@ -224,12 +224,15 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
                 param_size : float
                         Text size for the plotted parameters.
                         Default: 11
-                        
+                              
                 plot_res : bool
                         True to plot an appended residuals plot. The appended axes object will 
                         also be returned.
                         Default: True
-            
+
+                res_axes : matplotlib axes object
+                        The axes for the residuals to be plotted on.
+                        Default: An appended axes below the spectral plot
     Returns
     -------
     The axes object of the plotted XSPEC fit (if plot_res=True then the axes for the data and 
@@ -240,7 +243,7 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
                 "total_model_colour":"purple", "model_colours":plt.rcParams['axes.prop_cycle'].by_key()['color'], "fitting_range_colours":None, 
                 "EM_orders":None, "plot_parameters":True,
                 "x_param":0.3, "y_param":0.95, "y_param_inc":0.07, "param_size":11, 
-                "plot_res":True}
+                "plot_res":True, "res_axes":None}
     defaults.update(kwargs)
     
     # be lazy, just unpack the dict instead of changing the variable names later
@@ -353,8 +356,11 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
         if defaults["axes"]==plt:
             axs = plt.gca()
             
-        divider = make_axes_locatable(axs)
-        res = divider.append_axes('bottom', 1.2, pad=0.2, sharex=axs)
+        if type(defaults["res_axes"])==type(None):
+            divider = make_axes_locatable(axs)
+            res = divider.append_axes('bottom', 1.2, pad=0.2, sharex=axs)
+        else:
+            res = defaults["res_axes"]
         res.plot(counts_data["energy"], residuals, drawstyle='steps-mid', color=total_model_colour)
         res.axhline(0, linestyle=':', color='k')
         res.set_xlim(x_lim)

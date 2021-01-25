@@ -746,14 +746,14 @@ class NustarDo:
                 bottom_left_rectangle = SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=self.rsn_map.coordinate_frame)
                 length = rect[2] - rect[0]
                 height = rect[3] - rect[1]
-                self.rsn_map.draw_rectangle(bottom_left_rectangle, length*u.arcsec, height*u.arcsec, color='black')
+                self.rsn_map.draw_rectangle(bottom_left_rectangle, width=length*u.arcsec, height=height*u.arcsec, color='black')
             else:
                 b = 1
                 for rect in boxes:
                     bottom_left_rectangle = SkyCoord(rect[0]*u.arcsec, rect[1]*u.arcsec, frame=self.rsn_map.coordinate_frame)
                     length = rect[2] - rect[0]
                     height = rect[3] - rect[1]
-                    self.rsn_map.draw_rectangle(bottom_left_rectangle, length*u.arcsec, height*u.arcsec, color='black')
+                    self.rsn_map.draw_rectangle(bottom_left_rectangle, width=length*u.arcsec, height=height*u.arcsec, color='black')
                     for_text = self.arcsec_to_pixel([rect[0]-10,rect[3]+20], centre_pix_val= [self.rsn_map.meta['crpix1']+0.5, self.rsn_map.meta['crpix2']])
                     plt.text(for_text[0][0], for_text[0][1], 'Box '+str(b), fontsize=10)
                     b += 1
