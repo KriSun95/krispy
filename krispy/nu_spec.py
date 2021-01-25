@@ -79,6 +79,15 @@ def seperate(read_xspec_data, fitting_mode='1apec'):
     elif fitting_mode == '2apec':
         seperated.update(model_apec1=read_xspec_data['counts'][:,5], 
                          model_apec2=read_xspec_data['counts'][:,6])
+    elif fitting_mode == '3apec':
+        seperated.update(model_apec1=read_xspec_data['counts'][:,5], 
+                         model_apec2=read_xspec_data['counts'][:,6], 
+                         model_apec3=read_xspec_data['counts'][:,7])
+    elif fitting_mode == '4apec':
+        seperated.update(model_apec1=read_xspec_data['counts'][:,5], 
+                         model_apec2=read_xspec_data['counts'][:,6], 
+                         model_apec3=read_xspec_data['counts'][:,7], 
+                         model_apec4=read_xspec_data['counts'][:,8])
     elif fitting_mode == '1apec1bknpower':
         seperated.update(model_apec=read_xspec_data['counts'][:,5], 
                          model_bknpower=read_xspec_data['counts'][:,6])
@@ -87,11 +96,6 @@ def seperate(read_xspec_data, fitting_mode='1apec'):
                          model_bknpower=read_xspec_data['counts'][:,6], 
                          model_apec2=read_xspec_data['counts'][:,7], 
                          model_apec3=read_xspec_data['counts'][:,8])
-    elif fitting_mode == '4apec':
-        seperated.update(model_apec1=read_xspec_data['counts'][:,5], 
-                         model_apec2=read_xspec_data['counts'][:,6], 
-                         model_apec3=read_xspec_data['counts'][:,7], 
-                         model_apec4=read_xspec_data['counts'][:,8])
     else:
         seperated = None
         
