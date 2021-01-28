@@ -200,6 +200,12 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
                         
                 fitting_range_colours : list
                         Colours of the shaded regions that indicate the fitting range.
+
+                fitting_range_display : bool
+                        Set to False if you don't want the fitting range to be plotted for some reason,
+                        e.g. you want to plot it yourself in some other way. Fitting ranges should 
+                        always be plotted one way or another though.
+                        Default: True
                         
                 EM_orders : list
                         The orders of magnitude you want the emission measures displayed as.
@@ -233,6 +239,7 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
                 res_axes : matplotlib axes object
                         The axes for the residuals to be plotted on.
                         Default: An appended axes below the spectral plot
+
     Returns
     -------
     The axes object of the plotted XSPEC fit (if plot_res=True then the axes for the data and 
@@ -240,7 +247,7 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
     '''
     defaults = {"axes":plt, 
                 "meta_data":None,
-                "total_model_colour":"purple", "model_colours":plt.rcParams['axes.prop_cycle'].by_key()['color'], "fitting_range_colours":None, 
+                "total_model_colour":"purple", "model_colours":plt.rcParams['axes.prop_cycle'].by_key()['color'], "fitting_range_colours":None, "fitting_range_display":True, 
                 "EM_orders":None, "plot_parameters":True,
                 "x_param":0.3, "y_param":0.95, "y_param_inc":0.07, "param_size":11, 
                 "plot_res":True, "res_axes":None}
@@ -346,8 +353,8 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
             cumulative_y_param_inc += y_param_inc*no_of_lines
             axs.annotate(param_str, (x_param,y_param - cumulative_y_param_inc), color=model_colours[c], xycoords='axes fraction', size=param_size)
             
-            
-    markers = plotMarkers(fitting_ranges, span=True, axis=axs, customColours=fitting_range_colours)
+    if defaults["fitting_range_display"]:
+        markers = plotMarkers(fitting_ranges, span=True, axis=axs, customColours=fitting_range_colours)
     
     #residuals plotting
     if plot_res:

@@ -341,7 +341,7 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
     return fig, axs
 
 
-def plotMarkers(markers, span=True, axis=None, customColours=None):
+def plotMarkers(markers, span=True, axis=None, customColours=None, **kwargs):
     """Takes markers to be plotted on an axis as vertical lines or a spanned shaded region.
     
     Parameters
@@ -361,6 +361,8 @@ def plotMarkers(markers, span=True, axis=None, customColours=None):
             If you want ot provide your own colours for the markers. This list replaces the 
             default colours used.
             Default: None
+
+    kwargs : Passed to either matplotlib's axvspan or axvline depending if span==True or False.
             
     Returns
     -------
@@ -377,10 +379,10 @@ def plotMarkers(markers, span=True, axis=None, customColours=None):
 
         # plot a shaded region or just the time boundaries for the chu changes
         if span:
-            axis['ax'].axvspan(*markers[m], alpha=0.1, color=colours[c])
+            axis['ax'].axvspan(*markers[m], alpha=0.1, color=colours[c], **kwargs)
         else:
-            axis['ax'].axvline(markers[m][0], color=colours[c])
-            axis['ax'].axvline(markers[m][1], color=colours[c])
+            axis['ax'].axvline(markers[m][0], color=colours[c], **kwargs)
+            axis['ax'].axvline(markers[m][1], color=colours[c], **kwargs)
         markers_out[colours[c]] = markers[m]
 
     return markers_out
