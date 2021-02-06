@@ -368,6 +368,10 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
             res = divider.append_axes('bottom', 1.2, pad=0.2, sharex=axs)
         else:
             res = defaults["res_axes"]
+        # replace nans and infs with zeros (i.e., where there arent data so there is a divide by 0)
+        residuals[~np.isfinite(residuals)] = 0
+        residuals[np.isnan(residuals)] = 0
+        print(residuals)
         res.plot(counts_data["energy"], residuals, drawstyle='steps-mid', color=total_model_colour)
         res.axhline(0, linestyle=':', color='k')
         res.set_xlim(x_lim)
