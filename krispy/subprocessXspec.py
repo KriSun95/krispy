@@ -63,6 +63,31 @@ def loc8fitsAndTxtName(xspecFile):
                 return line.split()[-1]
 
 
+def locMcmcName(xspecFile):
+    """A function to find the name of the mcmc fits file you have defined in you XSPEC .xcm file, 
+    if it's there.
+
+    Parameters
+    ----------
+    xspecFile : str
+        The XSPEC .xcm file that has the "writefits" command used in it.
+            
+    Returns
+    -------
+    The mcmc fits path+file name from the .xcm file.
+
+    Example
+    -------
+    # to get mcmc fits path+file name from the .xcm file
+    fitsFile = loc8fitsAndTxtName("apec1fit_fpm1_cstat.xcm")
+    """
+    with open(xspecFile, "r") as lf:
+        for line in lf.readlines():
+            if line.startswith("chain run"):
+                # get the path and mcmc file name for the "chain run" line
+                return line.split()[-1]
+    return ""
+
 def maybeRemoveFile(file, remove=False):
     """Check if a file exists and remove it if you want.
 
@@ -139,6 +164,10 @@ def runXSPEC(xspecBatchFile, logFile=False, overwrite=False):
     maybeRemoveFile(txtFile, remove=overwrite)
     logFile = fitsFile[:-5]+".log" if logFile else ""
     maybeRemoveFile(logFile, remove=overwrite)
+
+    # mcmc might have been run, check for this file name convention
+    mcmcFile = locMcmcName(xspecBatchFile) # returns "" if this isn't there
+    maybeRemoveFile(mcmcFile, remove=overwrite)
     
 
     # XSPEC commands to execute once opened a pipeline
