@@ -217,7 +217,7 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
                         
                 x_param : float
                         Starting x value (axes fraction) of where the parameters are plotted.
-                        Default: 0.3
+                        Default: 0.25
                         
                 y_param : float
                         Starting y value (axes fraction) of where the parameters are plotted.
@@ -249,7 +249,7 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
                 "meta_data":None,
                 "total_model_colour":"purple", "model_colours":plt.rcParams['axes.prop_cycle'].by_key()['color'], "fitting_range_colours":None, "fitting_range_display":True, 
                 "EM_orders":None, "plot_parameters":True,
-                "x_param":0.3, "y_param":0.95, "y_param_inc":0.07, "param_size":11, 
+                "x_param":0.25, "y_param":0.95, "y_param_inc":0.07, "param_size":11, 
                 "plot_res":True, "res_axes":None}
     defaults.update(kwargs)
     
@@ -336,16 +336,17 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
             # normalisation at 1 keV
             minusN = matched_submodels[sm][6][0] if matched_submodels[sm][6][0]<0 else matched_submodels[sm][6][1]
             plusN = matched_submodels[sm][6][0] if matched_submodels[sm][6][0]>0 else matched_submodels[sm][6][1]
-            if True:#plusB==0 or minusB==0:
-                param_str = "{0:.2f} keV".format(matched_submodels[sm][1]) +\
-                            ", ${{{0:.2f}}}$".format(matched_submodels[sm][3]) +\
+            if plusB==0 or minusB==0:
+                param_str = "E$_{b}$: "+"{0:.2f} keV".format(matched_submodels[sm][1]) +\
+                            ", $\gamma$: "+"${{{0:.2f}}}$".format(matched_submodels[sm][3]) +\
                             ", \n${{{0:.2f}}}$".format(matched_submodels[sm][5]) +\
-                            " ph keV$^{-1}$ cm$^{-2}$ s$^{-1}$ at 1 keV"
+                            " ph keV$^{-1}$ cm$^{-2}$ s$^{-1}$ @ 1 keV"
             else:
 
-                param_str = "${{{0:.2f}}}^{{+{1:.2f}}}_{{-{2:.2f}}}$ MK".format(matched_submodels[sm][1], plusT, abs(minusT)) +\
-                            ", ${{{0:.2f}}}^{{+{1:.2f}}}_{{-{2:.2f}}}$".format(matched_submodels[sm][3]/em_norm, plusEM/em_norm, abs(minusEM)/em_norm) +\
-                            times_sign+"$10^{{{0:.0f}}}$".format(em_order) + " cm$^{-3}$"
+                param_str = "E$_{b}$: "+"${{{0:.2f}}}^{{+{1:.2f}}}_{{-{2:.2f}}}$ keV".format(matched_submodels[sm][1], plusB, abs(minusB)) +\
+                            ", $\gamma$: "+"${{{0:.2f}}}^{{+{1:.2f}}}_{{-{2:.2f}}}$".format(matched_submodels[sm][3], plusG, abs(minusG)) +\
+                            ", \n${{{0:.2f}}}^{{+{1:.2f}}}_{{-{2:.2f}}}$".format(matched_submodels[sm][5], plusN, abs(minusN)) +\
+                            " ph keV$^{-1}$ cm$^{-2}$ s$^{-1}$ @ 1 keV"
             no_of_lines = 2
         c = int( n - (n//len(model_colours))*len(model_colours) ) # cycle through line_colours
         axs.plot(counts_data["energy"], matched_submodels[sm][0], label=param_str, color=model_colours[c])
