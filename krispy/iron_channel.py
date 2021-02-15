@@ -91,7 +91,6 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
 
     for fn094 in files_094:
         if needing_prepped:
-            print(fn094[-39:-20])
             time_094 = data_handling.getTimeFromFormat(fn094[-39:-20], custom_fmt='%Y_%m_%dt%H_%M_%S')
         else:
             time_094 = data_handling.getTimeFromFormat(fn094[3:18]) #datetime.datetime.strptime(fn094[3:18], '%Y%m%d_%H%M%S')
