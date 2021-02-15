@@ -82,7 +82,7 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
         for i in range(3):
             deg = degradation(channels[i], time_obs, correction_table=correction_table)
             degs[i] = deg.value
-    print("hello, all my files are: ", files_094)
+    
     co_094 = []
     co_171 = []
     co_211 = []
@@ -90,17 +90,15 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
     output = []
 
     for fn094 in files_094:
-        print(fn094[39:-20])
         if needing_prepped:
-            print(fn094[39:-20])
-            time_094 = data_handling.getTimeFromFormat(fn094[39:-20], custom_fmt='%Y_%m_%dt%H_%M_%S')
+            print(fn094[-39:-20])
+            time_094 = data_handling.getTimeFromFormat(fn094[-39:-20], custom_fmt='%Y_%m_%dt%H_%M_%S')
         else:
             time_094 = data_handling.getTimeFromFormat(fn094[3:18]) #datetime.datetime.strptime(fn094[3:18], '%Y%m%d_%H%M%S')
 
         for fn171 in files_171:
             if needing_prepped:
-                print(fn171[39:-20])
-                time_171 = data_handling.getTimeFromFormat(fn171[39:-20], custom_fmt='%Y_%m_%dt%H_%M_%S')
+                time_171 = data_handling.getTimeFromFormat(fn171[-39:-20], custom_fmt='%Y_%m_%dt%H_%M_%S')
             else:
                 time_171 = data_handling.getTimeFromFormat(fn171[3:18]) #datetime.datetime.strptime(fn171[3:18], '%Y%m%d_%H%M%S')
             
@@ -108,7 +106,7 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
 
                 for fn211 in files_211:     
                     if needing_prepped:
-                        time_211 = data_handling.getTimeFromFormat(fn211[39:-20], custom_fmt='%Y_%m_%dt%H_%M_%S')
+                        time_211 = data_handling.getTimeFromFormat(fn211[-39:-20], custom_fmt='%Y_%m_%dt%H_%M_%S')
                     else:
                         time_211 = data_handling.getTimeFromFormat(fn211[3:18]) #datetime.datetime.strptime(fn211[3:18], '%Y%m%d_%H%M%S')
                     
