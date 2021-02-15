@@ -163,6 +163,9 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
 
         hdul = fits.HDUList([primary_hdu])
 
+        if needing_prepped:
+            f094 = "AIA" + f094[-39:-35] + f094[-34:-32] + f094[-31:-29] + "_" + f094[-28:-26] + f094[-25:-23] + f094[-22:-20] +"_0094.fits"
+
         hdul.writeto(outdir + f094[:18] + '_FeXVIII.fits', overwrite=True) 
         #names the file as 'AIAYYYYMMDD_HHmmss_FeXVIII.fits'
         
