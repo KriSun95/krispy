@@ -88,7 +88,8 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
     co_211 = []
 
     output = []
-
+    print("hello")
+    print(files_094[0][39:-20])
     for fn094 in files_094:
         print(fn094[39:-20])
         if needing_prepped:
