@@ -90,14 +90,25 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
     output = []
 
     for fn094 in files_094:
-        time_094 = data_handling.getTimeFromFormat(fn094[3:18]) #datetime.datetime.strptime(fn094[3:18], '%Y%m%d_%H%M%S')
+        if needing_prepped:
+            time_094 = data_handling.getTimeFromFormat(fn094[39:-20], custom_fmt='%Y_%m_%dt%H_%M_%S')
+        else:
+            time_094 = data_handling.getTimeFromFormat(fn094[3:18]) #datetime.datetime.strptime(fn094[3:18], '%Y%m%d_%H%M%S')
 
         for fn171 in files_171:
-            time_171 = data_handling.getTimeFromFormat(fn171[3:18]) #datetime.datetime.strptime(fn171[3:18], '%Y%m%d_%H%M%S')
+            if needing_prepped:
+                time_171 = data_handling.getTimeFromFormat(fn171[39:-20], custom_fmt='%Y_%m_%dt%H_%M_%S')
+            else:
+                time_171 = data_handling.getTimeFromFormat(fn171[3:18]) #datetime.datetime.strptime(fn171[3:18], '%Y%m%d_%H%M%S')
+            
             if time_094 <= time_171 < time_094 + timedelta(seconds=12):
 
                 for fn211 in files_211:     
-                    time_211 = data_handling.getTimeFromFormat(fn211[3:18]) #datetime.datetime.strptime(fn211[3:18], '%Y%m%d_%H%M%S')
+                    if needing_prepped:
+                        time_211 = data_handling.getTimeFromFormat(fn211[39:-20], custom_fmt='%Y_%m_%dt%H_%M_%S')
+                    else:
+                        time_211 = data_handling.getTimeFromFormat(fn211[3:18]) #datetime.datetime.strptime(fn211[3:18], '%Y%m%d_%H%M%S')
+                    
                     if time_094 <= time_211 < time_094 + timedelta(seconds=12):
                         co_094.append(fn094)
                         co_171.append(fn171)
