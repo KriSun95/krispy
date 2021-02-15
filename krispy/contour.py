@@ -197,7 +197,10 @@ class Contours:
                 hdulist = fits.open(aia_file_dir + file)
                 header = hdulist[0].header
                 hdulist.close()
-                time = data_handling.getTimeFromFormat(header['date-obs']) #datetime.datetime.strptime(header['date-obs'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                try:
+                    time = data_handling.getTimeFromFormat(header['date-obs']) #datetime.datetime.strptime(header['date-obs'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                except KeyError:
+                    time = data_handling.getTimeFromFormat(header['date_obs'])
                 times.append(time)
             else:
                 ## just to provide an entry so indices can match up
