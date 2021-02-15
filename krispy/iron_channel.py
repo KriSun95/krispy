@@ -16,7 +16,15 @@ import datetime
 from datetime import timedelta
 from astropy.io import fits
 
-def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degradation_corr=[True, '2018-09-09T12:00:00']):
+def prep(aia_sunpy_map):
+    from aiapy.calibrate import register, update_pointing, normalize_exposure
+    m_updated_pointing = update_pointing(aia_sunpy_map)
+    del aia_sunpy_map
+    m_registered = register(m_updated_pointing)
+    del m_updated_pointing
+    return normalize_exposure(m_registered)
+
+def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degradation_corr=[True, '2018-09-09T12:00:00'], needing_prepped=False):
     """Takes the 94, 171, 211 channels from SDO/AIA to create an iron18 emission proxy (Del Zanna 2013).
     
     Parameters
@@ -34,6 +42,10 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
             Also provide a time for the data-set of the form "YYYY-MM-DDTHH:mm:ss".
             (This should always really be True with the right time.)
             Default: [True, '2018-09-09T12:00:00']
+
+    needing_prepped : bool
+            Is the AIA data in dir_*** needing prepped?
+            Default: False
             
     Returns
     -------
@@ -100,14 +112,26 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
     d_total = len(files_094)
     for f094, f171, f211 in zip(files_094, files_171, files_211):
         aia_map_094 = sunpy.map.Map(dir_094+f094)
+
+        if needing_prepped:
+            aia_map_094 = prep(aia_map_094)
+
         data_094 = aia_map_094.data / aia_map_094.meta['exptime']
         data_094[data_094 < 0] = 0
         
         aia_map_171 = sunpy.map.Map(dir_171+f171)
+
+        if needing_prepped:
+            aia_map_171 = prep(aia_map_171)
+
         data_171 = aia_map_171.data / aia_map_171.meta['exptime']
         data_171[data_171 < 0] = 0
         
         aia_map_211 = sunpy.map.Map(dir_211+f211)
+
+        if needing_prepped:
+            aia_map_211 = prep(aia_map_211)
+        
         data_211 = aia_map_211.data / aia_map_211.meta['exptime']
         data_211[data_211 < 0] = 0
 
