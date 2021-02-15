@@ -67,6 +67,8 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
     files_211 = [ f for f in files_211_list if f.endswith('.fits')]
     files_211.sort()
 
+    print("hello, all my files are: ", files_094, files_171, files_211)
+
     degs = [1, 1, 1]
     if tr_degradation_corr[0] is True:
         import warnings
@@ -88,8 +90,7 @@ def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degr
     co_211 = []
 
     output = []
-    print("hello")
-    print(files_094[0][39:-20])
+
     for fn094 in files_094:
         print(fn094[39:-20])
         if needing_prepped:
