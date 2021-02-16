@@ -715,7 +715,7 @@ def frames(fitsDirectory=None, time_range=None, where=None, submap=None, framesF
 
 
             if type(where)==list:
-                needs_prepping = [needs_prepping] if type(needs_prepping)!=list else needs_prepping
+                needs_prepping = [needs_prepping]*len(where) if type(needs_prepping)!=list else needs_prepping
                 background_map = aiamap.which_background(fitsDirectory[d], files_in_trange, where=where[d], needs_prepping=needs_prepping[d])
             else:
                 background_map = aiamap.which_background(fitsDirectory[d], files_in_trange, where=where, needs_prepping=needs_prepping)
