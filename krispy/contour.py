@@ -200,11 +200,7 @@ class Contours:
                 try:
                     time = data_handling.getTimeFromFormat(header['date-obs']) #datetime.datetime.strptime(header['date-obs'], '%Y-%m-%dT%H:%M:%S.%fZ')
                 except KeyError:
-                    try:
-                        time = data_handling.getTimeFromFormat(header['date_obs'])
-                    except KeyError:
-                        try_map = sunpy.map.Map(aia_file_dir + file)
-                        print(try_map.meta)
+                    time = data_handling.getTimeFromFormat(header['date_obs'])
                 times.append(time)
             else:
                 ## just to provide an entry so indices can match up
@@ -238,7 +234,7 @@ class Contours:
     
 
     @staticmethod
-    def which_background(aia_dir=None, aia_files=None, where='average'):
+    def which_background(aia_dir=None, aia_files=None, where='average', needs_prepping=False):
         
         if type(aia_dir) == type(None) or type(aia_files) == type(None):
             # sys._getframe().f_code.co_name give the funciton name
@@ -248,10 +244,22 @@ class Contours:
         bgs = []
         bgs_header = []
         for file in aia_files:
-            hdulist = fits.open(aia_dir + file)
-            bgs_header.append(hdulist[0].header)
-            bgs.append(hdulist[0].data)
-            hdulist.close()
+            if not needs_prepping:
+                hdulist = fits.open(aia_dir + file)
+                bgs_header.append(hdulist[0].header)
+                bgs.append(hdulist[0].data)
+                hdulist.close()
+            else:
+                from aiapy.calibrate import register, update_pointing, normalize_exposure
+                to_prep = sunpy.map.Map(aia_dir + file)
+                aia_sunpy_map = update_pointing(to_prep)
+                del to_prep
+                m_registered = register(aia_sunpy_map)
+                del aia_sunpy_map
+                prepped = normalize_exposure(m_registered)
+
+                bgs_header.append(prepped.meta)
+                bgs.append(prepped.data)
      
         if where == 'start':
             bg = bgs[0]
