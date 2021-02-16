@@ -200,8 +200,11 @@ class Contours:
                 try:
                     time = data_handling.getTimeFromFormat(header['date-obs']) #datetime.datetime.strptime(header['date-obs'], '%Y-%m-%dT%H:%M:%S.%fZ')
                 except KeyError:
-                    print(header)
-                    time = data_handling.getTimeFromFormat(header['date_obs'])
+                    try:
+                        time = data_handling.getTimeFromFormat(header['date_obs'])
+                    except KeyError:
+                        try_map = sunpy.map.Map(aia_file_dir + file)
+                        print(try_map.meta)
                 times.append(time)
             else:
                 ## just to provide an entry so indices can match up
