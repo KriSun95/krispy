@@ -200,8 +200,14 @@ class Contours:
                 try:
                     time = data_handling.getTimeFromFormat(header['date-obs']) #datetime.datetime.strptime(header['date-obs'], '%Y-%m-%dT%H:%M:%S.%fZ')
                 except KeyError:
-                    print("Header info: ",header)
-                    time = data_handling.getTimeFromFormat(header['date_obs'])
+                    try:
+                        time = data_handling.getTimeFromFormat(header['date_obs'])
+                    except :
+                        hdulist = fits.open(aia_file_dir + file)
+                        header = hdulist[1].header
+                        hdulist.close()
+                        print("Header info: ",header)
+                        time = data_handling.getTimeFromFormat(header['date-obs'])
                 times.append(time)
             else:
                 ## just to provide an entry so indices can match up
