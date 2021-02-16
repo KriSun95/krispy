@@ -200,6 +200,7 @@ class Contours:
                 try:
                     time = data_handling.getTimeFromFormat(header['date-obs']) #datetime.datetime.strptime(header['date-obs'], '%Y-%m-%dT%H:%M:%S.%fZ')
                 except KeyError:
+                    print("Header info: ",header)
                     time = data_handling.getTimeFromFormat(header['date_obs'])
                 times.append(time)
             else:
