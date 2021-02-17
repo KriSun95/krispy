@@ -16,13 +16,16 @@ import datetime
 from datetime import timedelta
 from astropy.io import fits
 
-def prep(aia_sunpy_map):
+def prep(aia_sunpy_map, isHMI=False):
     from aiapy.calibrate import register, update_pointing, normalize_exposure
-    m_updated_pointing = update_pointing(aia_sunpy_map)
-    del aia_sunpy_map
-    m_registered = register(m_updated_pointing)
-    del m_updated_pointing
-    return normalize_exposure(m_registered)
+    if not isHMI:
+        aia_sunpy_map = update_pointing(aia_sunpy_map)
+        del aia_sunpy_map
+        m_registered = register(m_updated_pointing)
+        del m_updated_pointing
+        return normalize_exposure(m_registered)
+    else:
+        return register(aia_sunpy_map)
 
 def create_iron18(dir_094=None, dir_171=None, dir_211=None, outdir=None, tr_degradation_corr=[True, '2018-09-09T12:00:00'], needing_prepped=False):
     """Takes the 94, 171, 211 channels from SDO/AIA to create an iron18 emission proxy (Del Zanna 2013).

@@ -636,7 +636,7 @@ def xspecParams(xspec_fits, *args):
 
 
 # a function to read in frames already generated from a folder or create the frames
-def frames(fitsDirectory=None, time_range=None, where=None, submap=None, framesFolder=None, framesFile=None, overwrite=False, needs_prepping=False):
+def frames(fitsDirectory=None, time_range=None, where=None, submap=None, framesFolder=None, framesFile=None, overwrite=False):
     """Reads or creates the frames you want from a directory. Reading takes priority over creating the files again unless 
     overwrite=True.
     
@@ -663,10 +663,6 @@ def frames(fitsDirectory=None, time_range=None, where=None, submap=None, framesF
 
     overwrite : bool
         Set to true if you want the frames to be calculated again regardless if they are there or not.
-
-    needs_prepping : bool or list of bool
-        Set to True if the fits files need prepping (uses aiapy).
-        Default: False
             
     Returns
     -------
@@ -713,11 +709,10 @@ def frames(fitsDirectory=None, time_range=None, where=None, submap=None, framesF
 
             files_in_trange = aia_file_list[good_indices]
 
-            needs_prepping = [needs_prepping]*len(fitsDirectory) if type(needs_prepping)!=list else needs_prepping
             if type(where)==list:
-                background_map = aiamap.which_background(fitsDirectory[d], files_in_trange, where=where[d], needs_prepping=needs_prepping[d])
+                background_map = aiamap.which_background(fitsDirectory[d], files_in_trange, where=where[d])
             else:
-                background_map = aiamap.which_background(fitsDirectory[d], files_in_trange, where=where, needs_prepping=needs_prepping[d])
+                background_map = aiamap.which_background(fitsDirectory[d], files_in_trange, where=where)
 
             aia_frame, _ = aiamap.aia_frame(background_map, submap=submap[d])
             aia_frames.append(aia_frame)
