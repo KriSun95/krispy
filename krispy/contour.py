@@ -17,6 +17,7 @@ from astropy.coordinates import SkyCoord
 import astropy.units as u
 from skimage.transform import resize
 from scipy import signal
+from scipy.optimize import curve_fit
 from astropy.io import fits
 import matplotlib.colors as mc
 from matplotlib.patches import Circle
@@ -311,7 +312,7 @@ class Contours:
         return aia_data, aia_corr_data
     
 
-    def corr_fpm(self, nu_arrays, aia_array):
+    def corr_fpm(self, nu_arrays, aia_array, sub_pix=True):
 
         # take first map the now
         for key in nu_arrays:
@@ -325,6 +326,14 @@ class Contours:
         y, x = np.unravel_index(np.argmax(self.corr_data), self.corr_data.shape)  # find the match
 
         self.corr_ar = data_for_corr, nu_arr
+
+        # sub-pixel interpolation
+        if sub_pix:
+            # look at a cross (2 pixels N, E, S, W of x and y), fit a polynomial, find max for sub-pixel shift
+            poptx, pcovx = curve_fit(poly2, [x-2,x-1,x,x+1,x+2], self.corr_data[y, x-2:x+3], p0=[1,1,1])
+            popty, pcovy = curve_fit(poly2, [y-2,y-1,y,y+1,y+2], self.corr_data[y-2:y+3, x], p0=[1,1,1])
+            x = poly2max(*poptx[:2])
+            y = poly2max(*popty[:2])
 
         # need the number of NuSTAR pixels is needed for the shift
         x_pix_shift = x - np.shape(data_for_corr)[1]/2  
@@ -657,12 +666,25 @@ class Contours:
 
         return compmap
     
+
+    @staticmethod
+    def cc_nu_and_aia(nu_maps, bg_frame):
+        for key in nu_maps:
+            nu_arr = nu_maps[key].data
+            nu_arr[np.isnan(nu_arr)] = 0
+            break
+        resized_aia = resize(bg_frame.data, np.shape(nu_arr))
+        corr = signal.correlate2d(resized_aia, nu_arr, boundary='fill', mode='same')
+        _y, _x = np.unravel_index(np.argmax(corr), corr.shape)  # find the match
+        _x_pix_shift = _x - np.shape(resized_aia)[1]/2  
+        _y_pix_shift = _y - np.shape(resized_aia)[0]/2
+        return np.array([_x_pix_shift, _y_pix_shift])
     
     nu_shift = None
     
     def setup_deconvolved_contours(self, nu_file=None, colour_and_energy=None, 
                                    time_range=None, submap=None, iterations=None, OA2source_offset=None, hor2SourceAngle=None, 
-                                   aia_dir=None, deconvolve=True, bg_time_pos='average'):
+                                   aia_dir=None, deconvolve=True, bg_time_pos='average', cc_smaller_area=True):
         
         # set defualt values is inputs are None
         nu_file = self.file_given if nu_file == None else nu_file
@@ -701,11 +723,23 @@ class Contours:
             self.nu_shift = self.corr_fpm(nustar_maps_corr, background_corr)
         else:
             self.nu_shift = self.nu_shift
+            cc_smaller_area = False # if manual shift is given then no cross-correlation
         
         nu_final, nu_objs = self.apply_nu_shift_fpm(nu_file=nu_file, nu_shift=self.nu_shift, 
                                                     colour_and_energy=colour_and_energy, 
                                                     time_interval=time_range, submap=submap, 
                                                     iterations=iterations, OA2source_offset=OA2source_offset, hor2SourceAngle=hor2SourceAngle)
+
+        # run cross-correlation again, but this is over a smaller area? 
+        # issue when resizing the AIA map over the full NuSTAR FOV
+        if cc_smaller_area:
+            self.nu_smaller_area_shift = self.cc_nu_and_aia(nu_final, background_frame)
+            self.nu_shift += self.nu_smaller_area_shift
+            nu_final, nu_objs = self.apply_nu_shift_fpm(nu_file=nu_file, nu_shift=self.nu_shift, 
+                                                        colour_and_energy=colour_and_energy, 
+                                                        time_interval=time_range, submap=submap, 
+                                                        iterations=iterations, OA2source_offset=OA2source_offset, hor2SourceAngle=hor2SourceAngle)
+
         # what do I need for plotting that isn't an attribute yet?
         self.nu_final_maps =  nu_final
         self.nu_final_objects = nu_objs
@@ -765,3 +799,14 @@ class Contours:
         new_object.nu_final_objects = {**self.nu_final_objects, **other.nu_final_objects}
         
         return new_object
+
+
+
+def poly2(x,a,b,c):
+    # degree 2 polynomial for sub-pixel interpolation
+    x = np.array(x)
+    return a*x**2 + b*x + c
+
+def poly2max(a,b):
+    # x position of max value in a degree 2 polynomial a*x**2 + b*x + c
+    return -b/(2*a)
