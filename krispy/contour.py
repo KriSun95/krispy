@@ -321,7 +321,7 @@ class Contours:
             break
         
 
-        data_for_corr = resize(aia_array, np.shape(nu_arr))
+        data_for_corr = resize(aia_array, np.shape(nu_arr), anti_aliasing=True)
         self.corr_data = signal.correlate2d(data_for_corr, nu_arr, boundary='fill', mode='same')
         y, x = np.unravel_index(np.argmax(self.corr_data), self.corr_data.shape)  # find the match
 
@@ -673,7 +673,7 @@ class Contours:
             nu_arr = nu_maps[key].data
             nu_arr[np.isnan(nu_arr)] = 0
             break
-        resized_aia = resize(bg_frame.data, np.shape(nu_arr))
+        resized_aia = resize(bg_frame.data, np.shape(nu_arr), anti_aliasing=True)
         corr = signal.correlate2d(resized_aia, nu_arr, boundary='fill', mode='same')
         _y, _x = np.unravel_index(np.argmax(corr), corr.shape)  # find the match
         _x_pix_shift = _x - np.shape(resized_aia)[1]/2  
