@@ -86,8 +86,32 @@ def meta_info(xspec_output):
     return xspecParams(xspec_output+".fits", livetime, c_stat, factor)
 
 
+def gain_info(xspec_output):
+    ''' Get final gain used in the fitting.
+    
+    Parameters
+    ----------
+    xspec_output : str
+            The name of the XSPEC output .txt and .fits file.
+            
+    Returns
+    -------
+    A dictionary of the meta data for the gain fit. 
+    '''
+    # other plotting info
+    gain_params = ['gainSlope', 'gainSlopeElow', 'gainSlopeEhi']
+    gain_values = xspecParams(xspec_output+"_gain.fits", *gain_params)
+    
+    gain = gain_values['gainSlope'][0]
+    ext1, ext2 = gain-gain_values['gainSlopeElow'][0], gain-gain_values['gainSlopeEhi'][0]
+    plusG = ext1 if ext1>0 else ext2
+    minusG = ext1 if ext1<0 else ext2
+    
+    return " ($Gain: {{{0:.2f}}}^{{+{1:.2f}}}_{{-{2:.2f}}}$)".format(gain, plusG, abs(minusG))
+
+
 def getSubModels(data):
-    ''' Get mcount rates from teh spectral fit models.
+    ''' Get mcount rates from the spectral fit models.
     
     Parameters
     ----------
@@ -240,6 +264,10 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
                         The axes for the residuals to be plotted on.
                         Default: An appended axes below the spectral plot
 
+                add_to_title : string
+                        If you want to tag on extra information in the default title.
+                        Default: empty
+
     Returns
     -------
     The axes object of the plotted XSPEC fit (if plot_res=True then the axes for the data and 
@@ -250,7 +278,8 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
                 "total_model_colour":"purple", "model_colours":plt.rcParams['axes.prop_cycle'].by_key()['color'], "fitting_range_colours":None, "fitting_range_display":True, 
                 "EM_orders":None, "plot_parameters":True,
                 "x_param":0.25, "y_param":0.95, "y_param_inc":0.07, "param_size":11, 
-                "plot_res":True, "res_axes":None}
+                "plot_res":True, "res_axes":None, 
+                "add_to_title":""}
     defaults.update(kwargs)
     
     # be lazy, just unpack the dict instead of changing the variable names later
@@ -260,6 +289,7 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
     EM_orders, plot_parameters = defaults["EM_orders"], defaults["plot_parameters"]
     x_param, y_param, y_param_inc, param_size = defaults["x_param"], defaults["y_param"], defaults["y_param_inc"], defaults["param_size"]
     plot_res = defaults["plot_res"]
+    add_to_title = defaults["add_to_title"]
     
     fpm_used = fpmFromFilename(xspec_output)
     statistic_used = " C-stat"
@@ -277,7 +307,7 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
             minusF = ext1 if ext1<0 else ext2
             scaler = " ($C_{{B}}: {{{0:.2f}}}^{{+{1:.2f}}}_{{-{2:.2f}}}$)".format(factor[0], plusF, abs(minusF))
         
-    title_str = "FPM" + fpm_used + statistic_used + livetime_str + scaler if type(title)==type(None) else title
+    title_str = "FPM" + fpm_used + statistic_used + livetime_str + scaler + add_to_title if type(title)==type(None) else title
     
     # values for plotting the params
     y_lim = [1e-1,3.5e3] if type(y_lim)==type(None) else y_lim
@@ -422,6 +452,11 @@ def plotXspec_allTogether(xspec_output, fitting_mode, **kwargs):
     # create a dict the has a key indicating a thermal or non-thermal model that is assigned to a list of the 
     #  count rates and fitted parameters for the model
     matched_submodels = matchSubModels2Meta(subMods, fitting_values, fpmFromFilename(xspec_output))
+
+    # what if the gain was varied? I save this out in a xspec_output+_gain.fits file where xspec_output endswith gainVary
+    if xspec_output.endswith("gainVary"):
+        gain_string = gain_info(xspec_output)
+        kwargs.update(add_to_title=gain_string)
     
     # now pass everything on to be plotted and return the axes object(s) created
     return plotXspec(xspec_output, counts_data, matched_submodels, meta_data=plotting_values, **kwargs)

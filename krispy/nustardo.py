@@ -1789,7 +1789,7 @@ def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange
 
     ax1.set_yscale("log")
     ax1.set_ylim(y_lims_spec)
-    ax1.set_ylabel("Counts s$^{-1}$ keV$^{-1}$")
+    ax1.set_ylabel("Counts")# s$^{-1}$ keV$^{-1}$")
     plt.setp(ax1.get_xticklabels(), visible=False)
     ax1.set_xlim([1.6,10])
 
@@ -1848,6 +1848,189 @@ def CheckGrade0ToAllGrades(evtFile, wholeRangeToo=False, saveFig=None, timeRange
               "eff_exp":evt_header['livetime'], 
               "ontime":evt_header['ontime'], 
               "lvtime_percent":100*evt_header['livetime']/evt_header['ontime']}
+    if printOut:
+        for key in inform.keys():
+            print(key, " : ", inform[key])
+            
+    return inform, axes_made
+
+
+
+def CheckGrade0ToAnyGrades(evtFile, grades, wholeRangeToo=False, saveFig=None, timeRange=None, printOut=False, shortTitle="", xlims=None):
+    """Takes a NuSTAR evt file and compares the grade 0 events to the events of all grades.
+       Adapted from: https://github.com/ianan/ns_proc_test/blob/main/test_proc_jun20_002.ipynb
+    
+    Parameters
+    ----------
+    evtFile : str
+            The .evt file.
+
+    grades : list of length 1 or 2 list
+            A list of the lists of grades you want the grade 0 counts to be compared against. E.g. grades=[[1], [0,4]]
+            means that grade zero will be checked against grade 1 counts and grade 0-4 counts inclusive.
+    
+    wholeRangeToo : Bool
+            If you want to plot the whole energy range in a second plot, next to the one ranging from 
+            1.6--10 keV, set thi to True.
+            Default: False
+            
+    saveFig : str
+            If you want to save the figure made as a PDF then set this to a string of the save name.
+            Defualt: None
+
+    timeRange : list, 2 strings
+            If you only want a certain time range of the total file's spectrum to be plotted, e.g. 
+            ["%Y/%m/%d, %H:%M:%S", "%Y/%m/%d, %H:%M:%S"].
+            Defualt: None
+
+    printOut : Bool
+            If you want to print out the output nicely(-ish) set this to True.
+            Default: False
+
+    shortTitle : Str
+            Add a quick title to help keep track of the plots
+            Default: ""
+            
+    Returns
+    -------
+    Dictionary containing the file name used ["file"], the time range of the file ["fileTimeRange"], 
+    time range you asked it to plot ["timeRangeGivenToPlot"], effective exposure of full file ["eff_exp"], 
+    ontime of full file ["ontime"], percentage livetime ["lvtime_percent"] of full file given, Grade 0 
+    plotting info, and you custom grade info too.
+    """
+    
+    # read in .pha files for grade 0 and all grades
+    hdulist = fits.open(evtFile)
+    evt_data = hdulist[1].data
+    evt_header = hdulist[1].header
+    hdulist.close()
+    
+    # what is the time range of the file before filtering with time if you want
+    ## nustar times are measured in seconds from this date
+    rel_t = data_handling.getTimeFromFormat("2010/01/01, 00:00:00") 
+    file_start = str((rel_t + timedelta(seconds=np.min(evt_data["time"]))).strftime('%Y/%m/%d, %H:%M:%S'))
+    file_end   = str((rel_t + timedelta(seconds=np.max(evt_data["time"]))).strftime('%Y/%m/%d, %H:%M:%S'))
+    
+    # filter evt file by time?
+    if type(timeRange) == list:
+        if len(timeRange) == 2:
+            evt_data = NustarDo().time_filter(evt_data, tmrng=timeRange)
+
+    # work out the grade 0 spectra as well
+    data_grade0 = evt_data['pi'][evt_data['grade']==0]
+    hist_grade0, be_grade0 = np.histogram(data_grade0*0.04+1.6,bins=np.arange(1.6,79,0.04))
+    
+    other_grades = {}
+    ratios = []
+    max_ratios, min_ratios = [], []
+    # get the data
+    for g in grades:
+        if len(g)==1:
+            data_grade = evt_data['pi'][evt_data['grade']==g[0]]
+            g_str = "Grade "+str(g[0])
+            other_grades[g_str] = np.histogram(data_grade*0.04+1.6,bins=np.arange(1.6,79,0.04))
+        else:
+            data_grade = evt_data['pi'][(evt_data['grade']>=g[0]) & (evt_data['grade']<=g[1])]
+            g_str = "Grade "+str(g[0])+"-"+str(g[1])
+            other_grades[g_str] = np.histogram(data_grade*0.04+1.6,bins=np.arange(1.6,79,0.04))
+        ratio = other_grades[g_str][0]/hist_grade0
+        ratios.append(ratio)
+        maximum = np.max(ratio[np.isfinite(ratio)]) if wholeRangeToo else np.max(ratio[np.isfinite(ratio)][:int((10-1.6)/0.04)])
+        minimum = np.min(ratio[np.isfinite(ratio)]) if wholeRangeToo else np.min(ratio[np.isfinite(ratio)][:int((10-1.6)/0.04)])
+        max_ratios.append(maximum)
+        min_ratios.append(minimum)
+    
+    # plotting info
+    width   = 11 if wholeRangeToo else 5
+    columns = 2  if wholeRangeToo else 1
+    y_lims_spec  = [1e-1, 1.1*np.max(hist_grade0)]
+    
+    y_lims_ratio = [0.95*np.min(min_ratios), 1.05*np.max(max_ratios)]
+
+    axes_made = []
+
+    plt.figure(figsize=(width,7))
+    
+    # define subplots for close look
+    ax1 = plt.subplot2grid((4, columns), (0, 0), colspan=1, rowspan=3)
+    axes_made.append(ax1)
+    ax2 = plt.subplot2grid((4, columns), (3, 0), colspan=1, rowspan=1)
+    axes_made.append(ax2)
+    plt.tight_layout()
+
+    # axis 1: the plots for all grades and grade 0
+    for key, r in zip(other_grades.keys(), ratios):
+        ax1.plot(other_grades[key][1][:-1], other_grades[key][0], drawstyle="steps-pre", label=key)
+        ax2.plot(other_grades[key][1][:-1],   r,   drawstyle="steps-pre")
+    ax1.plot(be_grade0[:-1],   hist_grade0,   drawstyle="steps-pre", label="Grade 0")
+
+    ax1.set_yscale("log")
+    ax1.set_ylim(y_lims_spec)
+    ax1.set_ylabel("Counts")# s$^{-1}$ keV$^{-1}$")
+    plt.setp(ax1.get_xticklabels(), visible=False)
+
+    xlims = xlims if type(xlims)!=type(None) else [1.6,10]
+    ax1.set_xlim(xlims)
+
+    ax1.set_title("Grade 0 vs Chosen Grades - "+shortTitle)
+    ax1.legend()
+
+    # axis 2: the difference between all grades and grade 0
+    # ax2.plot(be_grade0[:-1],   ratio,   drawstyle="steps-pre", color='k')
+
+    ax2.set_ylabel("Chosen Grades / Grade0")
+    ax2.set_ylim(y_lims_ratio)
+    ax2.set_xlim(xlims)
+    ax2.set_xlabel("Energy [keV]")
+    ax2.grid(axis='y')
+
+
+    # define subplots for whole energy range
+    if wholeRangeToo:
+        # define subplots for close look
+        ax3 = plt.subplot2grid((4, 2), (0, 1), colspan=1, rowspan=3)
+        axes_made.append(ax3)
+        ax4 = plt.subplot2grid((4, 2), (3, 1), colspan=1, rowspan=1)
+        axes_made.append(ax4)
+        plt.tight_layout()
+
+        # axis 1: the plots for all grades and grade 0
+        for key, r in zip(other_grades.keys(), ratios):
+            ax3.plot(other_grades[key][1][:-1], other_grades[key][0], drawstyle="steps-pre", label=key)
+            ax4.plot(other_grades[key][1][:-1],   r,   drawstyle="steps-pre")
+        ax3.plot(be_grade0[:-1],   hist_grade0,   drawstyle="steps-pre", label="Grade 0")
+
+        ax3.set_yscale("log")
+        ax3.set_ylim(y_lims_spec)
+        ax3.set_xscale("log")
+        plt.setp(ax3.get_xticklabels(), visible=False)
+        ax3.set_xlim([1.6,79])
+
+        ax3.set_title("Same But Whole E-range")
+        ax3.legend()
+
+        # axis 2: the difference between all grades and grade 0
+        # ax4.plot(be_grade0[:-1],   ratio,   drawstyle="steps-pre", color='k')
+        
+        ax4.set_ylim(y_lims_ratio)
+        ax4.set_xscale("log")
+        ax4.set_xlim([1.6,79])
+        ax4.set_xlabel("Energy [keV]")
+        ax4.grid(axis='y')
+    
+    if type(saveFig) == str:
+        plt.savefig(saveFig, bbox_inches="tight")
+
+    # plt.show()
+    
+    inform = {"file":evtFile,
+              "fileTimeRange":[file_start, file_end], 
+              "timeRangeGivenToPlot":timeRange,
+              "eff_exp":evt_header['livetime'], 
+              "ontime":evt_header['ontime'], 
+              "lvtime_percent":100*evt_header['livetime']/evt_header['ontime'],
+              "Grade 0":[hist_grade0, be_grade0],
+              **other_grades}
     if printOut:
         for key in inform.keys():
             print(key, " : ", inform[key])

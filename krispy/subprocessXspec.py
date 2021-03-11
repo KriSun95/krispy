@@ -88,6 +88,34 @@ def locMcmcName(xspecFile):
                 return line.split()[-1]
     return ""
 
+
+def locGainName(xspecFile):
+    """A function to find the name of the gain fits file you have defined in you XSPEC .xcm file, 
+    if it's there. (This is if you use my way of saving out a fits file with the gain result in 
+    it from you .xcm file.)
+
+    Parameters
+    ----------
+    xspecFile : str
+        The XSPEC .xcm file that has the "writefits" command used in it.
+            
+    Returns
+    -------
+    The gain fits path+file name from the .xcm file.
+
+    Example
+    -------
+    # to get gain fits path+file name from the .xcm file
+    fitsFile = loc8fitsAndTxtName("apec1fit_fpm1_cstat.xcm")
+    """
+    with open(xspecFile, "r") as lf:
+        for line in lf.readlines():
+            if line.startswith("set finalFILE"):
+                # get the path and mcmc file name for the "chain run" line
+                return line.split()[-1]
+    return ""
+
+
 def maybeRemoveFile(file, remove=False):
     """Check if a file exists and remove it if you want.
 
@@ -168,6 +196,9 @@ def runXSPEC(xspecBatchFile, logFile=False, overwrite=False):
     # mcmc might have been run, check for this file name convention
     mcmcFile = locMcmcName(xspecBatchFile) # returns "" if this isn't there
     maybeRemoveFile(mcmcFile, remove=overwrite)
+    # gain might have been allowed to vary and saved, check for this file name convention
+    gainFile = locGainName(xspecBatchFile) # returns "" if this isn't there
+    maybeRemoveFile(gainFile, remove=overwrite)
     
 
     # XSPEC commands to execute once opened a pipeline
