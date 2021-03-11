@@ -113,15 +113,19 @@ class Contours:
             # get array for plotting
             nu1 = krispy.nustardo.NustarDo(nu_file, energy_range=[colour_and_energy[key][0], colour_and_energy[key][1]], time_range=time_interval)
             nu1.deconvolve['apply'] = False # just to be sure
+            nu1.gaussian_filter['apply'] = True
             nu1.sub_lt_zero = 0
             nustar_obj[key] = nu1.nustar_setmap(submap = [submap[0]-0.01, submap[1]-0.01, submap[2]+0.01, submap[3]+0.01]) # to avoid white border
+            nu1.gaussian_filter['apply'] = False
             del nu1
 
             # get array for cross-correlation
             nu2 = krispy.nustardo.NustarDo(nu_file, energy_range=[colour_and_energy[key][0], colour_and_energy[key][1]], time_range=time_interval)
             nu2.deconvolve['apply'] = False
+            nu2.gaussian_filter['apply'] = True
             nu2.sub_lt_zero = 0
             nustar_maps_corr[key] = nu2.nustar_setmap(submap = [submap[0]-90, submap[1]-90, submap[2]+90, submap[3]+90])
+            nu2.gaussian_filter['apply'] = False
             del nu2
 
         return nustar_obj, nustar_maps_corr

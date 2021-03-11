@@ -887,7 +887,7 @@ class NustarDo:
         #find all the folders in the evt directory (they end with a slash)
         search_directory = search_directory_regex.findall(start_directory)
 
-        # search the folder you're in first
+        # search the folder the evt file is in first
         search_directory = '/'+''.join(search_directory) 
         for in_dir in os.listdir(search_directory):
             if in_dir == 'nu' + obs_id + fpm + descriptor + ext:
