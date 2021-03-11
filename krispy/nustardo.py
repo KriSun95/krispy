@@ -887,6 +887,15 @@ class NustarDo:
         #find all the folders in the evt directory (they end with a slash)
         search_directory = search_directory_regex.findall(start_directory)
 
+        # search the folder you're in first
+        search_directory = '/'+''.join(search_directory) 
+        for in_dir in os.listdir(search_directory):
+            if in_dir == 'nu' + obs_id + fpm + descriptor + ext:
+                full_filename = os.path.join(search_directory, in_dir)
+                file_directory = search_directory
+                file_name = in_dir
+                return full_filename, file_directory, file_name
+
         #don't includce the last folder to go back a directory
         search_directory = '/'+''.join(search_directory[:-1]) #go back a directory to search for the house keeping file
         for _dirpath, _dirnames, _filenames in os.walk(search_directory):
@@ -895,6 +904,7 @@ class NustarDo:
                     full_filename = os.path.join(_dirpath, _file)
                     file_directory = _dirpath
                     file_name = _file
+                    return full_filename, file_directory, file_name
 
         return full_filename, file_directory, file_name
         
