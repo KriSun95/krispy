@@ -394,6 +394,12 @@ class Contours:
                 # if own_map isn't set then the map is created from scratch again and so isn't deconvolved
                 nu1.own_map = nu1.rsn_map
                 tn = False
+            else:
+                nu1.gaussian_filter['apply'] = True
+                nu1.nustar_setmap(submap='FoV')
+                nu1.gaussian_filter['apply'] = False
+                nu1.own_map = nu1.rsn_map
+                tn = False
 
             nu1.sub_lt_zero = 0
             nustar_final[key] = nu1.nustar_setmap(submap = [submap[0]-0.01, submap[1]-0.01, submap[2]+0.01, submap[3]+0.01], time_norm=tn) # to avoid white border
