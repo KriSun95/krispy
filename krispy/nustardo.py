@@ -118,6 +118,12 @@ class NustarDo:
         self.evt_data = hdulist[1].data
         self.evt_header = hdulist[1].header
         hdulist.close()
+
+        ############*********** this is a hacky fix but will do for now ***********############
+        # if Python code is used for the sunpos file creation the re-written header keywords aren't saved properly, so...
+        self.evt_header['TCDLT13'] = 2.45810736 # x
+        self.evt_header['TCDLT14'] = 2.45810736 # y
+
         
         #check evt_filename matches evt_header info
         assert obs_id == self.evt_header['OBS_ID'], 'Observation ID in the .evt filename does not match ID in the .evt header info. {} =/= {}'.format(obs_id, self.evt_header['OBS_ID'])
