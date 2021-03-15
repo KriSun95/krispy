@@ -888,11 +888,11 @@ class NustarDo:
         search_directory = search_directory_regex.findall(start_directory)
 
         # search the folder the evt file is in first
-        search_directory = '/'+''.join(search_directory) 
-        for in_dir in os.listdir(search_directory):
+        sd = '/'+''.join(search_directory) 
+        for in_dir in os.listdir(sd):
             if in_dir == 'nu' + obs_id + fpm + descriptor + ext:
-                full_filename = os.path.join(search_directory, in_dir)
-                file_directory = search_directory
+                full_filename = os.path.join(sd, in_dir)
+                file_directory = sd
                 file_name = in_dir
                 return full_filename, file_directory, file_name
 
