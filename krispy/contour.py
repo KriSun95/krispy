@@ -256,6 +256,11 @@ class Contours:
             bgs_header.append(hdulist[0].header)
             bgs.append(hdulist[0].data)
             hdulist.close()
+
+        # check they're all the same size, not a given apparently. Match up to the first one
+        for c,b in enumerate(bgs):
+            if np.shape(b.data) != np.shape(bgs[0].data):
+                bgs[c] = resize(b.data, np.shape(bgs[0].data), anti_aliasing=True)
      
         if where == 'start':
             bg = bgs[0]
