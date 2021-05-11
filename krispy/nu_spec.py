@@ -486,7 +486,9 @@ def make_nusrm(rmf_matrix=(), arf_array=()):
         return
     
     ## try np.multiply(photon_spec, srm.T) then sum columns, or np.multiply(photon_spec, srm.T).T and still sum rows?
-    srm = np.array([rmf_matrix[r, :] * arf_array[r] for r in range(len(arf_array))]) # each energy bin row in the rmf is multiplied the arf value for the same energy bin
+    #srm = np.array([rmf_matrix[r, :] * arf_array[r] for r in range(len(arf_array))]) # each energy bin row in the rmf is multiplied the arf value for the same energy bin
+    ## this line is >2x faster 
+    srm = arf_array[:, None]*rmf_matrix
     return srm
 
 
@@ -523,8 +525,9 @@ def make_model(energies=None, photon_model=None, parameters=None, srm=None):
         photon_spec = photon_model(energies, *parameters)
     
     ## try photon_spec@srm for matrix multiplication?
-    model_cts_matrix = np.array([srm[r, :] * photon_spec[r] for r in range(len(photon_spec))])
-    model_cts_spectrum = model_cts_matrix.sum(axis=0) # sum the rows together
+    # model_cts_matrix = np.array([srm[r, :] * photon_spec[r] for r in range(len(photon_spec))])
+    # model_cts_spectrum = model_cts_matrix.sum(axis=0) # sum the rows together
+    model_cts_spectrum = np.matmul(photon_spec, srm)
     
     return model_cts_spectrum
 
