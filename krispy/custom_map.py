@@ -68,7 +68,7 @@ def make_sunpy(evtdata, hdr, norm_map=False):
     # Assume X and Y are the same size
     resample = 1.0
     scale = delx * resample
-    bins = (max_x - min_x) / (resample)
+    bins = int((max_x - min_x) / (resample))
 
     H, yedges, xedges = np.histogram2d(y, x, bins=bins, range = [[min_y,max_y], [min_x, max_x]])
 

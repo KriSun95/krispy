@@ -341,6 +341,27 @@ def plotSDOlightcurves(instrument, directory="./", files=None, data_list=None, t
     return fig, axs
 
 
+def someColourDict():
+    """Returns a dictionary of lists of colours. Saves me defining "random" lists in the future
+    and helps me store colours lists I might like.
+    
+    Parameters
+    ----------
+    None.
+
+    Colours lists
+    -------------
+        random list -> "common":['k', 'r', 'g', 'c', 'm', 'b', 'y']
+        HG2G 42nd Anniversary book cover colours -> "HG2G":["#E43516", "#00B8F2", "#04A1A4", "#E95F0F", "#CCD101", "#FBBB03"]
+            
+    Returns
+    -------
+    A dictionary object.
+    """
+    return {"common":['k', 'r', 'g', 'c', 'm', 'b', 'y'],
+            "HG2G":["#E43516", "#00B8F2", "#04A1A4", "#E95F0F", "#CCD101", "#FBBB03"]}
+
+
 def plotMarkers(markers, span=True, axis=None, customColours=None, **kwargs):
     """Takes markers to be plotted on an axis as vertical lines or a spanned shaded region.
     

@@ -1,5 +1,6 @@
 import subprocess
 import os
+import time
 
 """ These functions/script is created to run an XSPEC session and pass certain XSPEC commands down the pipeline at certain times according to 
     the termal output during the XSPEC spectral fitting. I.e. trying to avoid having to manually input the final commands for the fitting.
@@ -292,7 +293,7 @@ def runXSPEC_customCommands(xspecBatchFile=None, logFile=False, overwrite=False,
     pass
 
 
-def XSPECfit(directory, xspecBatchFile, logFile=False, overwrite=False):
+def XSPECfit(directory, xspecBatchFile, logFile=False, overwrite=False, printTime=False):
     """Runs an XSPEC .xcm batch file(s) in the corresponding directory(s) and then, in the same XSPEC program, 
     run other manual commands to complete the XSPEC fitting process. This is because some of the final commands 
     needed to complete the fitting process in XSPEC needs to be run manually.
@@ -319,6 +320,10 @@ def XSPECfit(directory, xspecBatchFile, logFile=False, overwrite=False):
         fitting process. Setting this to True will check if a .fits, .txt. and .log file exist (using the 
         name defined with "writefits" fromxspecBatchFile) and delete them. If False with those files being
         present then an error will occur and the program will hault.
+        Default: False
+
+    printTime : bool
+        Do you want the time (in seconds) that it took the fit to be printed.
         Default: False
 
     Returns
@@ -351,9 +356,15 @@ def XSPECfit(directory, xspecBatchFile, logFile=False, overwrite=False):
 
     # change directory to each cxm file and run the fit then go back to the original directory to start again
     for d,xcm in zip(directory, xspecBatchFile):
+
+        start = time.time()
+
         os.chdir(d)
         runXSPEC(xspecBatchFile=xcm, logFile=logFile, overwrite=logFile)
         os.chdir(startingDir)
+
+        if printTime:
+            print("Fit took: ", time.time()-start, " seconds")
 
 
 if __name__=="__main__":
