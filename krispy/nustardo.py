@@ -121,8 +121,8 @@ class NustarDo:
 
         ############*********** this is a hacky fix but will do for now ***********############
         # if Python code is used for the sunpos file creation the re-written header keywords aren't saved properly, so...
-        # self.evt_header['TCDLT13'] = 2.45810736 # x
-        # self.evt_header['TCDLT14'] = 2.45810736 # y
+        self.evt_header['TCDLT13'] = 2.45810736 # x
+        self.evt_header['TCDLT14'] = 2.45810736 # y
 
         
         #check evt_filename matches evt_header info
