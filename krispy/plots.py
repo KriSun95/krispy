@@ -331,7 +331,7 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
 
     ## plot total model
     tmc = "purple" if type(total_model_colour)==type(None) else total_model_colour
-    axs.plot(counts_data["energy"], counts_data["model_total"], label='Total Model', color=total_model_colour)
+    axs.plot(counts_data["energy"], counts_data["model_total"], label='Total Model', color=total_model_colour, lw=defaults["linewidth"])
 
     # it just became easier to have this seperate
     times_sign = str(u'\u00d7'.encode('utf-8').decode('utf-8')) 
