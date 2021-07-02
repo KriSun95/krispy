@@ -268,6 +268,10 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
                         If you want to tag on extra information in the default title.
                         Default: empty
 
+                linewidth : float or int
+                        The thickness of the lines that are plotted. Passed to linewidth or lw in plt.plot.
+                        Default: 1
+
     Returns
     -------
     The axes object of the plotted XSPEC fit (if plot_res=True then the axes for the data and 
@@ -279,7 +283,7 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
                 "EM_orders":None, "plot_parameters":True,
                 "x_param":0.25, "y_param":0.95, "y_param_inc":0.07, "param_size":11, 
                 "plot_res":True, "res_axes":None, 
-                "add_to_title":""}
+                "add_to_title":"", "linewidth":1}
     defaults.update(kwargs)
     
     # be lazy, just unpack the dict instead of changing the variable names later
@@ -379,7 +383,7 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
                             " ph keV$^{-1}$ cm$^{-2}$ s$^{-1}$ @ 1 keV"
             no_of_lines = 2
         c = int( n - (n//len(model_colours))*len(model_colours) ) # cycle through line_colours
-        axs.plot(counts_data["energy"], matched_submodels[sm][0], label=param_str, color=model_colours[c])
+        axs.plot(counts_data["energy"], matched_submodels[sm][0], label=param_str, color=model_colours[c], lw=defaults["linewidth"])
         if plot_params[n]:
             cumulative_y_param_inc += y_param_inc*no_of_lines
             axs.annotate(param_str, (x_param,y_param - cumulative_y_param_inc), color=model_colours[c], xycoords='axes fraction', size=param_size)
@@ -402,7 +406,7 @@ def plotXspec(xspec_output, counts_data, matched_submodels, fitting_ranges=None,
         # replace nans and infs with zeros (i.e., where there arent data so there is a divide by 0)
         residuals[~np.isfinite(residuals)] = 0
         residuals[np.isnan(residuals)] = 0
-        res.plot(counts_data["energy"], residuals, drawstyle='steps-mid', color=total_model_colour)
+        res.plot(counts_data["energy"], residuals, drawstyle='steps-mid', color=total_model_colour, lw=defaults["linewidth"])
         res.axhline(0, linestyle=':', color='k')
         res.set_xlim(x_lim)
         res.set_ylim([-7,7])
