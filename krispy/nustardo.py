@@ -523,6 +523,9 @@ class NustarDo:
             tr = SkyCoord(top_right['x']*u.arcsec, top_right['y']*u.arcsec, frame=sunpy_map_obj.coordinate_frame)
             return sunpy_map_obj.submap(bl,top_right=tr)
 
+        if (lose_off_limb == False):
+            return sunpy_map_obj
+
         else:
             raise TypeError('\nCheck the submap coordinates that were given please. It should be a list with four '
                             'float/int entries in arcseconds in the form [bottom left x, bottom left y, top right x, '
@@ -683,8 +686,48 @@ class NustarDo:
     rcParams_default_setup = True
     cbar_title = 'Counts'
     ax_label_size = 18
+
+    @staticmethod
+    def draw_solar_grid(rsnmap, axes):
+        rsnmap.draw_limb(color='black',linewidth=1,linestyle='dashed', zorder=0)
+        # Manually plot a heliographic overlay - hopefully future no_ticks option in draw_grid
+        overlay = axes.get_coords_overlay('heliographic_stonyhurst')
+        lon = overlay[0]
+        lat = overlay[1]
+        lon.set_ticks_visible(False)
+        lat.set_ticks_visible(False)
+        lat.set_ticklabel_visible(False)
+        lon.set_ticklabel_visible(False)
+        lon.coord_wrap = 180
+        lon.set_major_formatter('dd')
+        overlay.grid(color='grey', linewidth=0.5, linestyle='dashed', zorder=0)
+
+
+    plt_plot_lines = None
+    @staticmethod
+    def execute_plt(*arg):
+        """
+        # Example
+        file = 'file_sunpos.evt'
+
+        nu = nustardo.NustarDo(file)
+
+        plt.figure(figsize=(10,10))
+
+        nu.nustar_setmap(submap="fov")
+
+        x,y = [0, 200], [0, 200]
+        nu.plt_plot_lines = [f'plt.plot({x},{y}, marker="o", ms=10, c="r")']
+
+        nu.nustar_plot(show_fig=False)
+
+        plt.show()
+        """
+        for a in arg:
+            exec(a)
         
-    def nustar_plot(self, boxes=None, show_fig=True, save_fig=None, usr_title=None):
+
+    def nustar_plot(self, boxes=None, show_fig=True, save_fig=None, usr_title=None, draw_grid=True):
         # adapted from Iain's python code
 
         if self.rcParams_default_setup:
@@ -700,25 +743,20 @@ class NustarDo:
 
         #fig = plt.figure(figsize=(9, 8), frameon=False)
         ax = plt.subplot(projection=self.rsn_map, frame_on=False) #rsn_map nustar_submap
+        self.axes = ax
         ax.set_facecolor((1.0, 1.0, 1.0))
 
         self.rsn_map.plot()
-        self.rsn_map.draw_limb(color='black',linewidth=1,linestyle='dashed',zorder=0)
+
+        # can't plot properly if the grid is drawn first so this allows plt.plot lines to be passed an executed before the grid in drawn
+        if type(self.plt_plot_lines)!=type(None):
+            self.execute_plt(*self.plt_plot_lines)
 
         if self.annotations['apply'] == True:
             plt.annotate(self.annotations['text'], self.annotations['position'], color=self.annotations['color'], fontsize=self.annotations['fontsize'], weight=self.annotations['weight'])
 
-        # Manually plot a heliographic overlay - hopefully future no_ticks option in draw_grid
-        overlay = ax.get_coords_overlay('heliographic_stonyhurst')
-        lon = overlay[0]
-        lat = overlay[1]
-        lon.set_ticks_visible(False)
-        lat.set_ticks_visible(False)
-        lat.set_ticklabel_visible(False)
-        lon.set_ticklabel_visible(False)
-        lon.coord_wrap = 180
-        lon.set_major_formatter('dd')
-        overlay.grid(color='grey', linewidth=0.5, linestyle='dashed')
+        if draw_grid:
+            self.draw_solar_grid(self.rsn_map, ax)
 
         # Tweak the titles and labels
         title_obsdate = self.rsn_map.date.strftime('%Y-%b-%dT%H:%M:%S.%f')[:-13] #'{:.20}'.format('{:%Y-%b-%d}'.format(self.rsn_map.date))
@@ -764,7 +802,7 @@ class NustarDo:
                     for_text = self.arcsec_to_pixel([rect[0]-10,rect[3]+20], centre_pix_val= [self.rsn_map.meta['crpix1']+0.5, self.rsn_map.meta['crpix2']])
                     plt.text(for_text[0][0], for_text[0][1], 'Box '+str(b), fontsize=10)
                     b += 1
-                    
+
         if save_fig != None:
             plt.savefig(save_fig, dpi=300, bbox_inches='tight')
         if show_fig == True:
